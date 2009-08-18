@@ -1,0 +1,95 @@
+GPT fdisk (aka gdisk)
+by Roderick W. Smith, rodsmith@rodsbooks.com
+
+Introduction
+------------
+
+This software is intended as a (somewhat) fdisk-workalike program for
+GPT-partitioned disks. Although libparted and programs that use it (GNU
+Parted, gparted, etc.) provide the ability to handle GPT disks, they have
+certain limitations that gdisk overcomes. Specific advantages of gdisk
+include:
+
+* The ability to convert MBR-partitioned disks in-place to GPT format,
+  without losing data
+
+* The ability to specify sector-exact partition sizes
+
+* More flexible specification of filesystem type code GUIDs, which
+  GNU Parted tends to corrupt (particularly for FAT partitions)
+
+* Clear identification of the number of unallocated sectors on a
+  disk
+
+* A user interface that's familiar to long-time users of Linux
+  fdisk
+
+* The MBR boot loader code is left alone (GNU Parted tends to
+  wipe it out with every change)
+
+Of course, gdisk isn't without its limitations. Most notably, it lacks the
+filesystem awareness and filesystem-related features of GNU Parted. You
+can't resize a partition's filesystem or create a partition with a
+filesystem already in place with gdisk, for instance. There's no GUI
+version of gdisk.
+
+Installing
+----------
+
+To compile gdisk, you must have appropriate development tools installed,
+most notably the GNU Compiler Collection (GCC) and its g++ compiler for
+C++. uncompress the package and type "make" at the command prompt in the
+resulting directory. The result should be a program file called gdisk. You
+can use this in place or copy the file to a suitable directory, such as
+/usr/local/sbin. You can copy the man page (gdisk.8) to /usr/local/man/man8
+to make it available.
+
+Caveats
+-------
+
+THIS SOFTWARE IS EARLY BETA SOFTWARE! IF IT WIPES OUT YOUR HARD DISK OR
+EATS YOUR CAT, DON'T BLAME ME! To date, I've tested the software mainly on
+two USB flash drives, 2 GiB and 8 GiB in size. I've also made a few minor
+tweaks to a production system with a 500 GiB hard disk and made more
+extensive changes to a handful of 80-160 GiB hard disks. I believe all
+data-corruption bugs to be squashed, but I know full well that the odds of
+my missing something are high. This is particularly true for large drives;
+I have no way of testing the software with > 2TiB drives, which will test
+the 64-bit sector pointer support.
+
+The MBR-to-GPT feature seems to work well for data drives, but it's largely
+untested on boot drives. One attempt with Windows failed miserably, but I
+believe that was because of Windows' inherent limitations with respect to
+GPT. (The partitions themselves were intact.)
+
+My main development platform is a system running the 64-bit version of
+Ubuntu. I've also tested on 64-bit OpenSuSE and 32-bit Fedora 10. Problems
+relating to 64-bit integers on the 32-bit Linux have been common during
+development and may crop up in the future. The Mac OS X support is new,
+and has at least one bug/limitation: It seems to be impossible to write
+a new partition table if any partitions from the disk are currently
+mounted.
+
+Redistribution
+--------------
+
+This program is licensed under terms of the GNU GPL (see the file COPYING).
+
+Acknowledgements
+----------------
+
+This code is mostly my own; however, I've used three functions from two
+other GPLed programs:
+
+- The code used to generate CRCs is taken from the efone program by
+  Krzysztof Dabrowski and ElysiuM deeZine. (See the crc32.h and
+  crc32.cc source code files.)
+
+- A function to find the disk size is taken from Linux fdisk by
+  A. V. Le Blanc.
+
+Additional code contributors include:
+
+- Yves Blusseau (1otnwmz02@sneakemail.com)
+
+- One anonymous contributor

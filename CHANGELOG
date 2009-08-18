@@ -1,0 +1,83 @@
+0.3.1:
+------
+
+- Added Mac OS X support, provided as a patch by an anonymous contributor.
+
+- Fixed bug in disksize() function on Mac OS. (Possibly dependent on the
+  kernel and/or GCC version.) The disk size, of type uint64_t, was not
+  being passed correctly, so I reorganized the function to return it as
+  the function's return value rather than as a parameter. This seems to
+  work OK on my Mac OS test system and on both 32- and 64-bit Linux
+  systems.
+
+- Added test for writability when opening a disk for reading. If the
+  test fails, a warning message is displayed. (The test simply opens
+  the disk for writing and then closes it before writing any data,
+  so the test shouldn't cause problems.)
+
+- Fixed off-by-one bug in GPTData::FindLastAvailable().
+
+- Fixed bug that caused display of options after a disk-write error.
+
+- Fixed several incorrect MacOS X partition type GUIDs.
+
+0.3.0:
+------
+
+- Changed version number to 0.3.0, reflecting the fact that I've received
+  no significant bug reports and so am elevating the program to "beta"
+  status. This change also entailed altering the warning the program
+  displays when saving partition table changes.
+
+- Fixed minor bug in CHS geometry of the protective MBR's type EE partition
+  (was producing 0x000200 as the start value, but should be 0x000100).
+  Should be a non-critical bug since the protective MBR partition
+  definition is only there to keep MBR-only disk utilities from messing
+  with the disk.
+
+- Added ability to enter GUIDs as single massive strings rather than in
+  chunks.
+
+0.2.2:
+------
+
+- Added #include directives required to compile the program using GCC
+  4.4.0.
+
+0.2.1:
+------
+
+- Fixed partition numbering problem in reports of partition overlaps in
+  verification function.
+
+- Fixed 1-sector partition size problem when creating new partitions
+  (partitions were 1 sector too big when using the +size option).
+
+- Changed BytesToSI() to display values in bytes without decimal points
+  (e.g., "512 bytes" rather than "512.0 bytes").
+
+- Added GPTData class member functions to retrieve GPT data structure
+  locations on disk; used in my internal-use-only GPT-wiping program.
+
+- Eliminated the "a reboot is recommended" notice after writing the
+  partition table.
+
+- Added notice after sorting the partition table to the effect that
+  editing /etc/fstab and/or the boot loader files may be required.
+
+- Fixed bug in MBR-reading function that caused 0x0f (Win95 LBA) and 0x85
+  (Linux extended) extended partitions to not be read.
+
+- Fixed bug in GetLastSector() (in support.cc) that would have prevented
+  correct user entry of over-32-bit sector numbers on 32-bit systems.
+
+- Made some changes/corrections to the partition type list in
+  parttypes.cc. Most of these were based on newly-discovered MBR type
+  codes for Apple (Mac OS X) filesystems.
+
+- General code cleanup (setting explicit casts, etc.)
+
+0.2.0:
+------
+
+- Initial semi-public release

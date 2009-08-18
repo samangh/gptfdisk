@@ -1,0 +1,602 @@
+.\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
+.\" May be distributed under the GNU General Public License
+.TH GDISK 8 "August 2009" "Linux 2.6" "GPT fdisk Manual"
+.SH NAME
+gdisk \- GPT partition table manipulator for Linux
+.SH SYNOPSIS
+.BI "gdisk "
+[ \-l ]
+.I device
+.SH DESCRIPTION
+Hard disks can be divided into one or more segments, known as
+.IR partitions .
+This division is described in the
+.I "partition table"
+of the disk. Several different partition table formats exist, each with its
+advantages and disadvantages.
+
+The original partitioning system used on PCs, now known as the
+.IR "MBR partitioning scheme",
+is subject to several limitations. These include an awkward distinction
+between
+.IR "primary",
+.IR "extended",
+and
+.IR "logical"
+partitions; no redundancy or error correction capabilities; and 32-bit data
+structures that, in conjunction with the common 512-byte sector size,
+impose a hard 2 TiB limit on the size of partitions and disks. This final
+drawback makes MBR partitions unsuitable for use on large hardware RAID
+arrays. Individual disk sizes are expected to reach the 2 TiB limit in
+2009, so MBR will become an unsuitable partitioning system even for
+individual hard disks in the near future.
+
+The successor to MBR partitions is the
+.IR "Globally Unique Identifier (GUID) Partition Table (GPT)"
+system. GPT addresses each of the major limitations of MBR partitions, and
+includes a dummy MBR partition table with a single
+.IR "protective MBR"
+entry to keep GPT-unaware programs from modifying the disk's GPT partitions. GPT
+is a new partitioning scheme, though, and as such, older utilities and OSes
+must be replaced or modified to handle GPT. Linux's venerable
+.B "fdisk"
+program, in particular, cannot process GPT disks. (The same is true of
+related programs, such as
+.B "sfdisk"
+and
+.BR "cfdisk".)
+The alternative GNU
+Parted and related programs, however, are capable of working on both MBR
+and GPT disks.
+
+GPT is often associated with the
+.IR "Extensible Firmware Interface (EFI)",
+which is Intel's intended successor to the traditional (legacy) PC BIOS. It
+is possible to use and even boot from GPT disks on non-EFI systems,
+including those that use a legacy BIOS. Using GPT disks on such a system
+isn't a great challenge, although the OS must support GPT. Booting from a
+GPT-based disk requires that the OS support this action, and if the system
+is BIOS-based, a GPT-aware boot loader is required. Patched versions of the
+.IR "Grand Unified Bootloader (GRUB)"
+0.97, as well as GRUB2, support GPT.
+
+GPT creates five distinct data structures of three types:
+.TP
+.B "Protective MBR"
+The first sector (512 bytes) of the disk is devoted to an MBR that
+consists of a single partition spanning the entire disk (or 2 TiB for disks
+larger than this). The protective MBR may optionally include first-stage
+boot loader code.
+.TP
+.B "GPT headers"
+Two GPT headers exist, a main header and a backup header. The primary
+header resides immediately after the protective MBR, and the backup header
+is stored on the last sector of the disk. These headers contain disk
+metadata, such as the location of the partition table, the size of the
+partition table, and a "serial number" (GUID) that should be unique for
+each disk. Each GPT header also stores two CRC checksums, one for the
+partition table and one for the GPT header itself.
+.TP
+.B "Partition tables"
+Each GPT header points to one partition table. The main partition table
+appears immediately after the main GPT header, and the backup partition
+table comes immediately before its GPT header. Typically, the partition
+tables may hold data on up to 128 partitions, although
+.B gdisk
+enables you to change this value. Each entry contains 64-bit start and stop
+sector numbers, a name, a partition GUID type code, a unique partition GUID
+identifier, and additional data.
+.PP
+
+The GPT fdisk (aka
+.BR "gdisk")
+program operates mainly on the GPT headers and partition tables; however,
+it can and will generate a fresh protective MBR, when required. (Any boot
+loader code in the protective MBR will not be disturbed.) If you've created
+an unusual protective MBR, such as a hybrid MBR created by
+.IR "gptsync",
+this should not be disturbed by most ordinary actions. Some advanced data
+recovery options require you to understand the distinctions between the
+main and backup data, as well as between the GPT headers and the partition
+tables.
+
+The
+.B "gdisk"
+program employs a user interface similar to that of
+.BR "fdisk",
+but
+.B "gdisk"
+modifies GPT partitions. It also has the capability of transforming MBR
+partitions into GPT partitions. Like the original
+.B fdisk
+program,
+.B gdisk
+does not modify disk structures until you explicitly write them to disk, so
+if you make a mistake, you can exit from the program with the 'q' option to
+save your partitions.
+
+.B gdisk
+is a text-mode menu-driven program for creation and manipulation of
+partition tables. It will automatically convert an MBR partition table to
+GPT format, or will load a GPT partition table. When used with the
+.IR "\-l"
+command-line option, the program displays the current partition table and
+then exits.
+
+Linux hard disk device filenames take the form
+.IR "/dev/sdx"
+or
+.IR "/dev/hdx",
+where
+.IR "x"
+is a letter from
+.IR "a"
+onward. The
+.IR "hdx"
+devices originally referred to IDE (aka PATA) drives, whereas
+.IR "sdx"
+devices originally referred to SCSI drives. These distinctions are now
+blurring. Modern SATA drives and USB flash drives usually acquire
+.IR "sdx"
+names, and the same can even be true of PATA drives, depending on kernel
+driver options. For instance,
+.IR "/dev/hda"
+refers to the first PATA drive, whereas
+.IR "/dev/sdb"
+is the second SCSI, SATA, USB, or other SCSI-equivalent drive. To use
+.BR "gdisk",
+you must pass a device filename to the program on the command line.
+
+The
+.I partition
+is a
+device name followed by a partition number.  For example,
+.B /dev/hda1
+is the first partition on the first PATA hard disk.
+.B gdisk
+creates partitions, but you don't pass partition numbers or partition
+device filenames to the program. Linux generates numbers for GPT partitions
+based on the partition's position in the partition table.
+
+The MBR partitioning system uses a combination of cylinder/head/sector
+(CHS) addressing and logical block addressing (LBA). The former is klunky
+and limiting. GPT drops CHS addressing and uses 64-bit LBA mode
+exclusively. Thus, GPT data structures, and therefore
+.BR "gdisk",
+do not need to deal with CHS geometries and all the problems they create.
+Users of
+.BR "fdisk"
+will note that
+.B "gdisk"
+lacks the options and limitations associated with CHS geometries.
+
+For best results, you should always use an OS-specific partition table
+program.  For example, you should make Mac OS X partitions with the Mac OS
+X Disk Utility
+program and Linux partitions with the Linux
+.B "gdisk"
+or GNU Parted program.
+
+Upon start,
+.B gdisk
+attempts to identify the partition type in use on the specified disk. If it
+finds valid GPT data,
+.B gdisk
+will use it. If
+.B gdisk
+finds a valid MBR but no GPT data, it will attempt to convert the MBR into
+GPT form. Upon exiting with the 'w' option,
+.B gdisk
+will then replace the MBR with a GPT.
+.IR "This action is potentially dangerous!"
+Your system may become unbootable, and partition type codes may become
+corrupted if the disk uses unrecognized type codes. Boot problems are
+particularly likely if you're multi-booting with any GPT-unaware OS. If you
+mistakenly launch
+.B gdisk
+on an MBR disk, you can safely exit the program
+without making any changes by using the 'q' option.
+
+The MBR-to-GPT conversion will leave at least one gap in the partition
+numbering if the original MBR used logical partitions. These gaps are
+harmless, but you can eliminate them by using the 's' option, if you like.
+(Doing this may require you to update your
+.IR "/etc/fstab"
+file.)
+
+When creating a fresh partition table, certain considerations may be in
+order:
+
+.TP
+.B *
+For data (non-boot) disks, and for boot disks used on BIOS-based computers
+with GRUB as the boot loader, partitions may be created in whatever order
+and in whatever sizes are desired.
+
+.TP
+.B *
+Boot disks for EFI-based systems require an
+.IR "EFI System Partition" (
+.B "gdisk"
+internal code 0xEF00) formatted as FAT-32. The recommended size of this
+partition is 100 MiB. Boot-related files are stored here. (Note that GNU
+Parted identifies such partitions as having the "boot flag" set.)
+
+.TP
+.B *
+If Windows is to boot from a GPT disk, a partition of type "Microsoft
+Reserved" (
+.B "gdisk"
+internal code 0x0C01) is recommended. This partition should be about 128 MiB
+in size. It ordinarily follows the EFI System Partition and immediately
+precedes the Windows data partitions. (Note that GNU Parted creates all
+FAT partitions as this type, which actually makes the partition unusable
+for normal file storage in both Windows and Mac OS X.)
+
+.TP
+.B *
+Some OSes' GPT utilities create some blank space (typically 128 MiB) after
+each partition. The intent is to enable future disk utilities to use this
+space. Such free space is not required of GPT disks, but creating it may
+help in future disk maintenance.
+
+.SH OPTIONS
+.TP
+.B \-l
+List the partition tables for the specified devices and then exit.
+.PP
+
+Most interactions with
+.B gdisk
+occur with its interactive text-mode menus. The main menu provides the
+following options:
+
+.TP
+.B c
+Change the GPT name of a partition. This name is encoded as a UTF-16
+string, but
+.B gdisk
+supports only ASCII characters as names. For the most part, Linux ignores
+the partition name, but it may be important in some OSes.
+
+.TP
+.B d
+Delete a partition. This action deletes the entry from the partition table
+but does not disturb the data within the sectors originally allocated to
+the partition on the disk.
+
+.TP
+.B i
+Show detailed partition information. The summary information produced by
+the 'p' command necessarily omits many details, such as the partition's
+unique GUID and the translation of
+.BR "gdisk"'s
+internal partition type code to a plain type name. The 'i' option
+displays this information for a single partition.
+
+.TP
+.B l
+Display a summary of partition types. GPT uses a GUID to identify
+partition types for particular OSes and purposes. For ease of data entry,
+.B gdisk
+compresses these into two-byte (four-digit hexadecimal) values that are
+related to their MBR codes. Specifically, the MBR code is multiplied by
+hexadecimal 0x0100. For instance, the code for Linux swap space in MBR is
+0x82, and it's 0x8200 in
+.BR "gdisk".
+A one-to-one correspondence is impossible, though. Most notably, many DOS,
+Windows, and Linux data partition codes correspond to a single GPT code
+(entered as 0x0700 in
+.BR "gdisk" ).
+Some OSes use a single MBR code but employ many more codes in GPT. For
+these,
+.B gdisk
+adds code numbers sequentially, such as 0xa500 for a FreeBSD disklabel,
+0xa501 for FreeBSD boot, 0xa502 for FreeBSD swap, and so on. Note that
+these two-byte codes are unique to
+.BR "gdisk".
+
+.TP
+.B m
+Print the menu. Type this command (or any other unrecognized command) to
+see a summary of available options.
+
+.TP
+.B n
+Create a new partition. This command is modelled after the equivalent
+.B fdisk
+option, although some differences exist. You enter a partition number,
+starting sector, and either an ending sector or increment (in integral
+multiples of sectors, kilobytes, megabytes, gigabytes, or terabytes). You
+must also set a partition type code.
+
+.TP
+.B o
+Clear out all partition data. This includes GPT header data,
+all partition definitions, and the protective MBR.
+
+.TP
+.B p
+Display basic partition summary data. This includes partition
+numbers, starting and ending sector numbers, partition sizes,
+.BR "gdisk"'s
+partition types codes, and partition names. For additional information,
+use the 'i' command.
+
+.TP
+.B q
+Quit from the program
+.IR "without saving data".
+Use it if you just wanted to view information or if you make a mistake and
+want to back out of all your changes.
+
+.TP
+.B s
+Sort partition entries. GPT partition numbers need not match the order of
+partitions on the disk. If you want them to match, you can use this option.
+Note that some partitioning utilities, such as GNU Parted, will sort
+partitions whenever they make changes. Such changes will be reflected in
+your Linux device filenames, so you may need to edit
+.IR "/etc/fstab"
+if you use this option.
+
+.TP
+.B t
+Change a single partition's type code. You enter the type code using a
+two-byte hexadecimal number, as described earlier. You may also enter a
+GUID directly, if you have one and
+.B gdisk
+doesn't know it.
+
+.TP
+.B v
+Verify disk. This option checks for a variety of problems, such as
+incorrect CRCs and mismatched main and backup data. This option does not
+automatically correct these problems, though; for that, you must use
+options on the experts' menu. If no problems are found, this command
+displays a summary of unallocated disk space.
+
+.TP
+.B w
+Write data. Use this command to save your changes.
+
+.TP
+.B x
+Enter the experts' menu. Using this option provides access to features you
+can use to get into even more trouble than the main menu allows.
+.PP
+
+A few options on the experts' menu duplicate functionality on the main
+menu, for the sake of convenience; however, for the most part the experts'
+menu provides unusually dangerous or obscure options. These are:
+
+.TP
+.B a
+Set attributes. GPT provides a 64-bit attributes field that can be used to
+set partition features.
+.B gdisk
+supports four attributes: 
+.IR "system partition",
+.IR "read-only",
+.IR "hidden",
+and
+.IR "do not automount".
+You can set other attributes, but their numbers aren't translated into
+anything useful. In practice, most OSes seem to ignore these attributes.
+.TP
+.B b
+Rebuild main GPT header from backup. You can use the backup GPT header to
+rebuild the main GPT header with this option. It's likely to be useful if
+your main GPT header was damaged or destroyed (say, by sloppy use of
+.IR "dd").
+.TP
+.B c
+Load backup partition table. Ordinarily,
+.B gdisk
+uses only the main partition table (although the backup's integrity is
+checked when you launch the program). If the main partition table has been
+damaged, you can use this option to load the backup from disk and use it
+instead. Note that this will almost certainly produce no or strange
+partition entries if you've just converted an MBR disk to GPT format, since
+there will be no backup partition table on disk.
+
+.TP
+.B d
+Use main GPT header and rebuild the backup. This option is likely to be
+useful if the backup GPT header has been damaged or destroyed.
+.TP
+.B e
+Load main partition table. This option reloads the main partition table
+from disk. It's only likely to be useful if you've tried to use the backup
+partition table (via 'c') but it's in worse shape then the main partition
+table.
+.TP
+.B f
+Change partition GUID. You can enter a custom unique GUID for a partition
+using this option. (Note this refers to the GUID that uniquely identifies a
+partition, not to its type code.) Ordinarily,
+.B gdisk
+assigns this number randomly; however, you might want to adjust the number
+manually if you've wound up with the same GUID on two partitions.
+.TP
+.B g
+Change disk GUID. Each disk has a unique GUID code, which
+.B gdisk
+assigns randomly upon creation of the GPT data structures. You can generate
+a fresh random GUID or enter one manually with this option.
+.TP
+.B i
+Show detailed partition information. This option is identical to the 'i'
+option on the main menu.
+.TP
+.B k
+Save partition data to a backup file. You can back up your partition table
+to a disk file using this option. The resulting file is a binary file
+consisting of the protective MBR, the main GPT header, the backup GPT
+header, and one copy of the partition table, in that order.
+.TP
+.B l
+Load partition data from a backup file. This option is the reverse of the 'k'
+option. Note that restoring partition data from anything but the
+original disk is not recommended.
+.TP
+.B m
+Print the menu. This option (or any unrecognized entry) displays a summary
+of the menu options.
+.TP
+.B n
+Create a new protective MBR. Use this option if the current protective MBR
+is damaged in a way that
+.B gdisk
+doesn't automatically detect and correct.
+.TP
+.B o
+Print protective MBR data. You can see a summary of the protective MBR's
+partitions with this option. This may enable you to spot glaring problems
+or help identify the partitions in a hybrid MBR.
+.TP
+.B p
+Print the partition table. This option is identical to the 'p' option in
+the main menu.
+.TP
+.B q
+Quit without saving changes. This option is identical to the 'q' option in
+the main menu.
+.TP
+.B r
+Return to the main menu. You can go back to the main menu with this option.
+.TP
+.B s
+Resize partition table. The partition table may be resized with this
+option. The default size is 128 entries. Officially, sizes of less than
+16KB (128 entries, given the normal entry size) are unsupported by the GPT
+specification; however, in practice they seem to work, and can sometimes be
+useful in converting MBR disks. Larger sizes also work fine. Linux imposes
+its own limits on the number of partitions, though.
+.TP
+.B v
+Verify disk. This option is identical to the 'v' option in the main menu.
+.TP
+.B w
+Write table to disk and exit. This option is identical to the 'w' option in
+the main menu.
+.PP
+
+In many cases, you can press the Enter key to select a default option when
+entering data. When only one option is possible,
+.B gdisk
+usually bypasses the prompt entirely.
+
+.SH BUGS
+As of August of 2009 (version 0.3.1),
+.B gdisk
+should be considered early beta software. Known bugs and
+limitations include:
+
+.TP
+.B *
+The program runs correctly only on little-endian (Intel and similar) CPUs.
+It should fail gracefully on PowerPC and other big-endian CPUs, but this
+hasn't been tested.
+
+.TP
+.B *
+The program compiles correctly only on Linux and Mac OS X. Both 64-bit
+(x86-64) and 32-bit (x86) versions for Linux have been tested, the former
+more thoroughly than the latter. The Mac OS X support was added with
+version 0.3.1 and has not been thoroughly tested.
+
+.TP
+.B *
+Under Mac OS X, the program will only save a partition table if no
+partitions from the disk are currently mounted. (This limitation does not
+exist in the Linux version of the program.)
+
+.TP
+.B *
+The fields used to display the start and end sector numbers for partitions
+in the 'p' command are 14 characters wide. This translates to a limitation
+of about 45 PiB. On larger disks, the displayed columns will go out of
+alignment.
+
+.TP
+.B *
+Only ASCII characters are supported in the partition name field. If an
+existing partition uses non-ASCII UTF-16 characters, they're likely to be
+corrupted in the 'i' menu option's display; however, they should be
+preserved when loading and saving partitions.
+
+.TP
+.B *
+The program can load only up to 124 logical partitions when converting from
+MBR format. This limit can be raised by changing the #define NUM_LOGICALS
+line in the
+.IR "mbr.cc"
+source code file and recompiling; however, such a change will require using
+a larger-than-normal GPT partition table. (The limit of 124 logical
+partitions was chosen because that number plus the four primary partitions
+equals the 128 partitions supported by the most common GPT partition table
+size.)
+
+.TP
+.B *
+Converting from MBR format sometimes fails because of insufficient space at
+the start or (more commonly) the end of the disk. Resizing the partition
+table (using the 's' option in the experts' menu) can sometimes overcome
+this problem; however, in extreme cases it may be necessary to resize a
+partition using GNU Parted or a similar tool.
+
+.TP
+.B *
+Converting from MBR supports only one extended partition. If multiple
+extended partitions are found, only the final extended partition's logical
+partitions are guaranteed to be converted intact; some or all of the
+earlier extended partition(s) logical partitions will be lost.
+
+.TP
+.B *
+MBR conversions work only if the disk has correct LBA partition
+descriptors. These descriptors should be present on any disk over 8 GiB in
+size or on smaller disks partitioned with any but very ancient software.
+
+.TP
+.B *
+If an MBR disk contains a FreeBSD disklabel partition, it's converted
+in-place as such rather than splitting out its constituent disklabel
+partitions into GPT partitions. Other OSes' disklabel partitions may not
+get appropriate GUID type codes at all.
+
+.TP
+.B *
+Booting after converting an MBR disk may be disrupted. Sometimes
+re-installing a boot loader will fix the problem, but other times you may
+need to switch boot loaders. Except on EFI-based platforms, Windows through
+Vista doesn't support booting from GPT disks.
+.PP
+
+.SH AUTHORS
+
+Primary author: Roderick W. Smith (rodsmith@rodsbooks.com)
+
+Contributors:
+
+* Yves Blusseau (1otnwmz02@sneakemail.com)
+
+* One anonymous contributor
+
+.SH "SEE ALSO"
+.BR cfdisk (8),
+.BR fdisk (8),
+.BR mkfs (8),
+.BR parted (8),
+.BR sfdisk (8)
+
+.IR "http://en.wikipedia.org/wiki/GUID_Partition_Table"
+
+.IR "http://developer.apple.com/technotes/tn2006/tn2166.html"
+
+.IR "http://www.rodsbooks.com/gdisk/"
+
+.SH AVAILABILITY
+The gdisk command is part of the GPT fdisk package and is available from
+Rod Smith.
