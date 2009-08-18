@@ -4,6 +4,9 @@
 
 #ifdef __APPLE__
 // Darwin (Mac OS) only: disk IOCTLs are different, and there is no lseek64
+// This used to use __DARWIN_UNIX03 rather than __APPLE__, but __APPLE__
+// is more general. If the code fails to work on older versions of OS X/
+// Darwin, this may need to be changed back (and in various .cc files).
 #include <sys/disk.h>
 #define lseek64 lseek
 #else

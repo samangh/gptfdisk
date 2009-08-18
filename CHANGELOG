@@ -1,3 +1,8 @@
+0.3.2:
+------
+
+- Changed __DARWIN_UNIX03 to __APPLE__ as code to enable MacOS X support.
+
 0.3.1:
 ------
 
