@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version 0.3.1\n\n");
+   printf("GPT fdisk (gdisk) version 0.3.2\n\n");
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {
@@ -88,7 +88,7 @@ int DoCommand(char* filename, struct GPTData* theGPT) {
          break;
       case 'o': case 'O':
          theGPT->ClearGPTData();
-//         theGPT->protectiveMBR.MakeProtectiveMBR();
+         theGPT->MakeProtectiveMBR();
 //         theGPT->BlankPartitions();
          break;
       case 'p': case 'P':
@@ -192,9 +192,9 @@ int ExpertsMenu(char* filename, struct GPTData* theGPT) {
             printf("Enter the disk's unique GUID:\n");
             theGPT->SetDiskGUID(GetGUID());
             break;
-/*         case 'h': case 'H':
+         case 'h': case 'H':
             theGPT->MakeHybrid();
-            break; */
+            break;
          case 'i': case 'I':
             theGPT->ShowDetails();
             break;
@@ -238,6 +238,12 @@ int ExpertsMenu(char* filename, struct GPTData* theGPT) {
                goOn = 0;
             } // if
             break;
+         case 'z': case 'Z':
+            if (theGPT->DestroyGPT() == 1) {
+               retval = 0;
+	       goOn = 0;
+            }
+            break;
          default:
             ShowExpertCommands();
             break;
@@ -254,7 +260,7 @@ void ShowExpertCommands(void) {
    printf("e\tload main partition table from disk (rebuilding backup)\n");
    printf("f\tchange partition GUID\n");
    printf("g\tchange disk GUID\n");
-//   printf("h\tmake hybrid MBR\n");
+   printf("h\tmake hybrid MBR\n");
    printf("i\tshow detailed information on a partition\n");
    printf("k\tsave partition data to a backup file\n");
    printf("l\tload partition data from a backup file\n");
@@ -267,4 +273,5 @@ void ShowExpertCommands(void) {
    printf("s\tresize partition table\n");
    printf("v\tverify disk\n");
    printf("w\twrite table to disk and exit\n");
+   printf("z\tDestroy GPT data structures and exit\n");
 } // ShowExpertCommands()

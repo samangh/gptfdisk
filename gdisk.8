@@ -405,12 +405,14 @@ there will be no backup partition table on disk.
 Use main GPT header and rebuild the backup. This option is likely to be
 useful if the backup GPT header has been damaged or destroyed.
 .TP
+
 .B e
 Load main partition table. This option reloads the main partition table
 from disk. It's only likely to be useful if you've tried to use the backup
 partition table (via 'c') but it's in worse shape then the main partition
 table.
 .TP
+
 .B f
 Change partition GUID. You can enter a custom unique GUID for a partition
 using this option. (Note this refers to the GUID that uniquely identifies a
@@ -424,6 +426,16 @@ Change disk GUID. Each disk has a unique GUID code, which
 .B gdisk
 assigns randomly upon creation of the GPT data structures. You can generate
 a fresh random GUID or enter one manually with this option.
+
+.TP
+.B h
+Create a hybrid MBR. This is an ugly workaround that enables GPT-unaware
+OSes, or that that can't boot from a GPT disk, to access up to three of
+the partitions on the disk by creating MBR entries for them. Note that
+these hybrid MBR entries are not updated when you make subsequent changes
+to the GPT entries, so you must re-run this option whenever you make
+changes that would affect the hybridized partitions.
+
 .TP
 .B i
 Show detailed partition information. This option is identical to the 'i'
@@ -480,6 +492,16 @@ Verify disk. This option is identical to the 'v' option in the main menu.
 .B w
 Write table to disk and exit. This option is identical to the 'w' option in
 the main menu.
+
+.TP
+.B z
+Destroy the GPT data structures and exit. Use this option if you want to
+repartition a GPT disk using 
+.B "fdisk"
+or some other GPT-unaware program.
+You'll be given the choice of preserving the existing MBR, in case it's a
+hybrid MBR with salvageable partitions.
+
 .PP
 
 In many cases, you can press the Enter key to select a default option when
@@ -488,7 +510,7 @@ entering data. When only one option is possible,
 usually bypasses the prompt entirely.
 
 .SH BUGS
-As of August of 2009 (version 0.3.1),
+As of August of 2009 (version 0.3.2),
 .B gdisk
 should be considered early beta software. Known bugs and
 limitations include:
@@ -505,12 +527,6 @@ The program compiles correctly only on Linux and Mac OS X. Both 64-bit
 (x86-64) and 32-bit (x86) versions for Linux have been tested, the former
 more thoroughly than the latter. The Mac OS X support was added with
 version 0.3.1 and has not been thoroughly tested.
-
-.TP
-.B *
-Under Mac OS X, the program will only save a partition table if no
-partitions from the disk are currently mounted. (This limitation does not
-exist in the Linux version of the program.)
 
 .TP
 .B *
@@ -571,7 +587,10 @@ get appropriate GUID type codes at all.
 Booting after converting an MBR disk may be disrupted. Sometimes
 re-installing a boot loader will fix the problem, but other times you may
 need to switch boot loaders. Except on EFI-based platforms, Windows through
-Vista doesn't support booting from GPT disks.
+at least Windows 7 RC doesn't support booting from GPT disks. Creating a
+hybrid MBR (using the 'h' option on the experts' menu) or abandoning GPT in
+favor of MBR may be your only options in this case.
+
 .PP
 
 .SH AUTHORS

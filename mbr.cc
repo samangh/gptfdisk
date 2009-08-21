@@ -52,14 +52,22 @@ MBRData::MBRData(char *filename) {
 MBRData::~MBRData(void) {
 } // MBRData destructor
 
-// Empty all data. Meant mainly for calling by constructors
-void MBRData::EmptyMBR(void) {
+// Empty all data. Meant mainly for calling by constructors, but it's also
+// used by the hybrid MBR functions in the GPTData class.
+void MBRData::EmptyMBR(int clearBootloader) {
    int i;
 
-   for (i = 0; i < 440; i++)
-      code[i] = 0;
-   diskSignature = (uint32_t) rand();
-   nulls = 0;
+   // Zero out the boot loader section, the disk signature, and the
+   // 2-byte nulls area only if requested to do so. (This is the
+   // default.)
+   if (clearBootloader == 1) {
+      for (i = 0; i < 440; i++)
+         code[i] = 0;
+      diskSignature = (uint32_t) rand();
+      nulls = 0;
+   } // if
+
+   // Blank out the partitions
    for (i = 0; i < 4; i++) {
       partitions[i].status = UINT8_C(0);
       partitions[i].firstSector[0] = UINT8_C(0);
@@ -343,6 +351,39 @@ void MBRData::MakeProtectiveMBR(void) {
    state = gpt;
 } // MBRData::MakeProtectiveMBR()
 
+// Create a partition that fills the most available space. Returns
+// 1 if partition was created, 0 otherwise. Intended for use in
+// creating hybrid MBRs.
+int MBRData::MakeBiggestPart(int i, int type) {
+   uint32_t start = UINT32_C(1); // starting point for each search
+   uint32_t firstBlock; // first block in a segment
+   uint32_t lastBlock; // last block in a segment
+   uint32_t segmentSize; // size of segment in blocks
+   uint32_t selectedSegment = UINT32_C(0); // location of largest segment
+   uint32_t selectedSize = UINT32_C(0); // size of largest segment in blocks
+   int found = 0;
+
+   do {
+      firstBlock = FindFirstAvailable(start);
+      if (firstBlock != UINT32_C(0)) { // something's free...
+         lastBlock = FindLastInFree(firstBlock);
+         segmentSize = lastBlock - firstBlock + UINT32_C(1);
+	 if (segmentSize > selectedSize) {
+            selectedSize = segmentSize;
+	    selectedSegment = firstBlock;
+	 } // if
+	 start = lastBlock + 1;
+      } // if
+   } while (firstBlock != 0);
+   if ((selectedSize > UINT32_C(0)) && ((uint64_t) selectedSize < diskSize)) {
+      found = 1;
+      MakePart(i, selectedSegment, selectedSize, type, 0);
+   } else {
+      found = 0;
+   } // if/else
+   return found;
+} // MBRData::MakeBiggestPart(int i)
+
 // Return a pointer to a primary or logical partition, or NULL if
 // the partition is out of range....
 struct MBRRecord* MBRData::GetPartition(int i) {
@@ -397,6 +438,53 @@ void MBRData::MakePart(int num, uint32_t start, uint32_t length, int type,
    partitions[num].firstLBA = start;
    partitions[num].lengthLBA = length;
 } // MakePart()
+
+// Finds the first free space on the disk from start onward; returns 0
+// if none available....
+uint32_t MBRData::FindFirstAvailable(uint32_t start) {
+   uint32_t first;
+   uint32_t i;
+   int firstMoved = 0;
+
+   first = start;
+
+   // ...now search through all partitions; if first is within an
+   // existing partition, move it to the next sector after that
+   // partition and repeat. If first was moved, set firstMoved
+   // flag; repeat until firstMoved is not set, so as to catch
+   // cases where partitions are out of sequential order....
+   do {
+      firstMoved = 0;
+      for (i = 0; i < 4; i++) {
+         // Check if it's in the existing partition
+         if ((first >= partitions[i].firstLBA) &&
+             (first < (partitions[i].firstLBA + partitions[i].lengthLBA))) {
+            first = partitions[i].firstLBA + partitions[i].lengthLBA;
+            firstMoved = 1;
+          } // if
+      } // for
+   } while (firstMoved == 1);
+   if (first >= diskSize)
+      first = 0;
+   return (first);
+} // MBRData::FindFirstAvailable()
+
+uint32_t MBRData::FindLastInFree(uint32_t start) {
+   uint32_t nearestStart;
+   uint32_t i;
+
+   if (diskSize <= UINT32_MAX)
+      nearestStart = diskSize - 1;
+   else
+      nearestStart = UINT32_MAX - 1;
+   for (i = 0; i < 4; i++) {
+      if ((nearestStart > partitions[i].firstLBA) &&
+          (partitions[i].firstLBA > start)) {
+         nearestStart = partitions[i].firstLBA - 1;
+      } // if
+   } // for
+   return (nearestStart);
+} // MBRData::FindLastInFree
 
 uint8_t MBRData::GetStatus(int i) {
    MBRRecord* thePart;

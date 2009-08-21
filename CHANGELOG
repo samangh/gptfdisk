@@ -3,6 +3,19 @@
 
 - Changed __DARWIN_UNIX03 to __APPLE__ as code to enable MacOS X support.
 
+- Added the ability to create a hybrid MBR ('h' on experts' menu). This was
+  motivated by my discovery that Windows 7 remains brain-dead when it comes
+  to the ability to boot from a GPT disk, at least on BIOS-based machines.
+
+- Added 'z' option to experts' menu, to destroy GPT data structures and
+  exit. The intent is to use this feature to enable subsequent partitioning
+  of the disk using fdisk or other GPT-unaware tools. (GNU Parted will wipe
+  the GPT data structures itself when you create a new MBR ["msdos
+  disklabel," in Parted parlance], so using Parted is another option.)
+
+- Slightly altered the effect of the 'o' command on the main menu. It now
+  blanks out the protective MBR, as well as the GPT data.
+
 0.3.1:
 ------
 
@@ -14,11 +27,6 @@
   the function's return value rather than as a parameter. This seems to
   work OK on my Mac OS test system and on both 32- and 64-bit Linux
   systems.
-
-- Added test for writability when opening a disk for reading. If the
-  test fails, a warning message is displayed. (The test simply opens
-  the disk for writing and then closes it before writing any data,
-  so the test shouldn't cause problems.)
 
 - Fixed off-by-one bug in GPTData::FindLastAvailable().
 

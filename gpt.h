@@ -126,11 +126,12 @@ public:
    void RebuildSecondHeader(void);
    void LoadSecondTableAsMain(void);
    uint64_t FindFreeBlocks(int *numSegments, uint64_t *largestSegment);
-//   void MakeHybrid(void);
-   void MakeProtectiveMBR(void) {return protectiveMBR.MakeProtectiveMBR();}
+   void MakeHybrid(void);
+   void MakeProtectiveMBR(void);
    int SaveGPTData(void);
    int SaveGPTBackup(char* filename);
    int LoadGPTBackup(char* filename);
+   int DestroyGPT(void); // Returns 1 if user proceeds
 
    // Return data about the GPT structures....
    uint32_t GetNumParts(void) {return mainHeader.numParts;}

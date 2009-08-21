@@ -1307,7 +1307,6 @@ uint64_t GPTData::FindFreeBlocks(int *numSegments, uint64_t *largestSegment) {
    return totalFound;
 } // GPTData::FindFreeBlocks()
 
-/*
 // Create a hybrid MBR -- an ugly, funky thing that helps GPT work with
 // OSes that don't understand GPT.
 void GPTData::MakeHybrid(void) {
@@ -1315,16 +1314,26 @@ void GPTData::MakeHybrid(void) {
    char line[255];
    int numParts, i, j, typeCode, bootable;
    uint64_t length;
+   char fillItUp = 'M'; // fill extra partition entries? (Yes/No/Maybe)
 
-   // First, rebuild the protective MBR...
-   protectiveMBR.MakeProtectiveMBR();
+   printf("\nWARNING! Hybrid MBRs are flaky and potentially dangerous! If you decide not\n"
+          "to use one, just hit the Enter key at the below prompt and your MBR\n"
+          "partition table will be untouched.\n\n\a");
 
    // Now get the numbers of up to three partitions to add to the
    // hybrid MBR....
-   printf("Type from one to three partition numbers to be added to the hybrid MBR, in\n"
-          "sequence: ");
+   printf("Type from one to three GPT partition numbers, separated by spaces, to be\n"
+          "added to the hybrid MBR, in sequence: ");
    fgets(line, 255, stdin);
    numParts = sscanf(line, "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
+
+   if (numParts > 0) {
+      // Blank out the protective MBR, but leave the boot loader code
+      // alone....
+      protectiveMBR.EmptyMBR(0);
+      protectiveMBR.SetDiskSize(diskSize);
+   } // if
+
    for (i = 0; i < numParts; i++) {
       j = partNums[i] - 1;
       printf("Creating entry for partition #%d\n", j + 1);
@@ -1337,7 +1346,7 @@ void GPTData::MakeHybrid(void) {
 	    printf("Set the bootable flag? ");
 	    bootable = (GetYN() == 'Y');
             length = partitions[j].lastLBA - partitions[j].firstLBA + UINT64_C(1);
-            protectiveMBR.MakePart(i + 1, (uint32_t) partitions[j].firstLBA,
+            protectiveMBR.MakePart(i, (uint32_t) partitions[j].firstLBA,
                     (uint32_t) length, typeCode, bootable);
          } else { // partition out of range
             printf("Partition %d ends beyond the 2TiB limit of MBR partitions; omitting it.\n",
@@ -1347,8 +1356,46 @@ void GPTData::MakeHybrid(void) {
          printf("Partition %d is out of range; omitting it.\n", j + 1);
       } // if/else
    } // for
+
+   if (numParts > 0) { // User opted to create a hybrid MBR....
+      // Create EFI protective partition that covers the start of the disk.
+      // If this location (covering the main GPT data structures) is omitted,
+      // Linux won't find any partitions on the disk. Note that this is
+      // NUMBERED AFTER the hybrid partitions, contrary to what the
+      // gptsync utility does. This is because Windows seems to choke on
+      // disks with a 0xEE partition in the first slot and subsequent
+      // additional partitions, unless it boots from the disk.
+      protectiveMBR.MakePart(numParts, 1, protectiveMBR.FindLastInFree(1), 0xEE);
+
+      // ... and for good measure, if there are any partition spaces left,
+      // optionally create more protective EFI partitions to cover as much
+      // space as possible....
+      for (i = 0; i < 4; i++) {
+         if (protectiveMBR.GetType(i) == 0x00) { // unused entry....
+	    if (fillItUp == 'M') {
+	       printf("Unused partition space(s) found. Use one to protect more partitions? ");
+	       fillItUp = GetYN();
+	       typeCode = 0x00; // use this to flag a need to get type code
+	    } // if
+	    if (fillItUp == 'Y') {
+	       if (typeCode == 0x00) {
+	          printf("Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ");
+                  // Comment on above: Mac OS treats disks with more than one
+		  // 0xEE MBR partition as MBR disks, not as GPT disks.
+                  fgets(line, 255, stdin);
+                  sscanf(line, "%x", &typeCode);
+               } // if (typeCode == 0x00)
+               protectiveMBR.MakeBiggestPart(i, typeCode); // make a partition
+            } // if (fillItUp == 'Y')
+         } // if unused entry
+      } // for (i = 0; i < 4; i++)
+   } // if (numParts > 0)
 } // GPTData::MakeHybrid()
-*/
+
+// Create a fresh protective MBR.
+void GPTData::MakeProtectiveMBR(void) {
+   protectiveMBR.MakeProtectiveMBR();
+} // GPTData::MakeProtectiveMBR(void)
 
 // Writes GPT (and protective MBR) to disk. Returns 1 on successful
 // write, 0 if there was a problem.
@@ -1608,6 +1655,52 @@ int GPTData::LoadGPTBackup(char* filename) {
    } // if
    return allOK;
 } // GPTData::LoadGPTBackup()
+
+// This function destroys the on-disk GPT structures. Returns 1 if the
+// user confirms destruction, 0 if the user aborts.
+int GPTData::DestroyGPT(void) {
+   int fd, i, doMore;
+   char blankSector[512], goOn;
+
+   for (i = 0; i < 512; i++) {
+      blankSector[i] = '\0';
+   } // for
+
+   printf("\a\aAbout to wipe out GPT on %s. Proceed? ", device);
+   goOn = GetYN();
+   if (goOn == 'Y') {
+      fd = open(device, O_WRONLY);
+#ifdef __APPLE__
+      // MacOS X requires a shared lock under some circumstances....
+      if (fd < 0) {
+         fd = open(device, O_WRONLY|O_SHLOCK);
+      } // if
+#endif
+      if (fd != -1) {
+         lseek64(fd, mainHeader.currentLBA * 512, SEEK_SET); // seek to GPT header
+         write(fd, blankSector, 512); // blank it out
+         lseek64(fd, mainHeader.partitionEntriesLBA * 512, SEEK_SET); // seek to partition table
+         for (i = 0; i < GetBlocksInPartTable(); i++)
+            write(fd, blankSector, 512);
+         lseek64(fd, secondHeader.partitionEntriesLBA * 512, SEEK_SET); // seek to partition table
+         for (i = 0; i < GetBlocksInPartTable(); i++)
+            write(fd, blankSector, 512);
+         lseek64(fd, secondHeader.currentLBA * 512, SEEK_SET); // seek to GPT header
+         write(fd, blankSector, 512); // blank it out
+	 printf("Blank out MBR? ");
+	 if (GetYN() == 'Y') {
+            lseek64(fd, 0, SEEK_SET);
+            write(fd, blankSector, 512); // blank it out
+         } // if blank MBR
+         close(fd);
+	 printf("GPT data structures destroyed! You may now partition the disk using fdisk or\n"
+                "other utilities. Program will now terminate.\n");
+      } else {
+         printf("Problem opening %s for writing! Program will now terminate.\n");
+      } // if/else (fd != -1)
+   } // if (goOn == 'Y')
+   return (goOn == 'Y');
+} // GPTData::DestroyGPT()
 
 // Check to be sure that data type sizes are correct. The basic types (uint*_t) should
 // never fail these tests, but the struct types may fail depending on compile options.
