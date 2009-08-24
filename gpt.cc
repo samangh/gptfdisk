@@ -209,8 +209,11 @@ int GPTData::LoadPartitions(char* deviceFilename) {
       CheckGPTSize();
    } else {
       allOK = 0;
-      fprintf(stderr, "Problem opening %s for reading!\n",
-              deviceFilename);
+      fprintf(stderr, "Problem opening %s for reading! Error is %d\n",
+              deviceFilename, errno);
+      if (errno == EACCES) { // User is probably not running as root
+         fprintf(stderr, "You must run this program as root or use sudo!\n");
+      } // if
    } // if/else
    return (allOK);
 } // GPTData::LoadPartitions()
@@ -466,14 +469,14 @@ void GPTData::DisplayGPTData(void) {
    totalFree = FindFreeBlocks(&i, &temp);
    printf("Total free space is %llu sectors (%s)\n", totalFree,
           BytesToSI(totalFree * (uint64_t) blockSize, sizeInSI));
-   printf("\nNumber  Start (block)     End (block)  Size        Code  Name\n");
+   printf("\nNumber  Start (sector)    End (sector)  Size       Code  Name\n");
    for (i = 0; i < mainHeader.numParts; i++) {
       if (partitions[i].firstLBA != 0) {
          BytesToSI(blockSize * (partitions[i].lastLBA - partitions[i].firstLBA + 1),
                    sizeInSI);
-         printf("%4d  %14lu  %14lu  ", i + 1, (unsigned long) partitions[i].firstLBA,
+         printf("%4d  %14lu  %14lu", i + 1, (unsigned long) partitions[i].firstLBA,
                 (unsigned long) partitions[i].lastLBA);
-         printf(" %-10s  %04X  ", sizeInSI,
+         printf("   %-10s  %04X  ", sizeInSI,
                 typeHelper.GUIDToID(partitions[i].partitionType));
          j = 0;
          while ((partitions[i].name[j] != '\0') && (j < 44)) {
@@ -517,7 +520,7 @@ void GPTData::ShowPartDetails(uint32_t partNum) {
              partitions[partNum].lastLBA,
 	     BytesToSI(partitions[partNum].lastLBA * blockSize, temp));
       size = (partitions[partNum].lastLBA - partitions[partNum].firstLBA + 1);
-      printf("Partition size: %llu sectprs (%s)\n", (unsigned long long)
+      printf("Partition size: %llu sectors (%s)\n", (unsigned long long)
              size, BytesToSI(size * ((uint64_t) blockSize), temp));
       printf("Attribute flags: %016llx\n", (unsigned long long)
              partitions[partNum].attributes);
@@ -1312,9 +1315,10 @@ uint64_t GPTData::FindFreeBlocks(int *numSegments, uint64_t *largestSegment) {
 void GPTData::MakeHybrid(void) {
    uint32_t partNums[3];
    char line[255];
-   int numParts, i, j, typeCode, bootable;
+   int numParts, i, j, typeCode, bootable, mbrNum;
    uint64_t length;
    char fillItUp = 'M'; // fill extra partition entries? (Yes/No/Maybe)
+   char eeFirst; // Whether EFI GPT (0xEE) partition comes first in table
 
    printf("\nWARNING! Hybrid MBRs are flaky and potentially dangerous! If you decide not\n"
           "to use one, just hit the Enter key at the below prompt and your MBR\n"
@@ -1332,21 +1336,31 @@ void GPTData::MakeHybrid(void) {
       // alone....
       protectiveMBR.EmptyMBR(0);
       protectiveMBR.SetDiskSize(diskSize);
+      printf("Place EFI GPT (0xEE) partition first in MBR (good for GRUB)? ");
+      eeFirst = GetYN();
    } // if
 
    for (i = 0; i < numParts; i++) {
       j = partNums[i] - 1;
-      printf("Creating entry for partition #%d\n", j + 1);
+      printf("\nCreating entry for partition #%d\n", j + 1);
       if ((j >= 0) && (j < mainHeader.numParts)) {
          if (partitions[j].lastLBA < UINT32_MAX) {
-            printf("Enter an MBR hex code (suggested %02X): ",
-                   typeHelper.GUIDToID(partitions[j].partitionType) / 256);
-            fgets(line, 255, stdin);
-	    sscanf(line, "%x", &typeCode);
+            do {
+               printf("Enter an MBR hex code (default %02X): ",
+                      typeHelper.GUIDToID(partitions[j].partitionType) / 256);
+               fgets(line, 255, stdin);
+               sscanf(line, "%x", &typeCode);
+               if (line[0] == '\n')
+                 typeCode = typeHelper.GUIDToID(partitions[j].partitionType) / 256;
+            } while ((typeCode <= 0) || (typeCode > 255));
 	    printf("Set the bootable flag? ");
 	    bootable = (GetYN() == 'Y');
             length = partitions[j].lastLBA - partitions[j].firstLBA + UINT64_C(1);
-            protectiveMBR.MakePart(i, (uint32_t) partitions[j].firstLBA,
+            if (eeFirst == 'Y')
+               mbrNum = i + 1;
+            else
+               mbrNum = i;
+            protectiveMBR.MakePart(mbrNum, (uint32_t) partitions[j].firstLBA,
                     (uint32_t) length, typeCode, bootable);
          } else { // partition out of range
             printf("Partition %d ends beyond the 2TiB limit of MBR partitions; omitting it.\n",
@@ -1365,7 +1379,11 @@ void GPTData::MakeHybrid(void) {
       // gptsync utility does. This is because Windows seems to choke on
       // disks with a 0xEE partition in the first slot and subsequent
       // additional partitions, unless it boots from the disk.
-      protectiveMBR.MakePart(numParts, 1, protectiveMBR.FindLastInFree(1), 0xEE);
+      if (eeFirst == 'Y')
+         mbrNum = 0;
+      else
+         mbrNum = numParts;
+      protectiveMBR.MakePart(mbrNum, 1, protectiveMBR.FindLastInFree(1), 0xEE);
 
       // ... and for good measure, if there are any partition spaces left,
       // optionally create more protective EFI partitions to cover as much
@@ -1373,18 +1391,20 @@ void GPTData::MakeHybrid(void) {
       for (i = 0; i < 4; i++) {
          if (protectiveMBR.GetType(i) == 0x00) { // unused entry....
 	    if (fillItUp == 'M') {
-	       printf("Unused partition space(s) found. Use one to protect more partitions? ");
+	       printf("\nUnused partition space(s) found. Use one to protect more partitions? ");
 	       fillItUp = GetYN();
 	       typeCode = 0x00; // use this to flag a need to get type code
 	    } // if
 	    if (fillItUp == 'Y') {
-	       if (typeCode == 0x00) {
-	          printf("Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ");
+               while ((typeCode <= 0) || (typeCode > 255)) {
+                  printf("Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ");
                   // Comment on above: Mac OS treats disks with more than one
-		  // 0xEE MBR partition as MBR disks, not as GPT disks.
+                  // 0xEE MBR partition as MBR disks, not as GPT disks.
                   fgets(line, 255, stdin);
                   sscanf(line, "%x", &typeCode);
-               } // if (typeCode == 0x00)
+                  if (line[0] == '\n')
+                     typeCode = 0;
+               } // while
                protectiveMBR.MakeBiggestPart(i, typeCode); // make a partition
             } // if (fillItUp == 'Y')
          } // if unused entry

@@ -96,6 +96,7 @@ uint64_t GetLastSector(uint64_t low, uint64_t high, char prompt[]) {
       if (num <= 0) {
          response = (unsigned long long) high;
 	 suffix = ' ';
+         plusFlag = 0;
       } // if
 
       // Set multiplier based on suffix
@@ -124,7 +125,7 @@ uint64_t GetLastSector(uint64_t low, uint64_t high, char prompt[]) {
       response *= (unsigned long long) mult;
       if (plusFlag == 1) {
          response = response + (unsigned long long) low - 1;
-      } // if/else
+      } // if
    } // while
    return ((uint64_t) response);
 } // GetLastSector()

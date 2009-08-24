@@ -1,3 +1,30 @@
+0.3.4:
+------
+
+- Fixed bug that enabled (possibly accidental) entry of MBR type codes of
+  0x00 in GPTData::MakeHybrid(). The fix also enables entry of default
+  type code by pressing the Enter key when prompted. Applied a similar
+  fix to the entry of the type code for the second protective partition,
+  if one is used.
+
+- Fixed a typo: "sectors" was spelled "sectprs" in one spot!
+
+- Fixed bug that caused default entry for end sector to be refused if an
+  initial value using a plus sign (e.g., "+20G") was also refused.
+
+0.3.3:
+------
+
+- Gave users control over the way MBR partitions are assigned to slots in a
+  hybrid MBR setup; the original method (putting the 0xEE partition after
+  the real partitions) works well for non-boot disks, but both GRUB and
+  GRUB2 become confused by this type of setup, so it needs changing.
+
+- Changed "blocks" to "sectors" in GPT and MBR table displays.
+
+- Added "Boot" column to MBR table display; shows an asterisk (*) when the
+  partition's status is bootable.
+
 0.3.2:
 ------
 

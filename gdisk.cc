@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version 0.3.2\n\n");
+   printf("GPT fdisk (gdisk) version 0.3.4\n\n");
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {

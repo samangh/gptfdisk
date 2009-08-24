@@ -265,13 +265,19 @@ int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
 void MBRData::DisplayMBRData(void) {
    int i;
    char tempStr[255];
+   char bootCode;
 
    printf("MBR disk identifier: 0x%08X\n", (unsigned int) diskSignature);
    printf("MBR partitions:\n");
-   printf("Number\t Start (block)\t Length (blocks)\tType\n");
+   printf("Number\t Boot\t Start (sector)\t Length (sectors)\tType\n");
    for (i = 0; i < 4; i++) {
       if (partitions[i].lengthLBA != 0) {
-         printf("%4d\t%13lu\t%15lu \t0x%02X\n", i + 1, (unsigned long) partitions[i].firstLBA,
+         if (partitions[i].status && 0x80) // it's bootable
+	    bootCode = '*';
+         else
+            bootCode = ' ';
+         printf("%4d\t   %c\t%13lu\t%15lu \t0x%02X\n", i + 1, bootCode,
+                (unsigned long) partitions[i].firstLBA,
                 (unsigned long) partitions[i].lengthLBA, partitions[i].partitionType);
       } // if
    } // for
