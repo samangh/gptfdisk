@@ -38,7 +38,7 @@ Installing
 
 To compile gdisk, you must have appropriate development tools installed,
 most notably the GNU Compiler Collection (GCC) and its g++ compiler for
-C++. uncompress the package and type "make" at the command prompt in the
+C++. Uncompress the package and type "make" at the command prompt in the
 resulting directory. The result should be a program file called gdisk. You
 can use this in place or copy the file to a suitable directory, such as
 /usr/local/sbin. You can copy the man page (gdisk.8) to /usr/local/man/man8
@@ -55,20 +55,15 @@ extensive changes to a handful of 80-160 GiB hard disks. I believe all
 data-corruption bugs to be squashed, but I know full well that the odds of
 my missing something are high. This is particularly true for large drives;
 I have no way of testing the software with > 2TiB drives, which will test
-the 64-bit sector pointer support.
-
-The MBR-to-GPT feature seems to work well for data drives, but it's largely
-untested on boot drives. One attempt with Windows failed miserably, but I
-believe that was because of Windows' inherent limitations with respect to
-GPT. (The partitions themselves were intact.)
+the 64-bit sector pointer support. I've received user reports of success
+with >2TiB drives, though.
 
 My main development platform is a system running the 64-bit version of
-Ubuntu. I've also tested on 64-bit OpenSuSE and 32-bit Fedora 10. Problems
-relating to 64-bit integers on the 32-bit Linux have been common during
-development and may crop up in the future. The Mac OS X support is new,
-and has at least one bug/limitation: It seems to be impossible to write
-a new partition table if any partitions from the disk are currently
-mounted.
+Ubuntu 8.04. I've also tested on 64-bit OpenSuSE, 32-bit Fedora 10, 32-bit
+Ubuntu 6.10, 64-bit Gentoo, 32-bit PowerPC Linux, and 32-bit Intel-based
+Mac OS X. Problems relating to 64-bit integers on the 32-bit Linux have
+been common during development and may crop up in the future. The Mac OS
+X and big-endian (PowerPC) support is new.
 
 Redistribution
 --------------

@@ -182,13 +182,11 @@ int GPTData::LoadPartitions(char* deviceFilename) {
 
       switch (UseWhichPartitions()) {
          case use_mbr:
-//            printf("In LoadPartitions(), using MBR\n");
             XFormPartitions(&protectiveMBR);
             break;
          case use_gpt:
             break;
          case use_new:
-//            printf("In LoadPartitions(), making new\n");
             ClearGPTData();
             protectiveMBR.MakeProtectiveMBR();
             break;
@@ -230,6 +228,8 @@ int GPTData::ForceLoadGPTData(int fd) {
    lseek64(fd, 512, SEEK_SET);
    read(fd, &mainHeader, 512); // read main GPT header
    mainCrcOk = CheckHeaderCRC(&mainHeader);
+   if (IsLittleEndian() == 0) // big-endian system; adjust header byte order....
+      ReverseHeaderBytes(&mainHeader);
 
    // Load backup header, check its CRC, and store the results of
    // the check for future reference
@@ -237,6 +237,8 @@ int GPTData::ForceLoadGPTData(int fd) {
    if (lseek64(fd, seekTo, SEEK_SET) != (off_t) -1) {
       read(fd, &secondHeader, 512); // read secondary GPT header
       secondCrcOk = CheckHeaderCRC(&secondHeader);
+      if (IsLittleEndian() == 0) // big-endian system; adjust header byte order....
+         ReverseHeaderBytes(&secondHeader);
    } else {
       allOK = 0;
       state = gpt_invalid;
@@ -319,6 +321,8 @@ int GPTData::LoadMainTable(void) {
       read(fd, partitions, sizeOfParts);
       newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
       mainPartsCrcOk = (newCRC == mainHeader.partitionEntriesCRC);
+      if (IsLittleEndian() == 0)
+         ReversePartitionBytes();
       retval = 1;
    } // if
    return retval;
@@ -334,7 +338,7 @@ WhichToUse GPTData::UseWhichPartitions(void) {
 
    mbrState = protectiveMBR.GetValidity();
 
-   if ((state == gpt_invalid) && (mbrState == mbr)) {
+   if ((state == gpt_invalid) && ((mbrState == mbr) || (mbrState == hybrid))) {
       printf("\n\a***************************************************************\n"
                     "Found invalid GPT and valid MBR; converting MBR to GPT format.\n"
              "THIS OPERATON IS POTENTIALLY DESTRUCTIVE! Exit by typing 'q' if\n"
@@ -342,8 +346,14 @@ WhichToUse GPTData::UseWhichPartitions(void) {
              "***************************************************************\n\n");
       which = use_mbr;
    } // if
+
    if ((state == gpt_valid) && (mbrState == gpt)) {
       printf("Found valid GPT with protective MBR; using GPT.\n");
+      which = use_gpt;
+   } // if
+   if ((state == gpt_valid) && (mbrState == hybrid)) {
+      printf("Found valid GPT with hybrid MBR; using GPT.\n");
+      printf("\aIf you change GPT partitions' sizes, you may need to re-create the hybrid MBR!\n");
       which = use_gpt;
    } // if
    if ((state == gpt_valid) && (mbrState == invalid)) {
@@ -366,7 +376,7 @@ WhichToUse GPTData::UseWhichPartitions(void) {
    // Nasty decisions here -- GPT is present, but corrupt (bad CRCs or other
    // problems)
    if (state == gpt_corrupt) {
-      if (mbrState == mbr) {
+      if ((mbrState == mbr) || (mbrState == hybrid)) {
          printf("Found valid MBR and corrupt GPT. Which do you want to use? (Using the\n"
                 "GPT MAY permit recovery of GPT data.)\n");
          answer = GetNumber(1, 3, 2, (char*) " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
@@ -383,13 +393,13 @@ WhichToUse GPTData::UseWhichPartitions(void) {
          if (answer == 1) {
             which = use_gpt;
          } else which = use_new;
-      } else {
+      } else { // corrupt GPT, MBR indicates it's a GPT disk....
          printf("\a\a****************************************************************************\n"
                 "Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk\n"
                 "verification and recovery are STRONGLY recommended.\n"
                 "****************************************************************************\n");
-      } // if
-   } // if
+      } // if/else/else
+   } // if (corrupt GPT)
 
    if (which == use_new)
       printf("Creating new GPT entries.\n");
@@ -717,14 +727,11 @@ int GPTData::XFormPartitions(MBRData* origParts) {
    else
       numToConvert = mainHeader.numParts;
 
-//   printf("In XFormPartitions(), numToConvert = %d\n", numToConvert);
-
    for (i = 0; i < numToConvert; i++) {
       origType = origParts->GetType(i);
-//      printf("Converting partition of type 0x%02X\n", (int) origType);
 
-      // don't convert extended partitions or null (non-existent) partitions
-      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x00)) {
+      // don't convert extended, hybrid protective, or null (non-existent) partitions
+      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x00) && (origType != 0xEE)) {
          partitions[i].firstLBA = (uint64_t) origParts->GetFirstSector(i);
          partitions[i].lastLBA = partitions[i].firstLBA + (uint64_t)
                                  origParts->GetLength(i) - 1;
@@ -1034,16 +1041,29 @@ int GPTData::CheckHeaderValidity(void) {
              (unsigned long) mainHeader.revision, UINT32_C(0x00010000));
    } // if/else/if
 
+   // If MBR bad, check for an Apple disk signature
+   if ((protectiveMBR.GetValidity() == invalid) && 
+       (((mainHeader.signature << 32) == APM_SIGNATURE1) ||
+        (mainHeader.signature << 32) == APM_SIGNATURE2)) {
+      printf("\n*******************************************************************\n");
+      printf("This disk appears to contain an Apple-format (APM) partition table!\n");
+      printf("*******************************************************************\n\n\a");
+   } // if
+
    return valid;
 } // GPTData::CheckHeaderValidity()
 
 // Check the header CRC to see if it's OK...
+// Note: Must be called BEFORE byte-order reversal on big-endian
+// systems!
 int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
    uint32_t oldCRC, newCRC;
 
-   // Back up old header and then blank it, since it must be 0 for
+   // Back up old header CRC and then blank it, since it must be 0 for
    // computation to be valid
    oldCRC = header->headerCRC;
+   if (IsLittleEndian() == 0)
+      ReverseBytes((char*) &oldCRC, 4);
    header->headerCRC = UINT32_C(0);
 
    // Initialize CRC functions...
@@ -1055,18 +1075,29 @@ int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
    return (oldCRC == newCRC);
 } // GPTData::CheckHeaderCRC()
 
-// Recompute all the CRCs. Must be called before saving if any changes
-// have been made.
+// Recompute all the CRCs. Must be called before saving (but after reversing
+// byte order on big-endian systems) if any changes have been made.
 void GPTData::RecomputeCRCs(void) {
    uint32_t crc;
+   uint32_t trueNumParts, crcTemp;
+   int littleEndian = 1;
 
    // Initialize CRC functions...
    chksum_crc32gentab();
 
+   littleEndian = IsLittleEndian();
+
    // Compute CRC of partition tables & store in main and secondary headers
-   crc = chksum_crc32((unsigned char*) partitions, mainHeader.numParts * GPT_SIZE);
+   trueNumParts = mainHeader.numParts;
+   if (littleEndian == 0)
+      ReverseBytes((char*) &trueNumParts, 4); // unreverse this key piece of data....
+   crc = chksum_crc32((unsigned char*) partitions, trueNumParts * GPT_SIZE);
    mainHeader.partitionEntriesCRC = crc;
    secondHeader.partitionEntriesCRC = crc;
+   if (littleEndian == 0) {
+      ReverseBytes((char*) &mainHeader.partitionEntriesCRC, 4);
+      ReverseBytes((char*) &secondHeader.partitionEntriesCRC, 4);
+   } // if
 
    // Zero out GPT tables' own CRCs (required for correct computation)
    mainHeader.headerCRC = 0;
@@ -1074,8 +1105,12 @@ void GPTData::RecomputeCRCs(void) {
 
    // Compute & store CRCs of main & secondary headers...
    crc = chksum_crc32((unsigned char*) &mainHeader, HEADER_SIZE);
+   if (littleEndian == 0)
+      ReverseBytes((char*) &crc, 4);
    mainHeader.headerCRC = crc;
    crc = chksum_crc32((unsigned char*) &secondHeader, HEADER_SIZE);
+   if (littleEndian == 0)
+      ReverseBytes((char*) &crc, 4);
    secondHeader.headerCRC = crc;
 } // GPTData::RecomputeCRCs()
 
@@ -1271,6 +1306,8 @@ void GPTData::LoadSecondTableAsMain(void) {
          newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
          secondPartsCrcOk = (newCRC == secondHeader.partitionEntriesCRC);
 	 mainPartsCrcOk = secondPartsCrcOk;
+         if (IsLittleEndian() == 0)
+            ReversePartitionBytes();
          if (!secondPartsCrcOk) {
             printf("Error! After loading backup partitions, the CRC still doesn't check out!\n");
          } // if
@@ -1424,6 +1461,7 @@ int GPTData::SaveGPTData(void) {
    char answer, line[256];
    int fd;
    uint64_t secondTable;
+   uint32_t numParts;
    off_t offset;
 
    if (strlen(device) == 0) {
@@ -1463,6 +1501,17 @@ int GPTData::SaveGPTData(void) {
       } // for j...
    } // for i...
 
+   // Pull out some data that's needed before doing byte-order reversal on
+   // big-endian systems....
+   numParts = mainHeader.numParts;
+   secondTable = secondHeader.partitionEntriesLBA;
+   if (IsLittleEndian() == 0) {
+      // Reverse partition bytes first, since that function requires non-reversed
+      // data from the main header....
+      ReversePartitionBytes();
+      ReverseHeaderBytes(&mainHeader);
+      ReverseHeaderBytes(&secondHeader);
+   } // if
    RecomputeCRCs();
 
    if (allOK) {
@@ -1499,13 +1548,12 @@ int GPTData::SaveGPTData(void) {
 
          // Now write the main partition tables...
 	 if (allOK) {
-	    if (write(fd, partitions, GPT_SIZE * mainHeader.numParts) == -1)
+	    if (write(fd, partitions, GPT_SIZE * numParts) == -1)
                allOK = 0;
          } // if
 
          // Now seek to near the end to write the secondary GPT....
 	 if (allOK) {
-            secondTable = secondHeader.partitionEntriesLBA;
             offset = (off_t) secondTable * (off_t) (blockSize);
             if (lseek64(fd, offset, SEEK_SET) == (off_t) - 1) {
                allOK = 0;
@@ -1515,7 +1563,7 @@ int GPTData::SaveGPTData(void) {
 
          // Now write the secondary partition tables....
 	 if (allOK)
-            if (write(fd, partitions, GPT_SIZE * mainHeader.numParts) == -1)
+            if (write(fd, partitions, GPT_SIZE * numParts) == -1)
                allOK = 0;
 
          // Now write the secondary GPT header...
@@ -1558,6 +1606,14 @@ int GPTData::SaveGPTData(void) {
       printf("Aborting write of new partition table.\n");
    } // if
 
+   if (IsLittleEndian() == 0) {
+      // Reverse (normalize) header bytes first, since ReversePartitionBytes()
+      // requires non-reversed data in mainHeader...
+      ReverseHeaderBytes(&mainHeader);
+      ReverseHeaderBytes(&secondHeader);
+      ReversePartitionBytes();
+   } // if
+
    return (allOK);
 } // GPTData::SaveGPTData()
 
@@ -1568,10 +1624,19 @@ int GPTData::SaveGPTData(void) {
 // table; it discards the backup partition table, since it should be
 // identical to the main partition table on healthy disks.
 int GPTData::SaveGPTBackup(char* filename) {
-   int fd, allOK = 1;;
+   int fd, allOK = 1;
+   uint32_t numParts;
 
    if ((fd = open(filename, O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH)) != -1) {
-      // First, write the protective MBR...
+      // Reverse the byte order, if necessary....
+      numParts = mainHeader.numParts;
+      if (IsLittleEndian() == 0) {
+         ReversePartitionBytes();
+         ReverseHeaderBytes(&mainHeader);
+         ReverseHeaderBytes(&secondHeader);
+      } // if
+
+      // Now write the protective MBR...
       protectiveMBR.WriteMBRData(fd);
 
       // Now write the main GPT header...
@@ -1586,7 +1651,7 @@ int GPTData::SaveGPTBackup(char* filename) {
 
       // Now write the main partition tables...
       if (allOK) {
-         if (write(fd, partitions, GPT_SIZE * mainHeader.numParts) == -1)
+         if (write(fd, partitions, GPT_SIZE * numParts) == -1)
             allOK = 0;
       } // if
 
@@ -1597,6 +1662,13 @@ int GPTData::SaveGPTBackup(char* filename) {
          printf("It may not be useable!\n");
       } // if/else
       close(fd);
+
+      // Now reverse the byte-order reversal, if necessary....
+      if (IsLittleEndian() == 0) {
+         ReverseHeaderBytes(&mainHeader);
+         ReverseHeaderBytes(&secondHeader);
+         ReversePartitionBytes();
+      } // if
    } else {
       fprintf(stderr, "Unable to open file %s for writing! Aborting!\n", filename);
       allOK = 0;
@@ -1611,8 +1683,12 @@ int GPTData::SaveGPTBackup(char* filename) {
 int GPTData::LoadGPTBackup(char* filename) {
    int fd, allOK = 1, val;
    uint32_t numParts, sizeOfEntries, sizeOfParts, newCRC;
+   int littleEndian = 1;
 
    if ((fd = open(filename, O_RDONLY)) != -1) {
+      if (IsLittleEndian() == 0)
+         littleEndian = 0;
+
       // Let the MBRData class load the saved MBR...
       protectiveMBR.ReadMBRData(fd);
 
@@ -1621,10 +1697,20 @@ int GPTData::LoadGPTBackup(char* filename) {
       read(fd, &mainHeader, 512);
       mainCrcOk = CheckHeaderCRC(&mainHeader);
 
+      // Reverse byte order, if necessary
+      if (littleEndian == 0) {
+         ReverseHeaderBytes(&mainHeader);
+      } // if
+
       // Load the backup GPT header in much the same way as the main
       // GPT header....
       read(fd, &secondHeader, 512);
       secondCrcOk = CheckHeaderCRC(&secondHeader);
+
+      // Reverse byte order, if necessary
+      if (littleEndian == 0) {
+         ReverseHeaderBytes(&secondHeader);
+      } // if
 
       // Return valid headers code: 0 = both headers bad; 1 = main header
       // good, backup bad; 2 = backup header good, main header bad;
@@ -1660,6 +1746,11 @@ int GPTData::LoadGPTBackup(char* filename) {
          newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
          mainPartsCrcOk = (newCRC == mainHeader.partitionEntriesCRC);
          secondPartsCrcOk = (newCRC == secondHeader.partitionEntriesCRC);
+         // Reverse byte order, if necessary
+            if (littleEndian == 0) {
+               ReversePartitionBytes();
+            } // if
+
       } else {
          allOK = 0;
       } // if/else
@@ -1722,16 +1813,60 @@ int GPTData::DestroyGPT(void) {
    return (goOn == 'Y');
 } // GPTData::DestroyGPT()
 
+void GPTData::ReverseHeaderBytes(struct GPTHeader* header) {
+   ReverseBytes((char*) &header->signature, 8);
+   ReverseBytes((char*) &header->revision, 4);
+   ReverseBytes((char*) &header->headerSize, 4);
+   ReverseBytes((char*) &header->headerCRC, 4);
+   ReverseBytes((char*) &header->reserved, 4);
+   ReverseBytes((char*) &header->currentLBA, 8);
+   ReverseBytes((char*) &header->backupLBA, 8);
+   ReverseBytes((char*) &header->firstUsableLBA, 8);
+   ReverseBytes((char*) &header->lastUsableLBA, 8);
+   ReverseBytes((char*) &header->partitionEntriesLBA, 8);
+   ReverseBytes((char*) &header->numParts, 4);
+   ReverseBytes((char*) &header->sizeOfPartitionEntries, 4);
+   ReverseBytes((char*) &header->partitionEntriesCRC, 4);
+   ReverseBytes((char*) header->reserved2, GPT_RESERVED);
+   ReverseBytes((char*) &header->diskGUID.data1, 8);
+   ReverseBytes((char*) &header->diskGUID.data2, 8);
+} // GPTData::ReverseHeaderBytes()
+
+// IMPORTANT NOTE: This function requires non-reversed mainHeader
+// structure!
+void GPTData::ReversePartitionBytes() {
+   uint32_t i;
+
+   // Check GPT signature on big-endian systems; this will mismatch
+   // if the function is called out of order. Unfortunately, it'll also
+   // mismatch if there's data corruption.
+   if ((mainHeader.signature != GPT_SIGNATURE) && (IsLittleEndian() == 0)) {
+      printf("GPT signature mismatch in GPTData::ReversePartitionBytes(). This indicates\n"
+             "data corruption or a misplaced call to this function.\n");
+   } // if signature mismatch....
+   for (i = 0; i < mainHeader.numParts; i++) {
+      ReverseBytes((char*) &partitions[i].partitionType.data1, 8);
+      ReverseBytes((char*) &partitions[i].partitionType.data2, 8);
+      ReverseBytes((char*) &partitions[i].uniqueGUID.data1, 8);
+      ReverseBytes((char*) &partitions[i].uniqueGUID.data2, 8);
+      ReverseBytes((char*) &partitions[i].firstLBA, 8);
+      ReverseBytes((char*) &partitions[i].lastLBA, 8);
+      ReverseBytes((char*) &partitions[i].attributes, 8);
+   } // for
+} // GPTData::ReversePartitionBytes()
+
+/******************************************
+ *                                        *
+ * Additional non-class support functions *
+ *                                        *
+ ******************************************/
+
 // Check to be sure that data type sizes are correct. The basic types (uint*_t) should
 // never fail these tests, but the struct types may fail depending on compile options.
 // Specifically, the -fpack-struct option to gcc may be required to ensure proper structure
 // sizes.
 int SizesOK(void) {
    int allOK = 1;
-   union {
-      uint32_t num;
-      unsigned char uc[sizeof(uint32_t)];
-   } endian;
 
    if (sizeof(uint8_t) != 1) {
       fprintf(stderr, "uint8_t is %d bytes, should be 1 byte; aborting!\n", sizeof(uint8_t));
@@ -1762,11 +1897,10 @@ int SizesOK(void) {
       allOK = 0;
    } // if
    // Determine endianness; set allOK = 0 if running on big-endian hardware
-   endian.num = 1;
-   if (endian.uc[0] != (unsigned char) 1) {
-      fprintf(stderr, "Running on big-endian hardware, but this program only works on little-endian\n"
-                      "systems; aborting!\n");
-      allOK = 0;
+   if (IsLittleEndian() == 0) {
+      fprintf(stderr, "\aRunning on big-endian hardware. Big-endian support is new and poorly"
+              " tested!\nBeware!\n");
+      // allOK = 0;
    } // if
    return (allOK);
 } // SizesOK()

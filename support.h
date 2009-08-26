@@ -38,6 +38,8 @@ char* BytesToSI(uint64_t size, char theValue[]);
 int GetBlockSize(int fd);
 char* GUIDToStr(struct GUIDData theGUID, char* theString);
 GUIDData GetGUID(void);
+int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
+void ReverseBytes(char* theValue, int numBytes); // Reverses byte-order of theValue
 uint64_t PowerOf2(int value);
 
 uint64_t disksize(int fd, int* err);

@@ -12,6 +12,9 @@
 #define __GPTSTRUCTS
 
 #define GPT_SIGNATURE UINT64_C(0x5452415020494645)
+// Signatures for Apple (APM) disks, multiplied by 0x100000000
+#define APM_SIGNATURE1 UINT64_C(0x00004D5000000000)
+#define APM_SIGNATURE2 UINT64_C(0x0000535400000000)
 
 /* Number and size of GPT entries... */
 #define NUM_GPT_ENTRIES 128
@@ -132,6 +135,8 @@ public:
    int SaveGPTBackup(char* filename);
    int LoadGPTBackup(char* filename);
    int DestroyGPT(void); // Returns 1 if user proceeds
+   void ReverseHeaderBytes(struct GPTHeader* header); // for endianness
+   void ReversePartitionBytes(); // for endianness
 
    // Return data about the GPT structures....
    uint32_t GetNumParts(void) {return mainHeader.numParts;}

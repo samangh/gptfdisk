@@ -141,6 +141,18 @@ void MBRData::ReadMBRData(int fd) {
    read(fd, &nulls, 2);
    read(fd, partitions, 64);
    read(fd, &MBRSignature, 2);
+
+   // Reverse the byte order, if necessary
+   if (IsLittleEndian() == 0) {
+      ReverseBytes((char*) &diskSignature, 4);
+      ReverseBytes((char*) &nulls, 2);
+      ReverseBytes((char*) &MBRSignature, 2);
+      for (i = 0; i < 4; i++) {
+         ReverseBytes((char*) &partitions[i].firstLBA, 4);
+         ReverseBytes((char*) &partitions[i].lengthLBA, 4);
+      } // for
+   } // if
+
    if (MBRSignature != MBR_SIGNATURE) {
       allOK = 0;
       state = invalid;
@@ -179,9 +191,19 @@ void MBRData::ReadMBRData(int fd) {
       for (i = 0; i < 4; i++) {
          if (partitions[i].partitionType == UINT8_C(0xEE)) {
             state = gpt;
-         } /* if */
-      } /* for */
-   } /* if */
+         } // if
+      } // for
+   } // if
+
+   // If there's an EFI GPT partition, look for other partition types,
+   // to flag as hybrid
+   if (state == gpt) {
+      for (i = 0 ; i < 4; i++) {
+         if ((partitions[i].partitionType != UINT8_C(0xEE)) &&
+             (partitions[i].partitionType != UINT8_C(0x00)))
+            state = hybrid;
+      } // for
+   } // if hybrid
 
 /*   // Tell the user what the MBR state is...
    switch (state) {
@@ -216,11 +238,35 @@ int MBRData::WriteMBRData(void) {
 // Save the MBR data to a file. Note that this function writes ONLY the
 // MBR data, not the logical partitions (if any are defined).
 void MBRData::WriteMBRData(int fd) {
+   int i;
+
+   // Reverse the byte order, if necessary
+   if (IsLittleEndian() == 0) {
+      ReverseBytes((char*) &diskSignature, 4);
+      ReverseBytes((char*) &nulls, 2);
+      ReverseBytes((char*) &MBRSignature, 2);
+      for (i = 0; i < 4; i++) {
+         ReverseBytes((char*) &partitions[i].firstLBA, 4);
+         ReverseBytes((char*) &partitions[i].lengthLBA, 4);
+      } // for
+   } // if
+
    write(fd, code, 440);
    write(fd, &diskSignature, 4);
    write(fd, &nulls, 2);
    write(fd, partitions, 64);
    write(fd, &MBRSignature, 2);
+   
+   // Reverse the byte order, if necessary
+   if (IsLittleEndian() == 0) {
+      ReverseBytes((char*) &diskSignature, 4);
+      ReverseBytes((char*) &nulls, 2);
+      ReverseBytes((char*) &MBRSignature, 2);
+      for (i = 0; i < 4; i++) {
+         ReverseBytes((char*) &partitions[i].firstLBA, 4);
+         ReverseBytes((char*) &partitions[i].lengthLBA, 4);
+      } // for
+   }// if
 } // MBRData::WriteMBRData(int fd)
 
 // This is a recursive function to read all the logical partitions, following the
@@ -240,7 +286,12 @@ int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
       fprintf(stderr, "Error seeking to or reading logical partition data from %lu!\nAborting!\n",
               (unsigned long) offset);
       allOK = 0;
-   }
+   } else if (IsLittleEndian() != 1) { // Reverse byte ordering of some data....
+      ReverseBytes((char*) &ebr.MBRSignature, 2);
+      ReverseBytes((char*) &ebr.partitions[0].firstLBA, 4);
+      ReverseBytes((char*) &ebr.partitions[0].lengthLBA, 4);
+   } // if/else/if
+
    if (ebr.MBRSignature != MBR_SIGNATURE) {
       allOK = 0;
       printf("MBR signature in logical partition invalid; read 0x%04X, but should be 0x%04X\n",

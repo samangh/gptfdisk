@@ -27,7 +27,7 @@ partitions; no redundancy or error correction capabilities; and 32-bit data
 structures that, in conjunction with the common 512-byte sector size,
 impose a hard 2 TiB limit on the size of partitions and disks. This final
 drawback makes MBR partitions unsuitable for use on large hardware RAID
-arrays. Individual disk sizes are expected to reach the 2 TiB limit in
+arrays. Individual disk sizes are expected to surpass the 2 TiB limit in
 2009, so MBR will become an unsuitable partitioning system even for
 individual hard disks in the near future.
 
@@ -94,7 +94,10 @@ program operates mainly on the GPT headers and partition tables; however,
 it can and will generate a fresh protective MBR, when required. (Any boot
 loader code in the protective MBR will not be disturbed.) If you've created
 an unusual protective MBR, such as a hybrid MBR created by
-.IR "gptsync",
+.IR "gptsync"
+or
+.BR "gdisk"'s
+own hybrid MBR creation feature,
 this should not be disturbed by most ordinary actions. Some advanced data
 recovery options require you to understand the distinctions between the
 main and backup data, as well as between the GPT headers and the partition
@@ -102,7 +105,7 @@ tables.
 
 The
 .B "gdisk"
-program employs a user interface similar to that of
+program employs a user interface similar to that of Linux's
 .BR "fdisk",
 but
 .B "gdisk"
@@ -170,13 +173,6 @@ will note that
 .B "gdisk"
 lacks the options and limitations associated with CHS geometries.
 
-For best results, you should always use an OS-specific partition table
-program.  For example, you should make Mac OS X partitions with the Mac OS
-X Disk Utility
-program and Linux partitions with the Linux
-.B "gdisk"
-or GNU Parted program.
-
 Upon start,
 .B gdisk
 attempts to identify the partition type in use on the specified disk. If it
@@ -215,12 +211,22 @@ and in whatever sizes are desired.
 
 .TP
 .B *
-Boot disks for EFI-based systems require an
-.IR "EFI System Partition" (
+Boot disks for EFI-based systems require an "EFI System
+Partition" (
 .B "gdisk"
 internal code 0xEF00) formatted as FAT-32. The recommended size of this
 partition is 100 MiB. Boot-related files are stored here. (Note that GNU
 Parted identifies such partitions as having the "boot flag" set.)
+
+.TP
+.B *
+Some boot loaders for BIOS-based systems make use of a "BIOS Boot
+Partition" (
+.B "gdisk"
+internal code 0xEF02), in which the secondary boot loader is stored,
+possibly without the benefit of a filesystem. This partition can
+typically be quite small (a few tens of kilobytes), but you should
+consult your boot loader documentation for details.
 
 .TP
 .B *
@@ -327,8 +333,8 @@ use the 'i' command.
 .B q
 Quit from the program
 .IR "without saving data".
-Use it if you just wanted to view information or if you make a mistake and
-want to back out of all your changes.
+Use this option if you just wanted to view information or if you make a
+mistake and want to back out of all your changes.
 
 .TP
 .B s
@@ -477,14 +483,16 @@ the main menu.
 .TP
 .B r
 Return to the main menu. You can go back to the main menu with this option.
+
 .TP
 .B s
-Resize partition table. The partition table may be resized with this
-option. The default size is 128 entries. Officially, sizes of less than
-16KB (128 entries, given the normal entry size) are unsupported by the GPT
-specification; however, in practice they seem to work, and can sometimes be
-useful in converting MBR disks. Larger sizes also work fine. Linux imposes
-its own limits on the number of partitions, though.
+Resize partition table. The default partition table size is 128 entries.
+Officially, sizes of less than 16KB (128 entries, given the normal entry
+size) are unsupported by the GPT specification; however, in practice they
+seem to work, and can sometimes be useful in converting MBR disks. Larger
+sizes also work fine. OSes may impose their own limits on the number of
+partitions, though.
+
 .TP
 .B v
 Verify disk. This option is identical to the 'v' option in the main menu.
@@ -510,23 +518,17 @@ entering data. When only one option is possible,
 usually bypasses the prompt entirely.
 
 .SH BUGS
-As of August of 2009 (version 0.3.3),
+As of August of 2009 (version 0.3.5),
 .B gdisk
 should be considered early beta software. Known bugs and
 limitations include:
 
 .TP
 .B *
-The program runs correctly only on little-endian (Intel and similar) CPUs.
-It should fail gracefully on PowerPC and other big-endian CPUs, but this
-hasn't been tested.
-
-.TP
-.B *
 The program compiles correctly only on Linux and Mac OS X. Both 64-bit
 (x86-64) and 32-bit (x86) versions for Linux have been tested, the former
 more thoroughly than the latter. The Mac OS X support was added with
-version 0.3.1 and has not been thoroughly tested.
+version 0.3.1 and has not been as thoroughly tested.
 
 .TP
 .B *
@@ -592,6 +594,10 @@ hybrid MBR (using the 'h' option on the experts' menu) or abandoning GPT in
 favor of MBR may be your only options in this case.
 
 .PP
+
+The support for big-endian CPUs (PowerPC, for example) is new, as of version
+0.3.5. I advise using caution on that platform, particularly with the more
+obscure features of the program.
 
 .SH AUTHORS
 

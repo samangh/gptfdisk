@@ -130,7 +130,6 @@ uint64_t GetLastSector(uint64_t low, uint64_t high, char prompt[]) {
    return ((uint64_t) response);
 } // GetLastSector()
 
-// Return a plain-text name for a partition type.
 // Takes a size in bytes (in size) and converts this to a size in
 // SI units (KiB, MiB, GiB, TiB, or PiB), returned in C++ string
 // form
@@ -182,8 +181,8 @@ int GetBlockSize(int fd) {
 #endif
 
    if (result != 512) {
-      printf("\aWARNING! Sector size is not 512 bytes! This program is likely to");
-      printf("misbehave! Proceed at your own risk!\n\n");
+      printf("\aWARNING! Sector size is not 512 bytes! This program is likely to ");
+      printf("misbehave!\nProceed at your own risk!\n\n");
    } // if
 
    if (err == -1)
@@ -191,6 +190,7 @@ int GetBlockSize(int fd) {
    return (result);
 } // GetBlockSize()
 
+// Return a plain-text name for a partition type.
 // Convert a GUID to a string representation, suitable for display
 // to humans....
 char* GUIDToStr(struct GUIDData theGUID, char* theString) {
@@ -302,6 +302,34 @@ GUIDData GetGUID(void) {
    printf("New GUID: %s\n", GUIDToStr(theGUID, temp));
    return theGUID;
 } // GetGUID()
+
+// Return 1 if the CPU architecture is little endian, 0 if it's big endian....
+int IsLittleEndian(void) {
+   int littleE = 1; // assume little-endian (Intel-style)
+   union {
+      uint32_t num;
+      unsigned char uc[sizeof(uint32_t)];
+   } endian;
+
+   endian.num = 1;
+   if (endian.uc[0] != (unsigned char) 1) {
+      littleE = 0;
+   } // if
+   return (littleE);
+} // IsLittleEndian()
+
+// Reverse the byte order of theValue; numBytes is number of bytes
+void ReverseBytes(char* theValue, int numBytes) {
+   char* tempValue;
+   int i;
+
+   tempValue = (char*) malloc(numBytes);
+   for (i = 0; i < numBytes; i++)
+      tempValue[i] = theValue[i];
+   for (i = 0; i < numBytes; i++)
+      theValue[i] = tempValue[numBytes - i - 1];
+   free(tempValue);
+} // ReverseBytes()
 
 // Compute (2 ^ value). Given the return type, value must be 63 or less.
 // Used in some bit-fiddling functions
