@@ -731,7 +731,8 @@ int GPTData::XFormPartitions(MBRData* origParts) {
       origType = origParts->GetType(i);
 
       // don't convert extended, hybrid protective, or null (non-existent) partitions
-      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x00) && (origType != 0xEE)) {
+      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) && 
+          (origType != 0x00) && (origType != 0xEE)) {
          partitions[i].firstLBA = (uint64_t) origParts->GetFirstSector(i);
          partitions[i].lastLBA = partitions[i].firstLBA + (uint64_t)
                                  origParts->GetLength(i) - 1;
@@ -1904,4 +1905,3 @@ int SizesOK(void) {
    } // if
    return (allOK);
 } // SizesOK()
-

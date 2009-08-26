@@ -78,6 +78,8 @@ public:
    void ReadMBRData(int fd);
    int WriteMBRData(void);
    void WriteMBRData(int fd);
+   // ReadLogicalPart() returns last partition # read to logicals[] array,
+   // or -1 if there was a problem....
    int ReadLogicalPart(int fd, uint32_t extendedStart, uint32_t diskOffset,
                        int partNum);
    void DisplayMBRData(void);

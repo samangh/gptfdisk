@@ -119,7 +119,7 @@ int MBRData::ReadMBRData(char* deviceFilename) {
 
 // Read data from MBR.
 void MBRData::ReadMBRData(int fd) {
-   int allOK = 1, i;
+   int allOK = 1, i, maxLogicals = 0;
    int err;
 
    // Clear logical partition array
@@ -176,9 +176,13 @@ void MBRData::ReadMBRData(int fd) {
          if ((partitions[i].partitionType == 0x05) || (partitions[i].partitionType == 0x0f)
              || (partitions[i].partitionType == 0x85)) {
             // Found it, so call a recursive algorithm to load everything from them....
-            allOK = ReadLogicalPart(fd, partitions[i].firstLBA, UINT32_C(0), 0);
-         } // if
-      } // for
+            maxLogicals = ReadLogicalPart(fd, partitions[i].firstLBA, UINT32_C(0), maxLogicals);
+            if ((maxLogicals < 0) || (maxLogicals > NUM_LOGICALS)) {
+               allOK = 0;
+               fprintf(stderr, "Error reading logical partitions! List may be truncated!\n");
+            } // if maxLogicals valid
+         } // if primary partition is extended
+      } // for primary partition loop
       if (allOK) { // Loaded logicals OK
          state = mbr;
       } else {
@@ -270,46 +274,54 @@ void MBRData::WriteMBRData(int fd) {
 } // MBRData::WriteMBRData(int fd)
 
 // This is a recursive function to read all the logical partitions, following the
-// logical partition linked list from the disk and storing the basic data in 
+// logical partition linked list from the disk and storing the basic data in the
+// logicals[] array. Returns last index to logicals[] uses, or -1 if there was a
+// problem
 int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
                              uint32_t diskOffset, int partNum) {
-   int allOK = 1;
    struct EBRRecord ebr;
    off_t offset;
 
-   offset = (off_t) (extendedStart + diskOffset) * blockSize;
-   if (lseek64(fd, offset, SEEK_SET) == (off_t) -1) { // seek to EBR record
-      fprintf(stderr, "Unable to seek to %lu! Aborting!\n", (unsigned long) offset);
-      allOK = 0;
-   }
-   if (read(fd, &ebr, 512) != 512) { // Load the data....
-      fprintf(stderr, "Error seeking to or reading logical partition data from %lu!\nAborting!\n",
-              (unsigned long) offset);
-      allOK = 0;
-   } else if (IsLittleEndian() != 1) { // Reverse byte ordering of some data....
-      ReverseBytes((char*) &ebr.MBRSignature, 2);
-      ReverseBytes((char*) &ebr.partitions[0].firstLBA, 4);
-      ReverseBytes((char*) &ebr.partitions[0].lengthLBA, 4);
-   } // if/else/if
+   if ((partNum < NUM_LOGICALS) && (partNum >= 0)) {
+      offset = (off_t) (extendedStart + diskOffset) * blockSize;
+      if (lseek64(fd, offset, SEEK_SET) == (off_t) -1) { // seek to EBR record
+         fprintf(stderr, "Unable to seek to %lu! Aborting!\n", (unsigned long) offset);
+         partNum = -1;
+      }
+      if (read(fd, &ebr, 512) != 512) { // Load the data....
+         fprintf(stderr, "Error seeking to or reading logical partition data from %lu!\nAborting!\n",
+                 (unsigned long) offset);
+         partNum = -1;
+      } else if (IsLittleEndian() != 1) { // Reverse byte ordering of some data....
+         ReverseBytes((char*) &ebr.MBRSignature, 2);
+         ReverseBytes((char*) &ebr.partitions[0].firstLBA, 4);
+         ReverseBytes((char*) &ebr.partitions[0].lengthLBA, 4);
+         ReverseBytes((char*) &ebr.partitions[1].firstLBA, 4);
+         ReverseBytes((char*) &ebr.partitions[1].lengthLBA, 4);
+      } // if/else/if
 
-   if (ebr.MBRSignature != MBR_SIGNATURE) {
-      allOK = 0;
-      printf("MBR signature in logical partition invalid; read 0x%04X, but should be 0x%04X\n",
-	     (unsigned int) ebr.MBRSignature, (unsigned int) MBR_SIGNATURE);
-   } /* if */
+      if (ebr.MBRSignature != MBR_SIGNATURE) {
+         partNum = -1;
+         fprintf(stderr, "MBR signature in logical partition invalid; read 0x%04X, but should be 0x%04X\n",
+                (unsigned int) ebr.MBRSignature, (unsigned int) MBR_SIGNATURE);
+      } // if
 
-   // Copy over the basic data....
-   logicals[partNum].status = ebr.partitions[0].status;
-   logicals[partNum].firstLBA = ebr.partitions[0].firstLBA + diskOffset + extendedStart;
-   logicals[partNum].lengthLBA = ebr.partitions[0].lengthLBA;
-   logicals[partNum].partitionType = ebr.partitions[0].partitionType;
+      // Copy over the basic data....
+      logicals[partNum].status = ebr.partitions[0].status;
+      logicals[partNum].firstLBA = ebr.partitions[0].firstLBA + diskOffset + extendedStart;
+      logicals[partNum].lengthLBA = ebr.partitions[0].lengthLBA;
+      logicals[partNum].partitionType = ebr.partitions[0].partitionType;
 
-   // Find the next partition (if there is one) and recurse....
-   if ((ebr.partitions[1].firstLBA != UINT32_C(0)) && allOK) {
-      allOK = ReadLogicalPart(fd, extendedStart, ebr.partitions[1].firstLBA,
-                              partNum + 1);
-   } // if
-   return (allOK);
+      // Find the next partition (if there is one) and recurse....
+      if ((ebr.partitions[1].firstLBA != UINT32_C(0)) && (partNum >= 0) &&
+          (partNum < (NUM_LOGICALS - 1))) {
+         partNum = ReadLogicalPart(fd, extendedStart, ebr.partitions[1].firstLBA,
+                                   partNum + 1);
+         } else {
+            partNum++;
+      } // if another partition
+   } // Not enough space for all the logicals (or previous error encountered)
+   return (partNum);
 } // MBRData::ReadLogicalPart()
 
 // Show the MBR data to the user....

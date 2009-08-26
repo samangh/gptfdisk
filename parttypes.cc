@@ -300,7 +300,8 @@ struct GUIDData PartTypes::IDToGUID(uint16_t ID) {
    } // while
    if (!found) {
       theGUID = IDToGUID(0x0700); // assign a default type code
-      printf("Exact type match not found; assigning type code for 'Linux/Windows data'\n");
+      printf("Exact type match not found for type code %lx; assigning type code for\n'Linux/Windows data'\n",
+             ID);
    } // if (!found)
    return theGUID;
 } // PartTypes::IDToGUID()

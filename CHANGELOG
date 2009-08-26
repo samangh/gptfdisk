@@ -14,6 +14,8 @@
 - Added code to identify and warn of the presence of an Apple Partition
   Map (APM) on the disk.
 
+- Enabled MBR conversion code to handle multiple logical partitions.
+
 0.3.4:
 ------
 
