@@ -4,6 +4,9 @@
 //
 // by Rod Smith, February 2009
 
+/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+  under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
+
 //#include <iostream>
 #include <stdio.h>
 #include <string.h>
@@ -24,7 +27,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version 0.3.5\n\n");
+   printf("GPT fdisk (gdisk) version 0.4.0\n\n");
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {
@@ -65,9 +68,9 @@ int DoCommand(char* filename, struct GPTData* theGPT) {
    fgets(line, 255, stdin);
    sscanf(line, "%c", &command);
    switch (command) {
-/*      case 'b': case 'B':
-         GetGUID();
-	 break; */
+      case 'b': case 'B':
+         theGPT->XFormDisklabel();
+         break;
       case 'c': case 'C':
          if (theGPT->GetPartRange(&temp1, &temp2) > 0)
             theGPT->SetName(theGPT->GetPartNum());
@@ -125,6 +128,7 @@ int DoCommand(char* filename, struct GPTData* theGPT) {
 } // DoCommand()
 
 void ShowCommands(void) {
+   printf("b\tconvert BSD disklabel partitions\n");
    printf("c\tchange a partition's name\n");
    printf("d\tdelete a partition\n");
    printf("i\tshow detailed information on a partition\n");

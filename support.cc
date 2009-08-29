@@ -3,6 +3,9 @@
 // Primarily by Rod Smith, February 2009, but with a few functions
 // copied from other sources (see attributions below).
 
+/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+  under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
+
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
@@ -177,7 +180,11 @@ int GetBlockSize(int fd) {
 #ifdef __APPLE__
    err = ioctl(fd, DKIOCGETBLOCKSIZE, &result);
 #else
+#ifdef __FreeBSD__
+   err = ioctl(fd, DIOCGSECTORSIZE, &result);
+#else
    err = ioctl(fd, BLKSSZGET, &result);
+#endif
 #endif
 
    if (result != 512) {
@@ -319,15 +326,17 @@ int IsLittleEndian(void) {
 } // IsLittleEndian()
 
 // Reverse the byte order of theValue; numBytes is number of bytes
-void ReverseBytes(char* theValue, int numBytes) {
+void ReverseBytes(void* theValue, int numBytes) {
+   char* origValue;
    char* tempValue;
    int i;
 
+   origValue = (char*) theValue;
    tempValue = (char*) malloc(numBytes);
    for (i = 0; i < numBytes; i++)
-      tempValue[i] = theValue[i];
+      tempValue[i] = origValue[i];
    for (i = 0; i < numBytes; i++)
-      theValue[i] = tempValue[numBytes - i - 1];
+      origValue[i] = tempValue[numBytes - i - 1];
    free(tempValue);
 } // ReverseBytes()
 
@@ -344,6 +353,7 @@ uint64_t PowerOf2(int value) {
    } else retval = 0;
    return retval;
 } // PowerOf2()
+
 
 /**************************************************************************************
  *                                                                                    *
@@ -367,6 +377,11 @@ uint64_t disksize(int fd, int *err) {
 #ifdef __APPLE__
 	*err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
 #else
+#ifdef __FreeBSD__
+        *err = ioctl(fd, DIOCGMEDIASIZE, &sz);
+        b = GetBlockSize(fd);
+        sectors = sz / b;
+#else
 	*err = ioctl(fd, BLKGETSIZE, &sz);
 	if (*err) {
 		sz = 0;
@@ -378,6 +393,7 @@ uint64_t disksize(int fd, int *err) {
 		sectors = sz;
 	else
 		sectors = (b >> 9);
+#endif
 #endif
 	return sectors;
 }

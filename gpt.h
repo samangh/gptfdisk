@@ -1,34 +1,21 @@
 /* gpt.h -- GPT and data structure definitions, types, and
    functions */
 
+/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+  under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
+
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include "support.h"
 #include "parttypes.h"
 #include "mbr.h"
+#include "bsd.h"
+#include "gptpart.h"
 
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPT_SIGNATURE UINT64_C(0x5452415020494645)
-// Signatures for Apple (APM) disks, multiplied by 0x100000000
-#define APM_SIGNATURE1 UINT64_C(0x00004D5000000000)
-#define APM_SIGNATURE2 UINT64_C(0x0000535400000000)
-
-/* Number and size of GPT entries... */
-#define NUM_GPT_ENTRIES 128
-#define GPT_SIZE 128
-/* Offset, in 512-byte sectors, for GPT table and partition data.
-   Note this is above two multiplied together, divided by 512, with 2
-   added 
-#define GPT_OFFSET (((NUM_GPT_ENTRIES * GPT_SIZE) / SECTOR_SIZE) + 2)
-*/
-
-#define HEADER_SIZE 92
-
-#define GPT_RESERVED 420
-#define NAME_SIZE 72
 
 using namespace std;
 
@@ -42,7 +29,7 @@ using namespace std;
 enum GPTValidity {gpt_valid, gpt_corrupt, gpt_invalid};
 
 // Which set of partition data to use
-enum WhichToUse {use_gpt, use_mbr, use_new};
+enum WhichToUse {use_gpt, use_mbr, use_bsd, use_new};
 
 // Header (first 512 bytes) of GPT table
 struct GPTHeader {
@@ -63,20 +50,11 @@ struct GPTHeader {
    unsigned char reserved2[GPT_RESERVED];
 }; // struct GPTHeader
 
-struct GPTPartition {
-   struct GUIDData partitionType;
-   struct GUIDData uniqueGUID;
-   uint64_t firstLBA;
-   uint64_t lastLBA;
-   uint64_t attributes;
-   unsigned char name[NAME_SIZE];
-}; // struct GPTPartition
-
 // Data in GPT format
 class GPTData {
 protected:
    struct GPTHeader mainHeader;
-   struct GPTPartition *partitions;
+   struct GPTPart *partitions;
    struct GPTHeader secondHeader;
    MBRData protectiveMBR;
    char device[256]; // device filename
@@ -87,6 +65,8 @@ protected:
    int secondCrcOk;
    int mainPartsCrcOk;
    int secondPartsCrcOk;
+   int apmFound; // set to 1 if APM detected
+   int bsdFound; // set to 1 if BSD disklabel detected in MBR
 //   uint32_t units; // display units, in multiples of sectors
    PartTypes typeHelper;
 public:
@@ -95,6 +75,9 @@ public:
    ~GPTData(void);
    int SetGPTSize(uint32_t numEntries);
    int CheckGPTSize(void);
+   void ShowAPMState(void);
+   void ShowGPTState(void);
+   void PartitionScan(int fd);
    int LoadPartitions(char* deviceFilename);
    int ForceLoadGPTData(int fd);
    int LoadMainTable(void);
@@ -112,7 +95,9 @@ public:
    uint64_t FindLastAvailable(uint64_t start);
    uint64_t FindLastInFree(uint64_t start);
    int IsFree(uint64_t sector);
-   int XFormPartitions(MBRData* origParts);
+   int XFormPartitions(void);
+   int XFormDisklabel(int OnGptPart = -1);
+   int XFormDisklabel(BSDData* disklabel, int startPart);
    void SortGPT(void);
    int ClearGPTData(void);
    void ChangePartType(void);
@@ -135,6 +120,8 @@ public:
    int SaveGPTBackup(char* filename);
    int LoadGPTBackup(char* filename);
    int DestroyGPT(void); // Returns 1 if user proceeds
+
+   // Endianness functions
    void ReverseHeaderBytes(struct GPTHeader* header); // for endianness
    void ReversePartitionBytes(); // for endianness
 
@@ -150,8 +137,6 @@ public:
 
 // Function prototypes....
 void BlankPartition(struct GPTPartition* partition);
-//int XFormType(uint8_t oldType, struct GUIDData* newType, int partNum);
-void QuickSortGPT(struct GPTPartition* partitions, int start, int finish);
 int TheyOverlap(struct GPTPartition* first, struct GPTPartition* second);
 void ChangeGPTType(struct GPTPartition* part);
 int SizesOK(void);

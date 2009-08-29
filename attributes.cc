@@ -2,6 +2,9 @@
 // Class to manage partition attribute codes. These are binary bit fields,
 // of which only three are currently (2/2009) documented on Wikipedia.
 
+/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+  under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
+
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 

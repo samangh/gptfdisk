@@ -3,6 +3,9 @@
 
 /* By Rod Smith, January to February, 2009 */
 
+/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+  under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
+
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
@@ -118,9 +121,10 @@ int MBRData::ReadMBRData(char* deviceFilename) {
 } // MBRData::ReadMBRData(char* deviceFilename)
 
 // Read data from MBR.
-void MBRData::ReadMBRData(int fd) {
-   int allOK = 1, i, maxLogicals = 0;
+void MBRData::ReadMBRData(int fd, int checkBlockSize) {
+   int allOK = 1, i, j, maxLogicals = 0;
    int err;
+   TempMBR tempMBR;
 
    // Clear logical partition array
    for (i = 0; i < NUM_LOGICALS; i++) {
@@ -136,39 +140,51 @@ void MBRData::ReadMBRData(int fd) {
       logicals[i].lengthLBA = UINT32_C(0);
    } // for
 
-   read(fd, code, 440);
-   read(fd, &diskSignature, 4);
-   read(fd, &nulls, 2);
-   read(fd, partitions, 64);
-   read(fd, &MBRSignature, 2);
+   err = lseek64(fd, 0, SEEK_SET);
+   err = read(fd, &tempMBR, 512);
+   for (i = 0; i < 440; i++)
+      code[i] = tempMBR.code[i];
+   diskSignature = tempMBR.diskSignature;
+   nulls = tempMBR.nulls;
+   for (i = 0; i < 4; i++) {
+      partitions[i].status = tempMBR.partitions[i].status;
+      partitions[i].partitionType = tempMBR.partitions[i].partitionType;
+      partitions[i].firstLBA = tempMBR.partitions[i].firstLBA;
+      partitions[i].lengthLBA = tempMBR.partitions[i].lengthLBA;
+      for (j = 0; j < 3; j++) {
+         partitions[i].firstSector[j] = tempMBR.partitions[i].firstSector[j];
+         partitions[i].lastSector[j] = tempMBR.partitions[i].lastSector[j];
+      } // for j...
+   } // for i...
+   MBRSignature = tempMBR.MBRSignature;
 
    // Reverse the byte order, if necessary
    if (IsLittleEndian() == 0) {
-      ReverseBytes((char*) &diskSignature, 4);
-      ReverseBytes((char*) &nulls, 2);
-      ReverseBytes((char*) &MBRSignature, 2);
+      ReverseBytes(&diskSignature, 4);
+      ReverseBytes(&nulls, 2);
+      ReverseBytes(&MBRSignature, 2);
       for (i = 0; i < 4; i++) {
-         ReverseBytes((char*) &partitions[i].firstLBA, 4);
-         ReverseBytes((char*) &partitions[i].lengthLBA, 4);
+         ReverseBytes(&partitions[i].firstLBA, 4);
+         ReverseBytes(&partitions[i].lengthLBA, 4);
       } // for
    } // if
 
    if (MBRSignature != MBR_SIGNATURE) {
       allOK = 0;
       state = invalid;
-      fprintf(stderr, "MBR signature invalid; read 0x%04X, but should be 0x%04X\n",
-              (unsigned int) MBRSignature, (unsigned int) MBR_SIGNATURE);
-   } /* if */
+   } // if
 
    // Find disk size
    diskSize = disksize(fd, &err);
 
    // Find block size
-   if ((blockSize = GetBlockSize(fd)) == -1) {
-      blockSize = SECTOR_SIZE;
-      printf("Unable to determine sector size; assuming %lu bytes!\n",
-             (unsigned long) SECTOR_SIZE);
-   } // if
+   if (checkBlockSize) {
+      if ((blockSize = GetBlockSize(fd)) == -1) {
+         blockSize = SECTOR_SIZE;
+         printf("Unable to determine sector size; assuming %lu bytes!\n",
+               (unsigned long) SECTOR_SIZE);
+      } // if
+   } // if (checkBlockSize)
 
    // Load logical partition data, if any is found....
    if (allOK) {
@@ -242,33 +258,55 @@ int MBRData::WriteMBRData(void) {
 // Save the MBR data to a file. Note that this function writes ONLY the
 // MBR data, not the logical partitions (if any are defined).
 void MBRData::WriteMBRData(int fd) {
-   int i;
+   int i, j;
+   TempMBR tempMBR;
 
    // Reverse the byte order, if necessary
    if (IsLittleEndian() == 0) {
-      ReverseBytes((char*) &diskSignature, 4);
-      ReverseBytes((char*) &nulls, 2);
-      ReverseBytes((char*) &MBRSignature, 2);
+      ReverseBytes(&diskSignature, 4);
+      ReverseBytes(&nulls, 2);
+      ReverseBytes(&MBRSignature, 2);
       for (i = 0; i < 4; i++) {
-         ReverseBytes((char*) &partitions[i].firstLBA, 4);
-         ReverseBytes((char*) &partitions[i].lengthLBA, 4);
+         ReverseBytes(&partitions[i].firstLBA, 4);
+         ReverseBytes(&partitions[i].lengthLBA, 4);
       } // for
    } // if
 
-   write(fd, code, 440);
+   // Copy MBR data to a 512-byte data structure for writing, to
+   // work around a FreeBSD limitation....
+   for (i = 0; i < 440; i++)
+      tempMBR.code[i] = code[i];
+   tempMBR.diskSignature = diskSignature;
+   tempMBR.nulls = nulls;
+   tempMBR.MBRSignature = MBRSignature;
+   for (i = 0; i < 4; i++) {
+      tempMBR.partitions[i].status = partitions[i].status;
+      tempMBR.partitions[i].partitionType = partitions[i].partitionType;
+      tempMBR.partitions[i].firstLBA = partitions[i].firstLBA;
+      tempMBR.partitions[i].lengthLBA = partitions[i].lengthLBA;
+      for (j = 0; j < 3; j++) {
+         tempMBR.partitions[i].firstSector[j] = partitions[i].firstSector[j];
+         tempMBR.partitions[i].lastSector[j] = partitions[i].lastSector[j];
+      } // for j...
+   } // for i...
+
+   // Now write that data structure...
+   write(fd, &tempMBR, 512);
+
+/*   write(fd, code, 440);
    write(fd, &diskSignature, 4);
    write(fd, &nulls, 2);
    write(fd, partitions, 64);
-   write(fd, &MBRSignature, 2);
+   write(fd, &MBRSignature, 2); */
    
-   // Reverse the byte order, if necessary
+   // Reverse the byte order back, if necessary
    if (IsLittleEndian() == 0) {
-      ReverseBytes((char*) &diskSignature, 4);
-      ReverseBytes((char*) &nulls, 2);
-      ReverseBytes((char*) &MBRSignature, 2);
+      ReverseBytes(&diskSignature, 4);
+      ReverseBytes(&nulls, 2);
+      ReverseBytes(&MBRSignature, 2);
       for (i = 0; i < 4; i++) {
-         ReverseBytes((char*) &partitions[i].firstLBA, 4);
-         ReverseBytes((char*) &partitions[i].lengthLBA, 4);
+         ReverseBytes(&partitions[i].firstLBA, 4);
+         ReverseBytes(&partitions[i].lengthLBA, 4);
       } // for
    }// if
 } // MBRData::WriteMBRData(int fd)
@@ -293,11 +331,11 @@ int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
                  (unsigned long) offset);
          partNum = -1;
       } else if (IsLittleEndian() != 1) { // Reverse byte ordering of some data....
-         ReverseBytes((char*) &ebr.MBRSignature, 2);
-         ReverseBytes((char*) &ebr.partitions[0].firstLBA, 4);
-         ReverseBytes((char*) &ebr.partitions[0].lengthLBA, 4);
-         ReverseBytes((char*) &ebr.partitions[1].firstLBA, 4);
-         ReverseBytes((char*) &ebr.partitions[1].lengthLBA, 4);
+         ReverseBytes(&ebr.MBRSignature, 2);
+         ReverseBytes(&ebr.partitions[0].firstLBA, 4);
+         ReverseBytes(&ebr.partitions[0].lengthLBA, 4);
+         ReverseBytes(&ebr.partitions[1].firstLBA, 4);
+         ReverseBytes(&ebr.partitions[1].lengthLBA, 4);
       } // if/else/if
 
       if (ebr.MBRSignature != MBR_SIGNATURE) {
@@ -356,13 +394,18 @@ void MBRData::DisplayMBRData(void) {
           BytesToSI(diskSize * (uint64_t) blockSize, tempStr));
 } // MBRData::DisplayMBRData()
 
-// Create a protective MBR
-void MBRData::MakeProtectiveMBR(void) {
+// Create a protective MBR. Clears the boot loader area if clearBoot > 0.
+void MBRData::MakeProtectiveMBR(int clearBoot) {
    int i;
 
    // Initialize variables
    nulls = 0;
    MBRSignature = MBR_SIGNATURE;
+
+   if (clearBoot > 0) {
+      for (i = 0; i < 440; i++)
+         code[i] = (uint8_t) 0;
+   } // if
 
    partitions[0].status = UINT8_C(0); // Flag the protective part. as unbootable
 
@@ -467,23 +510,24 @@ struct MBRRecord* MBRData::GetPartition(int i) {
    return thePart;
 } // GetPartition()
 
-// Displays the state, as a word, on stdout. Used for debugging
+// Displays the state, as a word, on stdout. Used for debugging & to
+// tell the user about the MBR state when the program launches....
 void MBRData::ShowState(void) {
    switch (state) {
       case invalid:
-         printf("invalid");
+         printf("  MBR: not present\n");
          break;
       case gpt:
-         printf("gpt");
+         printf("  MBR: protective\n");
          break;
       case hybrid:
-         printf("hybrid");
+         printf("  MBR: hybrid\n");
          break;
       case mbr:
-         printf("mbr");
+         printf("  MBR: MBR only\n");
          break;
       default:
-         printf("unknown -- bug!");
+         printf("\a  MBR: unknown -- bug!\n");
          break;
    } // switch
 } // MBRData::ShowState()
@@ -602,3 +646,36 @@ uint32_t MBRData::GetLength(int i) {
       retval = UINT32_C(0);
    return retval;
 } // MBRData::GetLength()
+
+// Return the MBR data as a GPT partition....
+GPTPart MBRData::AsGPT(int i) {
+   MBRRecord* origPart;
+   GPTPart newPart;
+   uint8_t origType;
+   uint64_t firstSector, lastSector;
+   char tempStr[NAME_SIZE];
+
+   newPart.BlankPartition();
+   origPart = GetPartition(i);
+   if (origPart != NULL) {
+      origType = origPart->partitionType;
+
+      // don't convert extended, hybrid protective, or null (non-existent)
+      // partitions (Note similar protection is in GPTData::XFormPartitions(),
+      // but I want it here too in case I call this function in another
+      // context in the future....)
+      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) && 
+          (origType != 0x00) && (origType != 0xEE)) {
+         firstSector = (uint64_t) origPart->firstLBA;
+         newPart.SetFirstLBA(firstSector);
+         lastSector = firstSector + (uint64_t) origPart->lengthLBA;
+         if (lastSector > 0) lastSector--;
+         newPart.SetLastLBA(lastSector);
+         newPart.SetType(((uint16_t) origType) * 0x0100);
+         newPart.SetUniqueGUID(1);
+         newPart.SetAttributes(0);
+         newPart.SetName((unsigned char*) newPart.GetNameType(tempStr));
+      } // if
+   } // if
+   return newPart;
+} // MBRData::AsGPT()

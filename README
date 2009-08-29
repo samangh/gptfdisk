@@ -13,6 +13,9 @@ include:
 * The ability to convert MBR-partitioned disks in-place to GPT format,
   without losing data
 
+* The ability to convert BSD disklabels in-place to create GPT
+  partitions, without losing data
+
 * The ability to specify sector-exact partition sizes
 
 * More flexible specification of filesystem type code GUIDs, which
@@ -26,6 +29,9 @@ include:
 
 * The MBR boot loader code is left alone (GNU Parted tends to
   wipe it out with every change)
+
+* The ability to create a hybrid MBR, which permits GPT-unaware
+  OSes to access up to three GPT partitions on the disk
 
 Of course, gdisk isn't without its limitations. Most notably, it lacks the
 filesystem awareness and filesystem-related features of GNU Parted. You
@@ -60,10 +66,10 @@ with >2TiB drives, though.
 
 My main development platform is a system running the 64-bit version of
 Ubuntu 8.04. I've also tested on 64-bit OpenSuSE, 32-bit Fedora 10, 32-bit
-Ubuntu 6.10, 64-bit Gentoo, 32-bit PowerPC Linux, and 32-bit Intel-based
-Mac OS X. Problems relating to 64-bit integers on the 32-bit Linux have
-been common during development and may crop up in the future. The Mac OS
-X and big-endian (PowerPC) support is new.
+Ubuntu 6.10, 64-bit Gentoo, 32-bit PowerPC Linux, 32-bit Intel-based Mac
+OS X, and 64-bit Fedora 7.1. Problems relating to 64-bit integers on the
+32-bit Linux have been common during development and may crop up in the
+future. The Mac OS X, FreeBSD, and big-endian (PowerPC) support are new.
 
 Redistribution
 --------------

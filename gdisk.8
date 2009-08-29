@@ -1,13 +1,15 @@
 .\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH GDISK 8 "August 2009" "Linux 2.6" "GPT fdisk Manual"
+.TH GDISK 8 "August 2009" "0.4.0" "GPT fdisk Manual"
 .SH NAME
-gdisk \- GPT partition table manipulator for Linux
+gdisk \- GPT partition table manipulator for Linux and Unix
 .SH SYNOPSIS
 .BI "gdisk "
 [ \-l ]
 .I device
+
 .SH DESCRIPTION
+
 Hard disks can be divided into one or more segments, known as
 .IR partitions .
 This division is described in the
@@ -110,7 +112,7 @@ program employs a user interface similar to that of Linux's
 but
 .B "gdisk"
 modifies GPT partitions. It also has the capability of transforming MBR
-partitions into GPT partitions. Like the original
+partitions or BSD disklabels into GPT partitions. Like the original
 .B fdisk
 program,
 .B gdisk
@@ -120,8 +122,9 @@ save your partitions.
 
 .B gdisk
 is a text-mode menu-driven program for creation and manipulation of
-partition tables. It will automatically convert an MBR partition table to
-GPT format, or will load a GPT partition table. When used with the
+partition tables. It will automatically convert an MBR partition table or
+BSD disklabel stored without an MBR carrier partition to GPT format, or
+will load a GPT partition table. When used with the
 .IR "\-l"
 command-line option, the program displays the current partition table and
 then exits.
@@ -173,6 +176,13 @@ will note that
 .B "gdisk"
 lacks the options and limitations associated with CHS geometries.
 
+For best results, you should always use an OS-specific partition table
+program.  For example, you should make Mac OS X partitions with the Mac OS
+X Disk Utility
+program and Linux partitions with the Linux
+.B "gdisk"
+or GNU Parted program.
+
 Upon start,
 .B gdisk
 attempts to identify the partition type in use on the specified disk. If it
@@ -180,10 +190,14 @@ finds valid GPT data,
 .B gdisk
 will use it. If
 .B gdisk
-finds a valid MBR but no GPT data, it will attempt to convert the MBR into
-GPT form. Upon exiting with the 'w' option,
+finds a valid MBR or BSD disklabel but no GPT data, it will attempt to
+convert the MBR or disklabel into GPT form. (BSD disklabels are likely to
+have unusable first and/or final partitions because they overlap with the
+GPT data structures, though.) GPT fdisk can identify, but not use data in,
+Apple Partition Map (APM) disks, which are used on 680x0- and PowerPC-based
+Macintoshes. Upon exiting with the 'w' option,
 .B gdisk
-will then replace the MBR with a GPT.
+will then replace the MBR or disklabel with a GPT.
 .IR "This action is potentially dangerous!"
 Your system may become unbootable, and partition type codes may become
 corrupted if the disk uses unrecognized type codes. Boot problems are
@@ -258,12 +272,25 @@ occur with its interactive text-mode menus. The main menu provides the
 following options:
 
 .TP
+.B b
+Convert BSD partitions into GPT partitions. This option works on BSD
+disklabels held within GPT (or converted MBR) partitions. Converted
+partitions' type codes are likely to need manual adjustment.
+.B gdisk
+will attempt to convert BSD disklabels stored on the main disk when
+launched, but this conversion is likely to produce first and/or last
+partitions that are unusable. The many BSD variants means that the
+probability of GPT fdisk being unable to convert a BSD disklabel are high
+compared to the likelihood of problems with an MBR conversion.
+
+.TP
 .B c
 Change the GPT name of a partition. This name is encoded as a UTF-16
 string, but
 .B gdisk
 supports only ASCII characters as names. For the most part, Linux ignores
-the partition name, but it may be important in some OSes.
+the partition name, but it may be important in some OSes. GPT fdisk sets
+a default name based on the partition type code.
 
 .TP
 .B d
@@ -342,7 +369,7 @@ Sort partition entries. GPT partition numbers need not match the order of
 partitions on the disk. If you want them to match, you can use this option.
 Note that some partitioning utilities, such as GNU Parted, will sort
 partitions whenever they make changes. Such changes will be reflected in
-your Linux device filenames, so you may need to edit
+your device filenames, so you may need to edit
 .IR "/etc/fstab"
 if you use this option.
 

@@ -1,5 +1,33 @@
+0.4.0:
+------
+
+- Added support for BSD disklabels. The program can now convert disks that
+  use "raw" disklabels, with the caveat that the first partition will
+  almost certainly need to be deleted because it'll overlap the main GPT
+  header; and convert disklabels contained within a GPT (or a former MBR,
+  converted to GPT) partition. In the latter case, the 'b' main menu option
+  is used.
+
+- Added support for compiling on FreeBSD.
+
+- Fixed bug that could cause crashes or incomplete sorts when sorting
+  the partition table.
+
+- New partitions, including converted ones, now take on the name of the
+  partition type as a default name.
+
+- Reorganized some code; created a separate C++ class for GPT partitions
+  (GPTPart), which replaced a struct and enabled moving code from the
+  bloated GPTData class into GPTPart.
+
+- Fixed a bug that produced spurious warnings about unknown sector sizes
+  when loading a backup file.
+
 0.3.5:
 ------
+
+Note: This version was not officially publicly released; I wanted to test
+the big-endian support while developing 0.4.0.
 
 - Tweaked the disk type identification code to warn users to re-sync their
   hybrid MBRs when one is detected.

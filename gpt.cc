@@ -3,6 +3,9 @@
 
 /* By Rod Smith, January to February, 2009 */
 
+/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+  under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
+
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
@@ -17,6 +20,7 @@
 #include <errno.h>
 #include "crc32.h"
 #include "gpt.h"
+#include "bsd.h"
 #include "support.h"
 #include "parttypes.h"
 #include "attributes.h"
@@ -39,6 +43,8 @@ GPTData::GPTData(void) {
    secondCrcOk = 0;
    mainPartsCrcOk = 0;
    secondPartsCrcOk = 0;
+   apmFound = 0;
+   bsdFound = 0;
    srand((unsigned int) time(NULL));
    SetGPTSize(NUM_GPT_ENTRIES);
 } // GPTData default constructor
@@ -54,6 +60,8 @@ GPTData::GPTData(char* filename) {
    secondCrcOk = 0;
    mainPartsCrcOk = 0;
    secondPartsCrcOk = 0;
+   apmFound = 0;
+   bsdFound = 0;
    srand((unsigned int) time(NULL));
    LoadPartitions(filename);
 } // GPTData(char* filename) constructor
@@ -65,8 +73,8 @@ GPTData::~GPTData(void) {
 // Resizes GPT to specified number of entries. Creates a new table if
 // necessary, copies data if it already exists.
 int GPTData::SetGPTSize(uint32_t numEntries) {
-   struct GPTPartition* newParts;
-   struct GPTPartition* trash;
+   struct GPTPart* newParts;
+   struct GPTPart* trash;
    uint32_t i, high, copyNum;
    int allOK = 1;
 
@@ -79,7 +87,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
       printf("to %lu to fill the sector\n", (unsigned long) numEntries);
    } // if
 
-   newParts = (struct GPTPartition*) calloc(numEntries, sizeof (struct GPTPartition));
+   newParts = (GPTPart*) calloc(numEntries, sizeof (GPTPart));
    if (newParts != NULL) {
       if (partitions != NULL) { // existing partitions; copy them over
          GetPartRange(&i, &high);
@@ -120,22 +128,22 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
 } // GPTData::SetGPTSize()
 
 // Checks to see if the GPT tables overrun existing partitions; if they
-// do, issues a warning but takes no action. Returns 1 if all is OK, 0
-// if problems were detected.
+// do, issues a warning but takes no action. Returns number of problems
+// detected (0 if OK, 1 to 2 if problems).
 int GPTData::CheckGPTSize(void) {
    uint64_t overlap, firstUsedBlock, lastUsedBlock;
    uint32_t i;
-   int allOK = 1;
+   int numProbs = 0;
 
    // first, locate the first & last used blocks
    firstUsedBlock = UINT64_MAX;
    lastUsedBlock = 0;
    for (i = 0; i < mainHeader.numParts; i++) {
-      if ((partitions[i].firstLBA < firstUsedBlock) &&
-          (partitions[i].firstLBA != 0))
-         firstUsedBlock = partitions[i].firstLBA;
-      if (partitions[i].lastLBA > lastUsedBlock)
-         lastUsedBlock = partitions[i].lastLBA;
+      if ((partitions[i].GetFirstLBA() < firstUsedBlock) &&
+          (partitions[i].GetFirstLBA() != 0))
+         firstUsedBlock = partitions[i].GetFirstLBA();
+      if (partitions[i].GetLastLBA() > lastUsedBlock)
+         lastUsedBlock = partitions[i].GetLastLBA();
    } // for
 
    // If the disk size is 0 (the default), then it means that various
@@ -144,45 +152,121 @@ int GPTData::CheckGPTSize(void) {
    if (diskSize != 0) {
       if (mainHeader.firstUsableLBA > firstUsedBlock) {
          overlap = mainHeader.firstUsableLBA - firstUsedBlock;
-         printf("Warning! Main partition table overlaps the first partition by %lu\n"
-                "blocks! Try reducing the partition table size by %lu entries.\n",
-                (unsigned long) overlap, (unsigned long) (overlap * 4));
-         printf("(Use the 's' item on the experts' menu.)\n");
-         allOK = 0;
+         printf("Warning! Main partition table overlaps the first partition by %lu blocks!\n",
+                (unsigned long) overlap);
+         if (firstUsedBlock > 2) {
+            printf("Try reducing the partition table size by %lu entries.\n",
+                   (unsigned long) (overlap * 4));
+            printf("(Use the 's' item on the experts' menu.)\n");
+         } else {
+            printf("You will need to delete this partition or resize it in another utility.\n");
+         } // if/else
+         numProbs++;
       } // Problem at start of disk
       if (mainHeader.lastUsableLBA < lastUsedBlock) {
          overlap = lastUsedBlock - mainHeader.lastUsableLBA;
-         printf("Warning! Secondary partition table overlaps the last partition by %lu\n"
-                "blocks! Try reducing the partition table size by %lu entries.\n",
-                (unsigned long) overlap, (unsigned long) (overlap * 4));
-         printf("(Use the 's' item on the experts' menu.)\n");
-         allOK = 0;
+         printf("Warning! Secondary partition table overlaps the last partition by %lu blocks\n",
+                (unsigned long) overlap);
+         if (lastUsedBlock > (diskSize - 2)) {
+            printf("You will need to delete this partition or resize it in another utility.\n");
+         } else {
+            printf("Try reducing the partition table size by %lu entries.\n",
+                   (unsigned long) (overlap * 4));
+            printf("(Use the 's' item on the experts' menu.)\n");
+         } // if/else
+         numProbs++;
       } // Problem at end of disk
    } // if (diskSize != 0)
-   return allOK;
+   return numProbs;
 } // GPTData::CheckGPTSize()
+
+// Tell user whether Apple Partition Map (APM) was discovered....
+void GPTData::ShowAPMState(void) {
+   if (apmFound)
+      printf("  APM: present\n");
+   else
+      printf("  APM: not present\n");
+} // GPTData::ShowAPMState()
+
+// Tell user about the state of the GPT data....
+void GPTData::ShowGPTState(void) {
+   switch (state) {
+      case gpt_invalid:
+         printf("  GPT: not present\n");
+         break;
+      case gpt_valid:
+         printf("  GPT: present\n");
+         break;
+      case gpt_corrupt:
+         printf("  GPT: damaged\n");
+         break;
+      default:
+         printf("\a  GPT: unknown -- bug!\n");
+         break;
+   } // switch
+} // GPTData::ShowGPTState()
+
+// Scan for partition data. This function loads the MBR data (regular MBR or
+// protective MBR) and loads BSD disklabel data (which is probably invalid).
+// It also looks for APM data, forces a load of GPT data, and summarizes
+// the results.
+void GPTData::PartitionScan(int fd) {
+   BSDData bsdDisklabel;
+//   int bsdFound;
+
+   printf("Partition table scan:\n");
+
+   // Read the MBR & check for BSD disklabel
+   protectiveMBR.ReadMBRData(fd);
+   protectiveMBR.ShowState();
+   bsdDisklabel.ReadBSDData(fd, 0, diskSize - 1);
+   bsdFound = bsdDisklabel.ShowState();
+//   bsdDisklabel.DisplayBSDData();
+
+   // Load the GPT data, whether or not it's valid
+   ForceLoadGPTData(fd);
+   ShowAPMState(); // Show whether there's an Apple Partition Map present
+   ShowGPTState(); // Show GPT status
+   printf("\n");
+
+   if (apmFound) {
+      printf("\n*******************************************************************\n");
+      printf("This disk appears to contain an Apple-format (APM) partition table!\n");
+      printf("It will be destroyed if you continue!\n");
+      printf("*******************************************************************\n\n\a");
+   } // if
+/*   if (bsdFound) {
+      printf("\n*************************************************************************\n");
+      printf("This disk appears to contain a BSD disklabel! It will be destroyed if you\n"
+            "continue!\n");
+      printf("*************************************************************************\n\n\a");
+   } // if */
+} // GPTData::PartitionScan()
 
 // Read GPT data from a disk.
 int GPTData::LoadPartitions(char* deviceFilename) {
    int fd, err;
    int allOK = 1, i;
    uint64_t firstBlock, lastBlock;
+   BSDData bsdDisklabel;
 
    if ((fd = open(deviceFilename, O_RDONLY)) != -1) {
       // store disk information....
       diskSize = disksize(fd, &err);
       blockSize = (uint32_t) GetBlockSize(fd);
       strcpy(device, deviceFilename);
-
-      // Read the MBR
-      protectiveMBR.ReadMBRData(fd);
-
-      // Load the GPT data, whether or not it's valid
-      ForceLoadGPTData(fd);
+      PartitionScan(fd); // Check for partition types & print summary
 
       switch (UseWhichPartitions()) {
          case use_mbr:
-            XFormPartitions(&protectiveMBR);
+            XFormPartitions();
+            break;
+         case use_bsd:
+            bsdDisklabel.ReadBSDData(fd, 0, diskSize - 1);
+//            bsdDisklabel.DisplayBSDData();
+            ClearGPTData();
+            protectiveMBR.MakeProtectiveMBR(1); // clear boot area (option 1)
+            XFormDisklabel(&bsdDisklabel, 0);
             break;
          case use_gpt:
             break;
@@ -197,11 +281,11 @@ int GPTData::LoadPartitions(char* deviceFilename) {
          firstBlock = mainHeader.backupLBA; // start high
 	 lastBlock = 0; // start low
          for (i = 0; i < mainHeader.numParts; i++) {
-	    if ((partitions[i].firstLBA < firstBlock) &&
-                (partitions[i].firstLBA > 0))
-	       firstBlock = partitions[i].firstLBA;
-            if (partitions[i].lastLBA > lastBlock)
-               lastBlock = partitions[i].lastLBA;
+	    if ((partitions[i].GetFirstLBA() < firstBlock) &&
+                (partitions[i].GetFirstLBA() > 0))
+	       firstBlock = partitions[i].GetFirstLBA();
+            if (partitions[i].GetLastLBA() > lastBlock)
+               lastBlock = partitions[i].GetLastLBA();
 	 } // for
       } // if
       CheckGPTSize();
@@ -340,11 +424,21 @@ WhichToUse GPTData::UseWhichPartitions(void) {
 
    if ((state == gpt_invalid) && ((mbrState == mbr) || (mbrState == hybrid))) {
       printf("\n\a***************************************************************\n"
-                    "Found invalid GPT and valid MBR; converting MBR to GPT format.\n"
+             "Found invalid GPT and valid MBR; converting MBR to GPT format.\n"
              "THIS OPERATON IS POTENTIALLY DESTRUCTIVE! Exit by typing 'q' if\n"
              "you don't want to convert your MBR partitions to GPT format!\n"
              "***************************************************************\n\n");
       which = use_mbr;
+   } // if
+
+   if ((state == gpt_invalid) && bsdFound) {
+      printf("\n\a**********************************************************************\n"
+             "Found invalid GPT and valid BSD disklabel; converting BSD disklabel\n"
+             "to GPT format. THIS OPERATON IS POTENTIALLY DESTRUCTIVE! Your first\n"
+             "BSD partition will likely be unusable. Exit by typing 'q' if you don't\n"
+             "want to convert your BSD partitions to GPT format!\n"
+             "**********************************************************************\n\n");
+      which = use_bsd;
    } // if
 
    if ((state == gpt_valid) && (mbrState == gpt)) {
@@ -353,7 +447,7 @@ WhichToUse GPTData::UseWhichPartitions(void) {
    } // if
    if ((state == gpt_valid) && (mbrState == hybrid)) {
       printf("Found valid GPT with hybrid MBR; using GPT.\n");
-      printf("\aIf you change GPT partitions' sizes, you may need to re-create the hybrid MBR!\n");
+      printf("\aIf you change GPT partitions, you may need to re-create the hybrid MBR!\n");
       which = use_gpt;
    } // if
    if ((state == gpt_valid) && (mbrState == invalid)) {
@@ -445,7 +539,7 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
    *high = 0;
    if (mainHeader.numParts > 0) { // only try if partition table exists...
       for (i = 0; i < mainHeader.numParts; i++) {
-         if (partitions[i].firstLBA != UINT64_C(0)) { // it exists
+         if (partitions[i].GetFirstLBA() != UINT64_C(0)) { // it exists
             *high = i; // since we're counting up, set the high value
 	    // Set the low value only if it's not yet found...
             if (*low == (mainHeader.numParts + 1)) *low = i;
@@ -481,20 +575,7 @@ void GPTData::DisplayGPTData(void) {
           BytesToSI(totalFree * (uint64_t) blockSize, sizeInSI));
    printf("\nNumber  Start (sector)    End (sector)  Size       Code  Name\n");
    for (i = 0; i < mainHeader.numParts; i++) {
-      if (partitions[i].firstLBA != 0) {
-         BytesToSI(blockSize * (partitions[i].lastLBA - partitions[i].firstLBA + 1),
-                   sizeInSI);
-         printf("%4d  %14lu  %14lu", i + 1, (unsigned long) partitions[i].firstLBA,
-                (unsigned long) partitions[i].lastLBA);
-         printf("   %-10s  %04X  ", sizeInSI,
-                typeHelper.GUIDToID(partitions[i].partitionType));
-         j = 0;
-         while ((partitions[i].name[j] != '\0') && (j < 44)) {
-            printf("%c", partitions[i].name[j]);
-	    j += 2;
-         } // while
-         printf("\n");
-      } // if
+      partitions[i].ShowSummary(i, blockSize, sizeInSI);
    } // for
 } // GPTData::DisplayGPTData()
 
@@ -514,33 +595,8 @@ void GPTData::ShowDetails(void) {
 
 // Show detailed information on the specified partition
 void GPTData::ShowPartDetails(uint32_t partNum) {
-   char temp[255];
-   int i;
-   uint64_t size;
-
-   if (partitions[partNum].firstLBA != 0) {
-      printf("Partition GUID code: %s ", GUIDToStr(partitions[partNum].partitionType, temp));
-      printf("(%s)\n", typeHelper.GUIDToName(partitions[partNum].partitionType, temp));
-      printf("Partition unique GUID: %s\n", GUIDToStr(partitions[partNum].uniqueGUID, temp));
-
-      printf("First sector: %llu (at %s)\n", (unsigned long long) 
-             partitions[partNum].firstLBA,
-	     BytesToSI(partitions[partNum].firstLBA * blockSize, temp));
-      printf("Last sector: %llu (at %s)\n", (unsigned long long) 
-             partitions[partNum].lastLBA,
-	     BytesToSI(partitions[partNum].lastLBA * blockSize, temp));
-      size = (partitions[partNum].lastLBA - partitions[partNum].firstLBA + 1);
-      printf("Partition size: %llu sectors (%s)\n", (unsigned long long)
-             size, BytesToSI(size * ((uint64_t) blockSize), temp));
-      printf("Attribute flags: %016llx\n", (unsigned long long)
-             partitions[partNum].attributes);
-      printf("Partition name: ");
-      i = 0;
-      while ((partitions[partNum].name[i] != '\0') && (i < NAME_SIZE)) {
-         printf("%c", partitions[partNum].name[i]);
-	 i += 2;
-      } // while
-      printf("\n");
+   if (partitions[partNum].GetFirstLBA() != 0) {
+      partitions[partNum].ShowDetails(blockSize);
    } else {
       printf("Partition #%d does not exist.", (int) (partNum + 1));
    } // if
@@ -553,7 +609,7 @@ void GPTData::CreatePartition(void) {
    int partNum, firstFreePart = 0;
 
    // Find first free partition...
-   while (partitions[firstFreePart].firstLBA != 0) {
+   while (partitions[firstFreePart].GetFirstLBA() != 0) {
       firstFreePart++;
    } // while
 
@@ -567,9 +623,9 @@ void GPTData::CreatePartition(void) {
                  mainHeader.numParts, firstFreePart + 1);
          partNum = GetNumber(firstFreePart + 1, mainHeader.numParts,
                              firstFreePart + 1, prompt) - 1;
-	 if (partitions[partNum].firstLBA != 0)
+	 if (partitions[partNum].GetFirstLBA() != 0)
 	    printf("partition %d is in use.\n", partNum + 1);
-      } while (partitions[partNum].firstLBA != 0);
+      } while (partitions[partNum].GetFirstLBA() != 0);
 
       // Get first block for new partition...
       sprintf(prompt, "First sector (%llu-%llu, default = %llu): ", firstBlock,
@@ -588,14 +644,12 @@ void GPTData::CreatePartition(void) {
       } while (IsFree(sector) == 0);
       lastBlock = sector;
 
-      partitions[partNum].firstLBA = firstBlock;
-      partitions[partNum].lastLBA = lastBlock;
+      partitions[partNum].SetFirstLBA(firstBlock);
+      partitions[partNum].SetLastLBA(lastBlock);
 
-      // rand() is only 32 bits on 32-bit systems, so multiply together to
-      // fill a 64-bit value.
-      partitions[partNum].uniqueGUID.data1 = (uint64_t) rand() * (uint64_t) rand();
-      partitions[partNum].uniqueGUID.data2 = (uint64_t) rand() * (uint64_t) rand();
-      ChangeGPTType(&partitions[partNum]);
+      partitions[partNum].SetUniqueGUID(1);
+      partitions[partNum].ChangeType();
+      partitions[partNum].SetName((unsigned char*) partitions[partNum].GetNameType(prompt));
    } else {
       printf("No free sectors available\n");
    } // if/else
@@ -610,11 +664,11 @@ void GPTData::DeletePartition(void) {
    if (GetPartRange(&low, &high) > 0) {
       sprintf(prompt, "Partition number (%d-%d): ", low + 1, high + 1);
       partNum = GetNumber(low + 1, high + 1, low, prompt);
-      BlankPartition(&partitions[partNum - 1]);
+      partitions[partNum - 1].BlankPartition();
    } else {
       printf("No partitions\n");
    } // if/else
-} // GPTData::DeletePartition
+} // GPTData::DeletePartition()
 
 // Find the first available block after the starting point; returns 0 if
 // there are no available blocks left
@@ -638,9 +692,9 @@ uint64_t GPTData::FindFirstAvailable(uint64_t start) {
    do {
       firstMoved = 0;
       for (i = 0; i < mainHeader.numParts; i++) {
-         if ((first >= partitions[i].firstLBA) &&
-             (first <= partitions[i].lastLBA)) { // in existing part.
-            first = partitions[i].lastLBA + 1;
+         if ((first >= partitions[i].GetFirstLBA()) &&
+             (first <= partitions[i].GetLastLBA())) { // in existing part.
+            first = partitions[i].GetLastLBA() + 1;
             firstMoved = 1;
           } // if
       } // for
@@ -668,9 +722,9 @@ uint64_t GPTData::FindLastAvailable(uint64_t start) {
    do {
       lastMoved = 0;
       for (i = 0; i < mainHeader.numParts; i++) {
-         if ((last >= partitions[i].firstLBA) &&
-             (last <= partitions[i].lastLBA)) { // in existing part.
-            last = partitions[i].firstLBA - 1;
+         if ((last >= partitions[i].GetFirstLBA()) &&
+             (last <= partitions[i].GetLastLBA())) { // in existing part.
+            last = partitions[i].GetFirstLBA() - 1;
             lastMoved = 1;
          } // if
       } // for
@@ -687,9 +741,9 @@ uint64_t GPTData::FindLastInFree(uint64_t start) {
 
    nearestStart = mainHeader.lastUsableLBA;
    for (i = 0; i < mainHeader.numParts; i++) {
-      if ((nearestStart > partitions[i].firstLBA) &&
-          (partitions[i].firstLBA > start)) {
-         nearestStart = partitions[i].firstLBA - 1;
+      if ((nearestStart > partitions[i].GetFirstLBA()) &&
+          (partitions[i].GetFirstLBA() > start)) {
+         nearestStart = partitions[i].GetFirstLBA() - 1;
       } // if
    } // for
    return (nearestStart);
@@ -701,8 +755,8 @@ int GPTData::IsFree(uint64_t sector) {
    uint32_t i;
 
    for (i = 0; i < mainHeader.numParts; i++) {
-      if ((sector >= partitions[i].firstLBA) &&
-          (sector <= partitions[i].lastLBA)) {
+      if ((sector >= partitions[i].GetFirstLBA()) &&
+          (sector <= partitions[i].GetLastLBA())) {
          isFree = 0;
       } // if
    } // for
@@ -713,10 +767,11 @@ int GPTData::IsFree(uint64_t sector) {
    return (isFree);
 } // GPTData::IsFree()
 
-int GPTData::XFormPartitions(MBRData* origParts) {
-   int i, j;
-   int numToConvert;
+int GPTData::XFormPartitions(void) {
+   int i, numToConvert;
    uint8_t origType;
+   struct newGUID;
+   char name[NAME_SIZE];
 
    // Clear out old data & prepare basics....
    ClearGPTData();
@@ -728,24 +783,12 @@ int GPTData::XFormPartitions(MBRData* origParts) {
       numToConvert = mainHeader.numParts;
 
    for (i = 0; i < numToConvert; i++) {
-      origType = origParts->GetType(i);
-
-      // don't convert extended, hybrid protective, or null (non-existent) partitions
+      origType = protectiveMBR.GetType(i);
+      // don't waste CPU time trying to convert extended, hybrid protective, or
+      // null (non-existent) partitions
       if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) && 
-          (origType != 0x00) && (origType != 0xEE)) {
-         partitions[i].firstLBA = (uint64_t) origParts->GetFirstSector(i);
-         partitions[i].lastLBA = partitions[i].firstLBA + (uint64_t)
-                                 origParts->GetLength(i) - 1;
-         partitions[i].partitionType = typeHelper.IDToGUID(((uint16_t) origType) * 0x0100);
-
-         // Create random unique GUIDs for the partitions
-         // rand() is only 32 bits, so multiply together to fill a 64-bit value
-	 partitions[i].uniqueGUID.data1 = (uint64_t) rand() * (uint64_t) rand();
-	 partitions[i].uniqueGUID.data2 = (uint64_t) rand() * (uint64_t) rand();
-	 partitions[i].attributes = 0;
-	 for (j = 0; j < NAME_SIZE; j++)
-            partitions[i].name[j] = '\0';
-      } // if
+          (origType != 0x00) && (origType != 0xEE))
+         partitions[i] = protectiveMBR.AsGPT(i);
    } // for
 
    // Convert MBR into protective MBR
@@ -756,18 +799,87 @@ int GPTData::XFormPartitions(MBRData* origParts) {
    mainCrcOk = secondCrcOk = mainPartsCrcOk = secondPartsCrcOk = 1;
 
    return (1);
-} // XFormPartitions()
+} // GPTData::XFormPartitions()
+
+// Transforms BSD disklable on the specified partition (numbered from 0).
+// If an invalid partition number is given, the program prompts for one.
+// Returns the number of new partitions created.
+int GPTData::XFormDisklabel(int i) {
+   uint32_t low, high, partNum, startPart;
+   uint16_t hexCode;
+   int goOn = 1, numDone = 0;
+   BSDData disklabel;
+
+   if (GetPartRange(&low, &high) != 0) {
+      if ((i < low) || (i > high))
+         partNum = GetPartNum();
+      else
+         partNum = (uint32_t) i;
+
+      // Find the partition after the last used one
+      startPart = high + 1;
+
+      // Now see if the specified partition has a BSD type code....
+      hexCode = partitions[partNum].GetHexType();
+      if ((hexCode != 0xa500) && (hexCode != 0xa900)) {
+         printf("Specified partition doesn't have a disklabel partition type "
+                "code.\nContinue anyway?");
+         goOn = (GetYN() == 'Y');
+      } // if
+
+      // If all is OK, read the disklabel and convert it.
+      if (goOn) {
+         goOn = disklabel.ReadBSDData(device, partitions[partNum].GetFirstLBA(),
+                                      partitions[partNum].GetLastLBA());
+         if ((goOn) && (disklabel.IsDisklabel())) {
+            numDone = XFormDisklabel(&disklabel, startPart);
+            if (numDone == 1)
+               printf("Converted %d BSD partition.\n", numDone);
+            else
+               printf("Converted %d BSD partitions.\n", numDone);
+         } else {
+            printf("Unable to convert partitions! Unrecognized BSD disklabel.\n");
+         } // if/else
+      } // if
+      if (numDone > 0) { // converted partitions; delete carrier
+         partitions[partNum].BlankPartition();
+      } // if
+   } else {
+      printf("No partitions\n");
+   } // if/else
+   return numDone;
+} // GPTData::XFormDisklable(int i)
+
+// Transform the partitions on an already-loaded BSD disklabel...
+int GPTData::XFormDisklabel(BSDData* disklabel, int startPart) {
+   int i, numDone = 0;
+
+   if ((disklabel->IsDisklabel()) && (startPart >= 0) &&
+       (startPart < mainHeader.numParts)) {
+      for (i = 0; i < disklabel->GetNumParts(); i++) {
+         partitions[i + startPart] = disklabel->AsGPT(i);
+         if (partitions[i + startPart].GetFirstLBA() != UINT64_C(0))
+            numDone++;
+      } // for
+   } // if
+
+   // Record that all original CRCs were OK so as not to raise flags
+   // when doing a disk verification
+   mainCrcOk = secondCrcOk = mainPartsCrcOk = secondPartsCrcOk = 1;
+
+   return numDone;
+} // GPTData::XFormDisklabel(BSDData* disklabel)
 
 // Sort the GPT entries, eliminating gaps and making for a logical
 // ordering. Relies on QuickSortGPT() for the bulk of the work
 void GPTData::SortGPT(void) {
    int i, lastPart = 0;
-   struct GPTPartition temp;
+   GPTPart temp;
 
    // First, find the last partition with data, so as not to
    // spend needless time sorting empty entries....
-   for (i = 0; i < GPT_SIZE; i++) {
-      if (partitions[i].firstLBA > 0)
+   for (i = 0; i < mainHeader.numParts; i++) {
+      if (partitions[i].GetFirstLBA() > 0)
          lastPart = i;
    } // for
 
@@ -775,7 +887,7 @@ void GPTData::SortGPT(void) {
    // in the Quicksort function....
    i = 0;
    while (i < lastPart) {
-      if (partitions[i].firstLBA == 0) {
+      if (partitions[i].GetFirstLBA() == 0) {
          temp = partitions[i];
 	 partitions[i] = partitions[lastPart];
 	 partitions[lastPart] = temp;
@@ -788,56 +900,12 @@ void GPTData::SortGPT(void) {
    QuickSortGPT(partitions, 0, lastPart);
 } // GPTData::SortGPT()
 
-// Recursive quick sort algorithm for GPT partitions. Note that if there
-// are any empties in the specified range, they'll be sorted to the
-// start, resulting in a sorted set of partitions that begins with
-// partition 2, 3, or higher.
-void QuickSortGPT(struct GPTPartition* partitions, int start, int finish) {
-   uint64_t starterValue; // starting location of median partition
-   int left, right;
-   struct GPTPartition temp;
-
-   left = start;
-   right = finish;
-   starterValue = partitions[(start + finish) / 2].firstLBA;
-   do {
-      while (partitions[left].firstLBA < starterValue)
-         left++;
-      while (partitions[right].firstLBA > starterValue)
-         right--;
-      if (left <= right) {
-         temp = partitions[left];
-	 partitions[left] = partitions[right];
-	 partitions[right] = temp;
-	 left++;
-	 right--;
-      } // if
-   } while (left <= right);
-   if (start < right) QuickSortGPT(partitions, start, right);
-   if (finish > left) QuickSortGPT(partitions, left, finish);
-} // QuickSortGPT()
-
-// Blank (delete) a single partition
-void BlankPartition(struct GPTPartition* partition) {
-   int j;
-
-   partition->uniqueGUID.data1 = 0;
-   partition->uniqueGUID.data2 = 0;
-   partition->partitionType.data1 = 0;
-   partition->partitionType.data2 = 0;
-   partition->firstLBA = 0;
-   partition->lastLBA = 0;
-   partition->attributes = 0;
-   for (j = 0; j < NAME_SIZE; j++)
-      partition->name[j] = '\0';
-} // BlankPartition
-
 // Blank the partition array
 void GPTData::BlankPartitions(void) {
    uint32_t i;
 
    for (i = 0; i < mainHeader.numParts; i++) {
-      BlankPartition(&partitions[i]);
+      partitions[i].BlankPartition();
    } // for
 } // GPTData::BlankPartitions()
 
@@ -877,48 +945,15 @@ int GPTData::ClearGPTData(void) {
 
    // Blank out the partitions array....
    BlankPartitions();
+
+   // Flag all CRCs as being OK....
+   mainCrcOk = 1;
+   secondCrcOk = 1;
+   mainPartsCrcOk = 1;
+   secondPartsCrcOk = 1;
+
    return (goOn);
 } // GPTData::ClearGPTData()
-
-// Returns 1 if the two partitions overlap, 0 if they don't
-int TheyOverlap(struct GPTPartition* first, struct GPTPartition* second) {
-   int theyDo = 0;
-
-   // Don't bother checking unless these are defined (both start and end points
-   // are 0 for undefined partitions, so just check the start points)
-   if ((first->firstLBA != 0) && (second->firstLBA != 0)) {
-      if ((first->firstLBA < second->lastLBA) && (first->lastLBA >= second->firstLBA))
-         theyDo = 1;
-      if ((second->firstLBA < first->lastLBA) && (second->lastLBA >= first->firstLBA))
-         theyDo = 1;
-   } // if
-   return (theyDo);
-} // Overlap()
-
-// Change the type code on the specified partition.
-// Note: The GPT CRCs must be recomputed after calling this function!
-void ChangeGPTType(struct GPTPartition* part) {
-   char typeName[255], line[255];
-   uint16_t typeNum = 0xFFFF;
-   PartTypes typeHelper;
-   GUIDData newType;
-
-   printf("Current type is '%s'\n", typeHelper.GUIDToName(part->partitionType, typeName));
-   while ((!typeHelper.Valid(typeNum)) && (typeNum != 0)) {
-      printf("Hex code (L to show codes, 0 to enter raw code): ");
-      fgets(line, 255, stdin);
-      sscanf(line, "%x", &typeNum);
-      if (line[0] == 'L')
-         typeHelper.ShowTypes();
-   } // while
-   if (typeNum != 0) // user entered a code, so convert it
-      newType = typeHelper.IDToGUID(typeNum);
-   else // user wants to enter the GUID directly, so do that
-      newType = GetGUID();
-   part->partitionType = newType;
-   printf("Changed system type of partition to '%s'\n",
-          typeHelper.GUIDToName(part->partitionType, typeName));
-} // ChangeGPTType()
 
 // Prompt user for a partition number, then change its type code
 // using ChangeGPTType(struct GPTPartition*) function.
@@ -928,7 +963,7 @@ void GPTData::ChangePartType(void) {
 
    if (GetPartRange(&low, &high) > 0) {
       partNum = GetPartNum();
-      ChangeGPTType(&partitions[partNum]);
+      partitions[partNum].ChangeType();
    } else {
       printf("No partitions\n");
    } // if/else
@@ -947,51 +982,20 @@ uint32_t GPTData::GetPartNum(void) {
    return (partNum - 1);
 } // GPTData::GetPartNum()
 
-// Prompt user for attributes to change on the specified partition
-// and change them.
 void GPTData::SetAttributes(uint32_t partNum) {
    Attributes theAttr;
 
-   theAttr.SetAttributes(partitions[partNum].attributes);
+   theAttr.SetAttributes(partitions[partNum].GetAttributes());
    theAttr.DisplayAttributes();
    theAttr.ChangeAttributes();
-   partitions[partNum].attributes = theAttr.GetAttributes();
+   partitions[partNum].SetAttributes(theAttr.GetAttributes());
 } // GPTData::SetAttributes()
 
-// Set the name for a partition to theName, or prompt for a name if
-// theName is a NULL pointer. Note that theName is a standard C-style
-// string, although the GUID partition definition requires a UTF-16LE
-// string. This function creates a simple-minded copy for this.
 void GPTData::SetName(uint32_t partNum, char* theName) {
-   char newName[NAME_SIZE]; // New name
-   int i;
-
-   // Blank out new name string, just to be on the safe side....
-   for (i = 0; i < NAME_SIZE; i++)
-      newName[i] = '\0';
-
-   if (theName == NULL) { // No name specified, so get one from the user
-      printf("Enter name: ");
-      fgets(newName, NAME_SIZE / 2, stdin);
-
-      // Input is likely to include a newline, so remove it....
-      i = strlen(newName);
-      if (newName[i - 1] == '\n')
-         newName[i - 1] = '\0';
-   } else {
-      strcpy(newName, theName);
-   } // if
-
-   // Copy the C-style ASCII string from newName into a form that the GPT
-   // table will accept....
-   for (i = 0; i < NAME_SIZE; i++) {
-      if ((i % 2) == 0) {
-         partitions[partNum].name[i] = newName[(i / 2)];
-      } else {
-         partitions[partNum].name[i] = '\0';
-      } // if/else
-   } // for
-} // GPTData::SetName()
+   if ((partNum >= 0) && (partNum < mainHeader.numParts))
+      if (partitions[partNum].GetFirstLBA() > 0)
+         partitions[partNum].SetName((unsigned char*) theName);
+} // GPTData::SetName
 
 // Set the disk GUID to the specified value. Note that the header CRCs must
 // be recomputed after calling this function.
@@ -1007,8 +1011,8 @@ int GPTData::SetPartitionGUID(uint32_t pn, GUIDData theGUID) {
    int retval = 0;
 
    if (pn < mainHeader.numParts) {
-      if (partitions[pn].firstLBA != UINT64_C(0)) {
-	 partitions[pn].uniqueGUID = theGUID;
+      if (partitions[pn].GetFirstLBA() != UINT64_C(0)) {
+	 partitions[pn].SetUniqueGUID(theGUID);
          retval = 1;
       } // if
    } // if
@@ -1024,8 +1028,8 @@ int GPTData::CheckHeaderValidity(void) {
 
    if (mainHeader.signature != GPT_SIGNATURE) {
       valid -= 1;
-      printf("Main GPT signature invalid; read 0x%016llX, should be\n0x%016llX\n",
-             (unsigned long long) mainHeader.signature, (unsigned long long) GPT_SIGNATURE);
+//      printf("Main GPT signature invalid; read 0x%016llX, should be\n0x%016llX\n",
+//             (unsigned long long) mainHeader.signature, (unsigned long long) GPT_SIGNATURE);
    } else if ((mainHeader.revision != 0x00010000) && valid) {
       valid -= 1;
       printf("Unsupported GPT version in main header; read 0x%08lX, should be\n0x%08lX\n",
@@ -1034,8 +1038,8 @@ int GPTData::CheckHeaderValidity(void) {
 
    if (secondHeader.signature != GPT_SIGNATURE) {
       valid -= 2;
-      printf("Secondary GPT signature invalid; read 0x%016llX, should be\n0x%016llX\n",
-             (unsigned long long) secondHeader.signature, (unsigned long long) GPT_SIGNATURE);
+//      printf("Secondary GPT signature invalid; read 0x%016llX, should be\n0x%016llX\n",
+//             (unsigned long long) secondHeader.signature, (unsigned long long) GPT_SIGNATURE);
    } else if ((secondHeader.revision != 0x00010000) && valid) {
       valid -= 2;
       printf("Unsupported GPT version in backup header; read 0x%08lX, should be\n0x%08lX\n",
@@ -1046,9 +1050,7 @@ int GPTData::CheckHeaderValidity(void) {
    if ((protectiveMBR.GetValidity() == invalid) && 
        (((mainHeader.signature << 32) == APM_SIGNATURE1) ||
         (mainHeader.signature << 32) == APM_SIGNATURE2)) {
-      printf("\n*******************************************************************\n");
-      printf("This disk appears to contain an Apple-format (APM) partition table!\n");
-      printf("*******************************************************************\n\n\a");
+      apmFound = 1; // Will display warning message later
    } // if
 
    return valid;
@@ -1064,7 +1066,7 @@ int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
    // computation to be valid
    oldCRC = header->headerCRC;
    if (IsLittleEndian() == 0)
-      ReverseBytes((char*) &oldCRC, 4);
+      ReverseBytes(&oldCRC, 4);
    header->headerCRC = UINT32_C(0);
 
    // Initialize CRC functions...
@@ -1091,13 +1093,13 @@ void GPTData::RecomputeCRCs(void) {
    // Compute CRC of partition tables & store in main and secondary headers
    trueNumParts = mainHeader.numParts;
    if (littleEndian == 0)
-      ReverseBytes((char*) &trueNumParts, 4); // unreverse this key piece of data....
+      ReverseBytes(&trueNumParts, 4); // unreverse this key piece of data....
    crc = chksum_crc32((unsigned char*) partitions, trueNumParts * GPT_SIZE);
    mainHeader.partitionEntriesCRC = crc;
    secondHeader.partitionEntriesCRC = crc;
    if (littleEndian == 0) {
-      ReverseBytes((char*) &mainHeader.partitionEntriesCRC, 4);
-      ReverseBytes((char*) &secondHeader.partitionEntriesCRC, 4);
+      ReverseBytes(&mainHeader.partitionEntriesCRC, 4);
+      ReverseBytes(&secondHeader.partitionEntriesCRC, 4);
    } // if
 
    // Zero out GPT tables' own CRCs (required for correct computation)
@@ -1107,11 +1109,11 @@ void GPTData::RecomputeCRCs(void) {
    // Compute & store CRCs of main & secondary headers...
    crc = chksum_crc32((unsigned char*) &mainHeader, HEADER_SIZE);
    if (littleEndian == 0)
-      ReverseBytes((char*) &crc, 4);
+      ReverseBytes(&crc, 4);
    mainHeader.headerCRC = crc;
    crc = chksum_crc32((unsigned char*) &secondHeader, HEADER_SIZE);
    if (littleEndian == 0)
-      ReverseBytes((char*) &crc, 4);
+      ReverseBytes(&crc, 4);
    secondHeader.headerCRC = crc;
 } // GPTData::RecomputeCRCs()
 
@@ -1213,18 +1215,21 @@ int GPTData::Verify(void) {
    // Check for overlapping partitions....
    for (i = 1; i < mainHeader.numParts; i++) {
       for (j = 0; j < i; j++) {
-         if (TheyOverlap(&partitions[i], &partitions[j])) {
+         if (partitions[i].DoTheyOverlap(&partitions[j])) {
             problems++;
             printf("\nProblem: partitions %d and %d overlap:\n", i + 1, j + 1);
             printf("  Partition %d: %llu to %llu\n", i, 
-                   (unsigned long long) partitions[i].firstLBA,
-                   (unsigned long long) partitions[i].lastLBA);
+                   (unsigned long long) partitions[i].GetFirstLBA(),
+                   (unsigned long long) partitions[i].GetLastLBA());
             printf("  Partition %d: %llu to %llu\n", j,
-                   (unsigned long long) partitions[j].firstLBA,
-                   (unsigned long long) partitions[j].lastLBA);
+                   (unsigned long long) partitions[j].GetFirstLBA(),
+                   (unsigned long long) partitions[j].GetLastLBA());
 	 } // if
       } // for j...
    } // for i...
+
+   // Verify that partitions don't run into GPT data areas....
+   problems += CheckGPTSize();
 
    // Now compute available space, but only if no problems found, since
    // problems could affect the results
@@ -1382,24 +1387,24 @@ void GPTData::MakeHybrid(void) {
       j = partNums[i] - 1;
       printf("\nCreating entry for partition #%d\n", j + 1);
       if ((j >= 0) && (j < mainHeader.numParts)) {
-         if (partitions[j].lastLBA < UINT32_MAX) {
+         if (partitions[j].GetLastLBA() < UINT32_MAX) {
             do {
                printf("Enter an MBR hex code (default %02X): ",
-                      typeHelper.GUIDToID(partitions[j].partitionType) / 256);
+                      typeHelper.GUIDToID(partitions[j].GetType()) / 256);
                fgets(line, 255, stdin);
                sscanf(line, "%x", &typeCode);
                if (line[0] == '\n')
-                 typeCode = typeHelper.GUIDToID(partitions[j].partitionType) / 256;
+                 typeCode = partitions[j].GetHexType() / 256;
             } while ((typeCode <= 0) || (typeCode > 255));
 	    printf("Set the bootable flag? ");
 	    bootable = (GetYN() == 'Y');
-            length = partitions[j].lastLBA - partitions[j].firstLBA + UINT64_C(1);
+            length = partitions[j].GetLengthLBA();
             if (eeFirst == 'Y')
                mbrNum = i + 1;
             else
                mbrNum = i;
-            protectiveMBR.MakePart(mbrNum, (uint32_t) partitions[j].firstLBA,
-                    (uint32_t) length, typeCode, bootable);
+            protectiveMBR.MakePart(mbrNum, (uint32_t) partitions[j].GetFirstLBA(),
+                                   (uint32_t) length, typeCode, bootable);
          } else { // partition out of range
             printf("Partition %d ends beyond the 2TiB limit of MBR partitions; omitting it.\n",
                    j + 1);
@@ -1472,7 +1477,7 @@ int GPTData::SaveGPTData(void) {
    // First do some final sanity checks....
    // Is there enough space to hold the GPT headers and partition tables,
    // given the partition sizes?
-   if (CheckGPTSize() == 0) {
+   if (CheckGPTSize() > 0) {
       allOK = 0;
    } // if
 
@@ -1488,14 +1493,14 @@ int GPTData::SaveGPTData(void) {
    // Check for overlapping partitions....
    for (i = 1; i < mainHeader.numParts; i++) {
       for (j = 0; j < i; j++) {
-         if (TheyOverlap(&partitions[i], &partitions[j])) {
+         if (partitions[i].DoTheyOverlap(&partitions[j])) {
             fprintf(stderr, "\Error: partitions %d and %d overlap:\n", i + 1, j + 1);
             fprintf(stderr, "  Partition %d: %llu to %llu\n", i, 
-                   (unsigned long long) partitions[i].firstLBA,
-                   (unsigned long long) partitions[i].lastLBA);
+                   (unsigned long long) partitions[i].GetFirstLBA(),
+                   (unsigned long long) partitions[i].GetLastLBA());
             fprintf(stderr, "  Partition %d: %llu to %llu\n", j,
-                   (unsigned long long) partitions[j].firstLBA,
-                   (unsigned long long) partitions[j].lastLBA);
+                   (unsigned long long) partitions[j].GetFirstLBA(),
+                   (unsigned long long) partitions[j].GetLastLBA());
             fprintf(stderr, "Aborting write operation!\n");
 	    allOK = 0;
 	 } // if
@@ -1583,11 +1588,17 @@ int GPTData::SaveGPTData(void) {
 	     * http://topiks.org/mac-os-x/0321278542/ch12lev1sec8.html */
 	    i = ioctl(fd, DKIOCSYNCHRONIZECACHE);
 #else
+#ifdef __FreeBSD__
+            sleep(2);
+            i = ioctl(fd, DIOCGFLUSH);
+            printf("Warning: The kernel is still using the old partition table.\n");
+#else
 	    sleep(2);
             i = ioctl(fd, BLKRRPART);
             if (i)
                printf("Warning: The kernel is still using the old partition table.\n"
                       "The new table will be used at the next reboot.\n");
+#endif
 #endif
          } // if
 
@@ -1691,7 +1702,7 @@ int GPTData::LoadGPTBackup(char* filename) {
          littleEndian = 0;
 
       // Let the MBRData class load the saved MBR...
-      protectiveMBR.ReadMBRData(fd);
+      protectiveMBR.ReadMBRData(fd, 0); // 0 = don't check block size
 
       // Load the main GPT header, check its vaility, and set the GPT
       // size based on the data
@@ -1815,22 +1826,22 @@ int GPTData::DestroyGPT(void) {
 } // GPTData::DestroyGPT()
 
 void GPTData::ReverseHeaderBytes(struct GPTHeader* header) {
-   ReverseBytes((char*) &header->signature, 8);
-   ReverseBytes((char*) &header->revision, 4);
-   ReverseBytes((char*) &header->headerSize, 4);
-   ReverseBytes((char*) &header->headerCRC, 4);
-   ReverseBytes((char*) &header->reserved, 4);
-   ReverseBytes((char*) &header->currentLBA, 8);
-   ReverseBytes((char*) &header->backupLBA, 8);
-   ReverseBytes((char*) &header->firstUsableLBA, 8);
-   ReverseBytes((char*) &header->lastUsableLBA, 8);
-   ReverseBytes((char*) &header->partitionEntriesLBA, 8);
-   ReverseBytes((char*) &header->numParts, 4);
-   ReverseBytes((char*) &header->sizeOfPartitionEntries, 4);
-   ReverseBytes((char*) &header->partitionEntriesCRC, 4);
-   ReverseBytes((char*) header->reserved2, GPT_RESERVED);
-   ReverseBytes((char*) &header->diskGUID.data1, 8);
-   ReverseBytes((char*) &header->diskGUID.data2, 8);
+   ReverseBytes(&header->signature, 8);
+   ReverseBytes(&header->revision, 4);
+   ReverseBytes(&header->headerSize, 4);
+   ReverseBytes(&header->headerCRC, 4);
+   ReverseBytes(&header->reserved, 4);
+   ReverseBytes(&header->currentLBA, 8);
+   ReverseBytes(&header->backupLBA, 8);
+   ReverseBytes(&header->firstUsableLBA, 8);
+   ReverseBytes(&header->lastUsableLBA, 8);
+   ReverseBytes(&header->partitionEntriesLBA, 8);
+   ReverseBytes(&header->numParts, 4);
+   ReverseBytes(&header->sizeOfPartitionEntries, 4);
+   ReverseBytes(&header->partitionEntriesCRC, 4);
+   ReverseBytes(&header->reserved2, GPT_RESERVED);
+   ReverseBytes(&header->diskGUID.data1, 8);
+   ReverseBytes(&header->diskGUID.data2, 8);
 } // GPTData::ReverseHeaderBytes()
 
 // IMPORTANT NOTE: This function requires non-reversed mainHeader
@@ -1846,13 +1857,7 @@ void GPTData::ReversePartitionBytes() {
              "data corruption or a misplaced call to this function.\n");
    } // if signature mismatch....
    for (i = 0; i < mainHeader.numParts; i++) {
-      ReverseBytes((char*) &partitions[i].partitionType.data1, 8);
-      ReverseBytes((char*) &partitions[i].partitionType.data2, 8);
-      ReverseBytes((char*) &partitions[i].uniqueGUID.data1, 8);
-      ReverseBytes((char*) &partitions[i].uniqueGUID.data2, 8);
-      ReverseBytes((char*) &partitions[i].firstLBA, 8);
-      ReverseBytes((char*) &partitions[i].lastLBA, 8);
-      ReverseBytes((char*) &partitions[i].attributes, 8);
+      partitions[i].ReversePartBytes();
    } // for
 } // GPTData::ReversePartitionBytes()
 
@@ -1886,18 +1891,22 @@ int SizesOK(void) {
       allOK = 0;
    } // if
    if (sizeof(struct MBRRecord) != 16) {
-      fprintf(stderr, "MBRRecord is %d bytes, should be 16 bytes; aborting!\n", sizeof(uint32_t));
+      fprintf(stderr, "MBRRecord is %d bytes, should be 16 bytes; aborting!\n", sizeof(MBRRecord));
       allOK = 0;
    } // if
    if (sizeof(struct EBRRecord) != 512) {
-      fprintf(stderr, "EBRRecord is %d bytes, should be 512 bytes; aborting!\n", sizeof(uint32_t));
+      fprintf(stderr, "EBRRecord is %d bytes, should be 512 bytes; aborting!\n", sizeof(EBRRecord));
       allOK = 0;
    } // if
    if (sizeof(struct GPTHeader) != 512) {
-      fprintf(stderr, "GPTHeader is %d bytes, should be 512 bytes; aborting!\n", sizeof(uint32_t));
+      fprintf(stderr, "GPTHeader is %d bytes, should be 512 bytes; aborting!\n", sizeof(GPTHeader));
       allOK = 0;
    } // if
-   // Determine endianness; set allOK = 0 if running on big-endian hardware
+   if (sizeof(GPTPart) != 128) {
+      fprintf(stderr, "GPTPart is %d bytes, should be 128 bytes; aborting!\n", sizeof(GPTPart));
+      allOK = 0;
+   } // if
+// Determine endianness; set allOK = 0 if running on big-endian hardware
    if (IsLittleEndian() == 0) {
       fprintf(stderr, "\aRunning on big-endian hardware. Big-endian support is new and poorly"
               " tested!\nBeware!\n");
