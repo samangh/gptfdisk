@@ -70,62 +70,68 @@ protected:
 //   uint32_t units; // display units, in multiples of sectors
    PartTypes typeHelper;
 public:
+   // Basic necessary functions....
    GPTData(void);
    GPTData(char* deviceFilename);
    ~GPTData(void);
-   int SetGPTSize(uint32_t numEntries);
+
+   // Verify (or update) data integrity
+   int Verify(void);
    int CheckGPTSize(void);
-   void ShowAPMState(void);
-   void ShowGPTState(void);
+   int CheckHeaderValidity(void);
+   int CheckHeaderCRC(struct GPTHeader* header);
+   void RecomputeCRCs(void);
+   void RebuildMainHeader(void);
+   void RebuildSecondHeader(void);
+   int FindHybridMismatches(void);
+   int FindOverlaps(void);
+
+   // Load or save data from/to disk
    void PartitionScan(int fd);
    int LoadPartitions(char* deviceFilename);
    int ForceLoadGPTData(int fd);
    int LoadMainTable(void);
-   WhichToUse UseWhichPartitions(void);
-   void ResizePartitionTable(void);
-   int GetPartRange(uint32_t* low, uint32_t* high);
+   void LoadSecondTableAsMain(void);
+   int SaveGPTData(void);
+   int SaveGPTBackup(char* filename);
+   int LoadGPTBackup(char* filename);
+
+   // Display data....
+   void ShowAPMState(void);
+   void ShowGPTState(void);
    void DisplayGPTData(void);
    void DisplayMBRData(void) {protectiveMBR.DisplayMBRData();}
    void ShowDetails(void);
    void ShowPartDetails(uint32_t partNum);
+
+   // Request information from the user (& possibly do something with it)
+   uint32_t GetPartNum(void);
+   void ResizePartitionTable(void);
    void CreatePartition(void);
    void DeletePartition(void);
-   void BlankPartitions(void);
-   uint64_t FindFirstAvailable(uint64_t start = 0);
-   uint64_t FindLastAvailable(uint64_t start);
-   uint64_t FindLastInFree(uint64_t start);
-   int IsFree(uint64_t sector);
+   void ChangePartType(void);
+   void SetAttributes(uint32_t partNum);
+   int DestroyGPT(void); // Returns 1 if user proceeds
+
+   // Convert to GPT from other formats (may require user interaction)
+   WhichToUse UseWhichPartitions(void);
    int XFormPartitions(void);
    int XFormDisklabel(int OnGptPart = -1);
    int XFormDisklabel(BSDData* disklabel, int startPart);
+   void MakeHybrid(void);
+
+   // Adjust GPT structures WITHOUT user interaction...
+   int SetGPTSize(uint32_t numEntries);
+   void BlankPartitions(void);
    void SortGPT(void);
    int ClearGPTData(void);
-   void ChangePartType(void);
-   uint32_t GetPartNum(void);
-   void SetAttributes(uint32_t partNum);
    void SetName(uint32_t partNum, char* theName = NULL);
    void SetDiskGUID(GUIDData newGUID);
    int SetPartitionGUID(uint32_t pn, GUIDData theGUID);
-   int CheckHeaderValidity(void);
-   int CheckHeaderCRC(struct GPTHeader* header);
-   void RecomputeCRCs(void);
-   int Verify(void);
-   void RebuildMainHeader(void);
-   void RebuildSecondHeader(void);
-   void LoadSecondTableAsMain(void);
-   uint64_t FindFreeBlocks(int *numSegments, uint64_t *largestSegment);
-   void MakeHybrid(void);
-   void MakeProtectiveMBR(void);
-   int SaveGPTData(void);
-   int SaveGPTBackup(char* filename);
-   int LoadGPTBackup(char* filename);
-   int DestroyGPT(void); // Returns 1 if user proceeds
-
-   // Endianness functions
-   void ReverseHeaderBytes(struct GPTHeader* header); // for endianness
-   void ReversePartitionBytes(); // for endianness
+   void MakeProtectiveMBR(void) {protectiveMBR.MakeProtectiveMBR();}
 
    // Return data about the GPT structures....
+   int GetPartRange(uint32_t* low, uint32_t* high);
    uint32_t GetNumParts(void) {return mainHeader.numParts;}
    uint64_t GetMainHeaderLBA(void) {return mainHeader.currentLBA;}
    uint64_t GetSecondHeaderLBA(void) {return secondHeader.currentLBA;}
@@ -133,12 +139,21 @@ public:
    uint64_t GetSecondPartsLBA(void) {return secondHeader.partitionEntriesLBA;}
    uint64_t GetBlocksInPartTable(void) {return (mainHeader.numParts *
                    mainHeader.sizeOfPartitionEntries) / blockSize;}
+
+   // Find information about free space
+   uint64_t FindFirstAvailable(uint64_t start = 0);
+   uint64_t FindFirstInLargest(void);
+   uint64_t FindLastAvailable(uint64_t start);
+   uint64_t FindLastInFree(uint64_t start);
+   uint64_t FindFreeBlocks(int *numSegments, uint64_t *largestSegment);
+   int IsFree(uint64_t sector);
+
+   // Endianness functions
+   void ReverseHeaderBytes(struct GPTHeader* header); // for endianness
+   void ReversePartitionBytes(); // for endianness
 }; // class GPTData
 
 // Function prototypes....
-void BlankPartition(struct GPTPartition* partition);
-int TheyOverlap(struct GPTPartition* first, struct GPTPartition* second);
-void ChangeGPTType(struct GPTPartition* part);
 int SizesOK(void);
 
 #endif

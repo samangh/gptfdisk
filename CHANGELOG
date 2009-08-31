@@ -1,3 +1,38 @@
+0.4.1:
+------
+
+- Code cleanup/re-organization
+
+- Partition creation function ('n' on main menu) now uses the start of the
+  largest available chunk of free space rather than the first available
+  sector as the default starting sector number. This should enable easier
+  partition creation if there are small bits of free space on the disk.
+
+- You can now specify the end point of a partition by using a minus sign,
+  in which case the end point is the default value minus the specified
+  size. For instance, "-200M" creates a partition that ends 200MiB before
+  the default end point.
+
+- You can now specify the start point of a partition by using a plus or
+  minus sign, in which case the start point is the specified distance from
+  the start (+) or end (-) of free space. This is exactly the same as the
+  new rules for entry of the end point, except that the default value is
+  set differently.
+
+- Deleting a partition now checks for a matching hybrid MBR partition, and
+  if one is found, it's deleted. Any empty space that then surrounds the
+  0xEE (EFI GPT) MBR partitions is then added to the nearby 0xEE partition.
+  If no non-0xEE partitions are left, a fresh protective MBR is generated.
+
+- Added hybrid MBR consistency check to the verify ('v') option and to
+  pre-write checks. If non-0xEE/non-0x00 MBR partitions without
+  corresponding GPT partitions are found, the user is warned. This finding
+  does NOT prevent writing the partition table, though.
+
+- Added non-destructive write test when opening the device file, in order
+  to detect the problem with FreeBSD being unable to write to disks with
+  mounted partitions (or other potential problems).
+
 0.4.0:
 ------
 
@@ -92,7 +127,8 @@ the big-endian support while developing 0.4.0.
 0.3.1:
 ------
 
-- Added Mac OS X support, provided as a patch by an anonymous contributor.
+- Added Mac OS X support, provided as a patch by David Hubbard
+  (david.c.hubbard@gmail.com).
 
 - Fixed bug in disksize() function on Mac OS. (Possibly dependent on the
   kernel and/or GCC version.) The disk size, of type uint64_t, was not
@@ -105,7 +141,8 @@ the big-endian support while developing 0.4.0.
 
 - Fixed bug that caused display of options after a disk-write error.
 
-- Fixed several incorrect MacOS X partition type GUIDs.
+- Fixed several incorrect MacOS X partition type GUIDs, thanks to Yves
+  Blusseau (1otnwmz02@sneakemail.com).
 
 0.3.0:
 ------

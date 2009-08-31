@@ -496,6 +496,61 @@ int MBRData::MakeBiggestPart(int i, int type) {
    return found;
 } // MBRData::MakeBiggestPart(int i)
 
+// Delete a partition if one exists at the specified location.
+// Returns 1 if a partition was deleted, 0 otherwise....
+// Used to help keep GPT & hybrid MBR partitions in sync....
+int MBRData::DeleteByLocation(uint64_t start64, uint64_t length64) {
+   uint32_t start32, length32;
+   int i, j, deleted = 0;
+
+   if ((state == hybrid) && (start64 < UINT32_MAX) && (length64 < UINT32_MAX)) {
+      start32 = (uint32_t) start64;
+      length32 = (uint32_t) length64;
+      for (i = 0; i < 4; i++) {
+         if ((partitions[i].firstLBA == start32) && (partitions[i].lengthLBA = length32) &&
+             (partitions[i].partitionType != 0xEE)) {
+            partitions[i].firstLBA = UINT32_C(0);
+            partitions[i].lengthLBA = UINT32_C(0);
+            partitions[i].status = UINT8_C(0);
+            partitions[i].partitionType = UINT8_C(0);
+            for (j = 0; j < 3; j++) {
+               partitions[i].firstSector[j] = UINT8_C(0);
+               partitions[i].lastSector[j] = UINT8_C(0);
+            } // for j (CHS data blanking)
+            OptimizeEESize();
+            deleted = 1;
+         } // if (match found)
+      } // for i (partition scan)
+   } // if (hybrid & GPT partition < 2TiB)
+   return deleted;
+} // MBRData::DeleteByLocation()
+
+// Optimizes the size of the 0xEE (EFI GPT) partition
+void MBRData::OptimizeEESize(void) {
+   int i, typeFlag = 0;
+   uint32_t after;
+
+   for (i = 0; i < 4; i++) {
+      // Check for non-empty and non-0xEE partitions
+      if ((partitions[i].partitionType != 0xEE) && (partitions[i].partitionType != 0x00))
+         typeFlag++;
+      if (partitions[i].partitionType == 0xEE) {
+         // Blank space before this partition; fill it....
+         if (IsFree(partitions[i].firstLBA - 1)) {
+            partitions[i].firstLBA = FindFirstInFree(partitions[i].firstLBA - 1);
+         } // if
+         // Blank space after this partition; fill it....
+         after = partitions[i].firstLBA + partitions[i].lengthLBA;
+         if (IsFree(after)) {
+            partitions[i].lengthLBA = FindLastInFree(after) - partitions[i].firstLBA + 1;
+         } // if free space after
+      } // if partition is 0xEE
+      if (typeFlag == 0) { // No non-hybrid partitions found
+         MakeProtectiveMBR(); // ensure it's a fully compliant hybrid MBR.
+      } // if
+   } // for partition loop
+} // MBRData::OptimizeEESize()
+
 // Return a pointer to a primary or logical partition, or NULL if
 // the partition is out of range....
 struct MBRRecord* MBRData::GetPartition(int i) {
@@ -582,6 +637,7 @@ uint32_t MBRData::FindFirstAvailable(uint32_t start) {
    return (first);
 } // MBRData::FindFirstAvailable()
 
+// Finds the last free sector on the disk from start forward.
 uint32_t MBRData::FindLastInFree(uint32_t start) {
    uint32_t nearestStart;
    uint32_t i;
@@ -597,7 +653,39 @@ uint32_t MBRData::FindLastInFree(uint32_t start) {
       } // if
    } // for
    return (nearestStart);
-} // MBRData::FindLastInFree
+} // MBRData::FindLastInFree()
+
+// Finds the first free sector on the disk from start backward.
+uint32_t MBRData::FindFirstInFree(uint32_t start) {
+   uint32_t nearestStart, bestLastLBA, thisLastLBA;
+   int i;
+
+   bestLastLBA = 1;
+   for (i = 0; i < 4; i++) {
+      thisLastLBA = partitions[i].firstLBA + partitions[i].lengthLBA;
+      if (thisLastLBA > 0) thisLastLBA--;
+      if ((thisLastLBA > bestLastLBA) && (thisLastLBA < start)) {
+         bestLastLBA = thisLastLBA + 1;
+      } // if
+   } // for
+   return (bestLastLBA);
+} // MBRData::FindFirstInFree()
+
+// Returns 1 if the specified sector is unallocated, 0 if it's
+// allocated.
+int MBRData::IsFree(uint32_t sector) {
+   int i, isFree = 1;
+   uint32_t first, last;
+
+   for (i = 0; i < 4; i++) {
+      first = partitions[i].firstLBA;
+      last = first + partitions[i].lengthLBA;
+      if (last > 0) last--;
+      if ((first <= sector) && (last >= sector))
+         isFree = 0;
+   } // for
+   return isFree;
+} // MBRData::IsFree()
 
 uint8_t MBRData::GetStatus(int i) {
    MBRRecord* thePart;

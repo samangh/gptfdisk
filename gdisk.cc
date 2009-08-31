@@ -2,7 +2,7 @@
 // Program modelled after Linux fdisk, but it manipulates GPT partitions
 // rather than MBR partitions.
 //
-// by Rod Smith, February 2009
+// by Rod Smith, project began February 2009
 
 /* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version 0.4.0\n\n");
+   printf("GPT fdisk (gdisk) version 0.4.1\n\n");
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {

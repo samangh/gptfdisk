@@ -1,7 +1,7 @@
-/* bsd.cc -- Functions for loading, saving, and manipulating legacy BSD disklabel
+/* bsd.cc -- Functions for loading and manipulating legacy BSD disklabel
    data. */
 
-/* By Rod Smith, August, 2009 */
+/* By Rod Smith, initial coding August, 2009 */
 
 /* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
@@ -15,10 +15,8 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <string.h>
-//#include <time.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include "crc32.h"
 #include "support.h"
 #include "bsd.h"
 
@@ -34,7 +32,6 @@ BSDData::BSDData(void) {
    labelFirstLBA = 0;
    labelLastLBA = 0;
    labelStart = LABEL_OFFSET1; // assume raw disk format
-//   deviceFilename[0] = '\0';
    partitions = NULL;
 } // default constructor
 
@@ -42,19 +39,23 @@ BSDData::~BSDData(void) {
    free(partitions);
 } // destructor
 
+// Read BSD disklabel data from the specified device filename. This function
+// just opens the device file and then calls an overloaded function to do
+// the bulk of the work.
 int BSDData::ReadBSDData(char* device, uint64_t startSector, uint64_t endSector) {
    int fd, allOK = 1;
 
-   if ((fd = open(device, O_RDONLY)) != -1) {
-      ReadBSDData(fd, startSector, endSector);
+   if (device != NULL) {
+      if ((fd = open(device, O_RDONLY)) != -1) {
+         ReadBSDData(fd, startSector, endSector);
+      } else {
+         allOK = 0;
+      } // if/else
+
+      close(fd);
    } else {
       allOK = 0;
-   } // if
-
-   close(fd);
-
-//   if (allOK)
-//      strcpy(deviceFilename, device);
+   } // if/else
 
    return allOK;
 } // BSDData::ReadBSDData() (device filename version)
@@ -250,8 +251,9 @@ GPTPart BSDData::AsGPT(int i) {
    sectorEnd = sectorOne + (uint64_t) partitions[i].lengthLBA;
    if (sectorEnd > 0) sectorEnd--;
    // Note on above: BSD partitions sometimes have a length of 0 and a start
-   // sector of 0. With unsigned ints, the usual (start + length - 1) to
-   // find the end will result in a huge number, which will be confusing
+   // sector of 0. With unsigned ints, the usual way (start + length - 1) to
+   // find the end will result in a huge number, which will be confusing.
+   // Thus, apply the "-1" part only if it's reasonable to do so.
 
    // Do a few sanity checks on the partition before we pass it on....
    // First, check that it falls within the bounds of its container
@@ -264,7 +266,7 @@ GPTPart BSDData::AsGPT(int i) {
        (GetType(i) == 0))
       passItOn = 0;
    // If the end point is 0, it's not a valid partition.
-   if (sectorEnd == 0)
+   if ((sectorEnd == 0) || (sectorEnd == labelFirstLBA))
       passItOn = 0;
 
    if (passItOn) {

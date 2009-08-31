@@ -1,6 +1,6 @@
 .\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH GDISK 8 "August 2009" "0.4.0" "GPT fdisk Manual"
+.TH GDISK 8 "August 2009" "0.4.1" "GPT fdisk Manual"
 .SH NAME
 gdisk \- GPT partition table manipulator for Linux and Unix
 .SH SYNOPSIS
@@ -258,7 +258,9 @@ for normal file storage in both Windows and Mac OS X.)
 Some OSes' GPT utilities create some blank space (typically 128 MiB) after
 each partition. The intent is to enable future disk utilities to use this
 space. Such free space is not required of GPT disks, but creating it may
-help in future disk maintenance.
+help in future disk maintenance. You can use GPT fdisk's relative partition
+positioning option (specifying the starting sector as '+128M', for
+instance) to simplify creating such gaps.
 
 .SH OPTIONS
 .TP
@@ -296,7 +298,10 @@ a default name based on the partition type code.
 .B d
 Delete a partition. This action deletes the entry from the partition table
 but does not disturb the data within the sectors originally allocated to
-the partition on the disk.
+the partition on the disk. If a corresponding hybrid MBR partition exists,
+.B gdisk
+deletes it, as well, and expands any adjacent 0xEE (EFI GPT) MBR protective
+partition to fill the new free space.
 
 .TP
 .B i
@@ -339,9 +344,21 @@ see a summary of available options.
 Create a new partition. This command is modelled after the equivalent
 .B fdisk
 option, although some differences exist. You enter a partition number,
-starting sector, and either an ending sector or increment (in integral
-multiples of sectors, kilobytes, megabytes, gigabytes, or terabytes). You
-must also set a partition type code.
+starting sector, and an ending sector. Both start and end sectors can be
+specified in absolute terms as sector numbers or as positions measured in
+kilobytes (K), megabytes (M), gigabytes (G), or terabytes (T); for
+instance,
+.BI 40M
+specifies a position 40MiB from the start of the disk. You can specify
+locations relative to the start or end of the specified range by preceding
+the number by a '+' or '-' symbol, as in
+.BI +2G
+to specify a point 2GiB after the first available sector, or
+.BI -200M
+to specify a point 200MiB before the last available sector. Pressing the
+Enter key with no input specifies the default value, which is the start of
+the largest available block for the start sector and the last available
+block for the end sector.
 
 .TP
 .B o
@@ -545,17 +562,29 @@ entering data. When only one option is possible,
 usually bypasses the prompt entirely.
 
 .SH BUGS
-As of August of 2009 (version 0.3.5),
+As of August of 2009 (version 0.4.1),
 .B gdisk
-should be considered early beta software. Known bugs and
-limitations include:
+should be considered beta software. Known bugs and limitations include:
 
 .TP
 .B *
-The program compiles correctly only on Linux and Mac OS X. Both 64-bit
-(x86-64) and 32-bit (x86) versions for Linux have been tested, the former
-more thoroughly than the latter. The Mac OS X support was added with
-version 0.3.1 and has not been as thoroughly tested.
+The program compiles correctly only on Linux, FreeBSD, and Mac OS X. Both
+64-bit (x86-64) and 32-bit (x86) versions for Linux have been tested, the
+former more thoroughly than the latter. The Mac OS X support was added with
+version 0.3.1 and has not been as thoroughly tested. FreeBSD support was
+added with version 0.4.0 and has not been very thoroughly tested.
+
+.TP
+.B *
+The FreeBSD version of the program can't write changes to the partition
+table to a disk when existing partitions on that disk are mounted. (The
+same problem exists with many other FreeBSD utilities, such as
+.B "gpt"
+,
+.B "fdisk"
+, and
+.B "dd".
+
 
 .TP
 .B *
@@ -593,32 +622,34 @@ partition using GNU Parted or a similar tool.
 
 .TP
 .B *
-Converting from MBR supports only one extended partition. If multiple
-extended partitions are found, only the final extended partition's logical
-partitions are guaranteed to be converted intact; some or all of the
-earlier extended partition(s) logical partitions will be lost.
-
-.TP
-.B *
 MBR conversions work only if the disk has correct LBA partition
 descriptors. These descriptors should be present on any disk over 8 GiB in
 size or on smaller disks partitioned with any but very ancient software.
 
 .TP
 .B *
-If an MBR disk contains a FreeBSD disklabel partition, it's converted
-in-place as such rather than splitting out its constituent disklabel
-partitions into GPT partitions. Other OSes' disklabel partitions may not
-get appropriate GUID type codes at all.
+BSD disklabel support can create first and/or last partitions that overlap
+with the GPT data structures. This can sometimes be compensated by
+adjusting the partition table size, but in extreme cases the affected
+partition(s) may need to be deleted.
 
 .TP
 .B *
-Booting after converting an MBR disk may be disrupted. Sometimes
-re-installing a boot loader will fix the problem, but other times you may
-need to switch boot loaders. Except on EFI-based platforms, Windows through
-at least Windows 7 RC doesn't support booting from GPT disks. Creating a
-hybrid MBR (using the 'h' option on the experts' menu) or abandoning GPT in
-favor of MBR may be your only options in this case.
+Because of the highly variable nature of BSD disklabel structures,
+conversions from this form may be unreliable -- partitions may be dropped,
+converted in a way that creates overlaps with other partitions, or
+converted with incorrect start or end values. Use this feature with
+caution!
+
+.TP
+.B *
+Booting after converting an MBR or BSD disklabel disk is likely to be
+disrupted. Sometimes re-installing a boot loader will fix the problem, but
+other times you may need to switch boot loaders. Except on EFI-based
+platforms, Windows through at least Windows 7 RC doesn't support booting
+from GPT disks. Creating a hybrid MBR (using the 'h' option on the experts'
+menu) or abandoning GPT in favor of MBR may be your only options in this
+case.
 
 .PP
 

@@ -105,10 +105,15 @@ public:
    void MakePart(int num, uint32_t startLBA, uint32_t lengthLBA, int type = 0x07,
                  int bootable = 0);
    int MakeBiggestPart(int i, int type); // Make partition filling most space
+   int DeleteByLocation(uint64_t start64, uint64_t length64);
+   void OptimizeEESize(void);
+   void SetHybrid(void) {state = hybrid;} // Set hybrid flag
 
    // Functions to find information on free space....
    uint32_t FindFirstAvailable(uint32_t start = 1);
    uint32_t FindLastInFree(uint32_t start);
+   uint32_t FindFirstInFree(uint32_t start);
+   int IsFree(uint32_t sector);
 
    // Functions to extract data on specific partitions....
    uint8_t GetStatus(int i);

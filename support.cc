@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+#include <fcntl.h>
 #include "support.h"
 
 #include <sys/types.h>
@@ -64,12 +65,14 @@ char GetYN(void) {
    return response;
 } // GetYN(void)
 
-// Obtains the final sector number, between low and high, from the
+// Obtains a sector number, between low and high, from the
 // user, accepting values prefixed by "+" to add sectors to low,
 // or the same with "K", "M", "G", or "T" as suffixes to add
 // kilobytes, megabytes, gigabytes, or terabytes, respectively.
-// Use the high value as the default if the user just hits Enter
-uint64_t GetLastSector(uint64_t low, uint64_t high, char prompt[]) {
+// If a "-" prefix is used, use the high value minus the user-
+// specified number of sectors (or KiB, MiB, etc.). Use the def
+ //value as the default if the user just hits Enter
+uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]) {
    unsigned long long response;
    int num;
    int plusFlag = 0;
@@ -92,12 +95,18 @@ uint64_t GetLastSector(uint64_t low, uint64_t high, char prompt[]) {
          strcpy(line, &line[1]);
       } // if
 
+      // If present, flag and remove leading minus sign
+      if (line[0] == '-') {
+         plusFlag = -1;
+         strcpy(line, &line[1]);
+      } // if
+
       // Extract numeric response and, if present, suffix
       num = sscanf(line, "%llu%c", &response, &suffix);
 
-      // If no response, use default: The high value
+      // If no response, use default (def)
       if (num <= 0) {
-         response = (unsigned long long) high;
+         response = (unsigned long long) def;
 	 suffix = ' ';
          plusFlag = 0;
       } // if
@@ -127,11 +136,14 @@ uint64_t GetLastSector(uint64_t low, uint64_t high, char prompt[]) {
       // Adjust response based on multiplier and plus flag, if present
       response *= (unsigned long long) mult;
       if (plusFlag == 1) {
-         response = response + (unsigned long long) low - 1;
+         response = response + (unsigned long long) low - UINT64_C(1);
+      } // if
+      if (plusFlag == -1) {
+         response = (unsigned long long) high - response;
       } // if
    } // while
    return ((uint64_t) response);
-} // GetLastSector()
+} // GetSectorNum()
 
 // Takes a size in bytes (in size) and converts this to a size in
 // SI units (KiB, MiB, GiB, TiB, or PiB), returned in C++ string
@@ -354,6 +366,21 @@ uint64_t PowerOf2(int value) {
    return retval;
 } // PowerOf2()
 
+// An extended file-open function. This includes some system-specific checks.
+// I want them in a function because I use these calls twice and I don't want
+// to forget to change them in one location if I need to change them in
+// the other....
+int OpenForWrite(char* deviceFilename) {
+   int fd;
+
+   fd = open(deviceFilename, O_WRONLY); // try to open the device; may fail....
+#ifdef __APPLE__
+   // MacOS X requires a shared lock under some circumstances....
+   if (fd < 0) {
+      fd = open(deviceFilename, O_WRONLY|O_SHLOCK);
+   } // if
+#endif
+} // MyOpen()
 
 /**************************************************************************************
  *                                                                                    *
