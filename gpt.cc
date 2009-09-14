@@ -83,7 +83,7 @@ GPTData::~GPTData(void) {
 // do *NOT* recover from these problems. Returns the total number of
 // problems identified.
 int GPTData::Verify(void) {
-   int problems = 0, numSegments, i, j;
+   int problems = 0, numSegments;
    uint64_t totalFree, largestSegment;
    char tempStr[255], siTotal[255], siLargest[255];
 
@@ -282,7 +282,7 @@ int GPTData::CheckHeaderValidity(void) {
    } // if/else/if
 
    // If MBR bad, check for an Apple disk signature
-   if ((protectiveMBR.GetValidity() == invalid) && 
+   if ((protectiveMBR.GetValidity() == invalid) &&
         (((mainHeader.signature << 32) == APM_SIGNATURE1) ||
         (mainHeader.signature << 32) == APM_SIGNATURE2)) {
       apmFound = 1; // Will display warning message later
@@ -317,7 +317,7 @@ int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
 // byte order on big-endian systems) if any changes have been made.
 void GPTData::RecomputeCRCs(void) {
    uint32_t crc;
-   uint32_t trueNumParts, crcTemp;
+   uint32_t trueNumParts;
    int littleEndian = 1;
 
    // Initialize CRC functions...
@@ -703,7 +703,7 @@ void GPTData::LoadSecondTableAsMain(void) {
 // Writes GPT (and protective MBR) to disk. Returns 1 on successful
 // write, 0 if there was a problem.
 int GPTData::SaveGPTData(void) {
-   int allOK = 1, i, j;
+   int allOK = 1, i;
    char answer, line[256];
    int fd;
    uint64_t secondTable;
@@ -806,27 +806,7 @@ int GPTData::SaveGPTData(void) {
 
          // re-read the partition table
          if (allOK) {
-            sync();
-#ifdef __APPLE__
-            printf("Warning: The kernel may continue to use old or deleted partitions.\n"
-                  "You should reboot or remove the drive.\n");
-	    /* don't know if this helps
-	     * it definitely will get things on disk though:
-            * http://topiks.org/mac-os-x/0321278542/ch12lev1sec8.html */
-            i = ioctl(fd, DKIOCSYNCHRONIZECACHE);
-#else
-#ifdef __FreeBSD__
-            sleep(2);
-            i = ioctl(fd, DIOCGFLUSH);
-            printf("Warning: The kernel may still provide disk access using old partition IDs.\n");
-#else
-            sleep(2);
-            i = ioctl(fd, BLKRRPART);
-            if (i)
-               printf("Warning: The kernel is still using the old partition table.\n"
-                     "The new table will be used at the next reboot.\n");
-#endif
-#endif
+            DiskSync(fd);
          } // if
 
          if (allOK) { // writes completed OK
@@ -1035,7 +1015,7 @@ void GPTData::ShowGPTState(void) {
 
 // Display the basic GPT data
 void GPTData::DisplayGPTData(void) {
-   int i, j;
+   int i;
    char sizeInSI[255]; // String to hold size of disk in SI units
    char tempStr[255];
    uint64_t temp, totalFree;
@@ -1233,13 +1213,17 @@ void GPTData::SetAttributes(uint32_t partNum) {
 // This function destroys the on-disk GPT structures. Returns 1 if the
 // user confirms destruction, 0 if the user aborts.
 int GPTData::DestroyGPT(void) {
-   int fd, i, doMore;
+   int fd, i;
    char blankSector[512], goOn;
 
    for (i = 0; i < 512; i++) {
       blankSector[i] = '\0';
    } // for
 
+   if ((apmFound) || (bsdFound)) {
+      printf("WARNING: APM or BSD disklabel structures detected! This operation could\n"
+             "damage any APM or BSD partitions on this disk!\n");
+   } // if APM or BSD
    printf("\a\aAbout to wipe out GPT on %s. Proceed? ", device);
    goOn = GetYN();
    if (goOn == 'Y') {
@@ -1265,7 +1249,16 @@ int GPTData::DestroyGPT(void) {
          if (GetYN() == 'Y') {
             lseek64(fd, 0, SEEK_SET);
             write(fd, blankSector, 512); // blank it out
-         } // if blank MBR
+         } else { // write current protective MBR, in case it's hybrid....
+            // find and delete 0xEE partitions in MBR
+            for (i = 0; i < 4; i++) {
+               if (protectiveMBR.GetType(i) == (uint8_t) 0xEE) {
+                  protectiveMBR.DeletePartition(i);
+               } // if
+            } // for
+            protectiveMBR.WriteMBRData(fd);
+         } // if/else
+         DiskSync(fd);
          close(fd);
          printf("GPT data structures destroyed! You may now partition the disk using fdisk or\n"
                "other utilities. Program will now terminate.\n");
@@ -1376,7 +1369,6 @@ int GPTData::XFormPartitions(void) {
    int i, numToConvert;
    uint8_t origType;
    struct newGUID;
-   char name[NAME_SIZE];
 
    // Clear out old data & prepare basics....
    ClearGPTData();
@@ -1391,7 +1383,7 @@ int GPTData::XFormPartitions(void) {
       origType = protectiveMBR.GetType(i);
       // don't waste CPU time trying to convert extended, hybrid protective, or
       // null (non-existent) partitions
-      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) && 
+      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) &&
            (origType != 0x00) && (origType != 0xEE))
          partitions[i] = protectiveMBR.AsGPT(i);
    } // for
@@ -1509,7 +1501,8 @@ void GPTData::MakeHybrid(void) {
       j = partNums[i] - 1;
       printf("\nCreating entry for partition #%d\n", j + 1);
       if ((j >= 0) && (j < mainHeader.numParts)) {
-         if (partitions[j].GetLastLBA() < UINT32_MAX) {
+         if ((partitions[j].GetLastLBA() < UINT32_MAX) &&
+             (partitions[j].GetLastLBA() > UINT64_C(0))) {
             do {
                printf("Enter an MBR hex code (default %02X): ",
                       typeHelper.GUIDToID(partitions[j].GetType()) / 256);
@@ -1529,7 +1522,8 @@ void GPTData::MakeHybrid(void) {
                                    (uint32_t) length, typeCode, bootable);
             protectiveMBR.SetHybrid();
          } else { // partition out of range
-            printf("Partition %d ends beyond the 2TiB limit of MBR partitions; omitting it.\n",
+            printf("Partition %d ends beyond the 2TiB limit of MBR partitions or does not exist;\n"
+                   "omitting it.\n",
                    j + 1);
          } // if/else
       } else {
@@ -1683,8 +1677,12 @@ void GPTData::SortGPT(void) {
 
 // Set up data structures for entirely new set of partitions on the
 // specified device. Returns 1 if OK, 0 if there were problems.
+// Note that this function does NOT clear the protectiveMBR data
+// structure, since it may hold the original MBR partitions if the
+// program was launched on an MBR disk, and those may need to be
+// converted to GPT format.
 int GPTData::ClearGPTData(void) {
-   int goOn, i;
+   int goOn = 1, i;
 
    // Set up the partition table....
    free(partitions);
@@ -1835,7 +1833,7 @@ uint64_t GPTData::FindFirstAvailable(uint64_t start) {
 // Finds the first available sector in the largest block of unallocated
 // space on the disk. Returns 0 if there are no available blocks left
 uint64_t GPTData::FindFirstInLargest(void) {
-   uint64_t start, firstBlock, lastBlock, segmentSize, selectedSize = 0, selectedSegment;
+   uint64_t start, firstBlock, lastBlock, segmentSize, selectedSize = 0, selectedSegment = 0;
 
    start = 0;
    do {
@@ -1937,7 +1935,7 @@ int GPTData::IsFree(uint64_t sector) {
          isFree = 0;
            } // if
    } // for
-   if ((sector < mainHeader.firstUsableLBA) || 
+   if ((sector < mainHeader.firstUsableLBA) ||
         (sector > mainHeader.lastUsableLBA)) {
       isFree = 0;
         } // if

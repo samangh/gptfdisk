@@ -293,6 +293,14 @@ struct GUIDData PartTypes::IDToGUID(uint16_t ID) {
    int found = 0;
    struct GUIDData theGUID;
 
+   // Start by assigning a default GUID for the return value. Done
+   // "raw" to avoid the necessity for a recursive call and the
+   // remote possibility of an infinite recursive loop that this
+   // approach would present....
+   theGUID.data1 = UINT64_C(0x4433B9E5EBD0A0A2);
+   theGUID.data2 = UINT64_C(0xC79926B7B668C087);
+
+   // Now search the type list for a match to the ID....
    while ((theItem != NULL) && (!found)) {
       if (theItem->MBRType == ID)  { // found it!
          theGUID = theItem->GUIDType;
@@ -302,8 +310,7 @@ struct GUIDData PartTypes::IDToGUID(uint16_t ID) {
       } // if/else
    } // while
    if (!found) {
-      theGUID = IDToGUID(0x0700); // assign a default type code
-      printf("Exact type match not found for type code %lx; assigning type code for\n'Linux/Windows data'\n",
+      printf("Exact type match not found for type code %04X; assigning type code for\n'Linux/Windows data'\n",
              ID);
    } // if (!found)
    return theGUID;
@@ -317,7 +324,7 @@ struct GUIDData PartTypes::IDToGUID(uint16_t ID) {
 uint16_t PartTypes::GUIDToID(struct GUIDData typeCode) {
    AType* theItem = allTypes;
    int found = 0;
-   uint16_t theID;
+   uint16_t theID = 0xFFFF;
 
    while ((theItem != NULL) && (!found)) {
       if ((theItem->GUIDType.data1 == typeCode.data1) &&

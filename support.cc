@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include "support.h"
 
 #include <sys/types.h>
@@ -184,8 +185,9 @@ char* BytesToSI(uint64_t size, char theValue[]) {
    return theValue;
 } // BlocksToSI()
 
-// Returns block size of device pointed to by fd file descriptor, or -1
-// if there's a problem
+// Returns block size of device pointed to by fd file descriptor. If the ioctl
+// returns an error condition, print a warning but return a value of SECTOR_SIZE
+// (512)..
 int GetBlockSize(int fd) {
    int err, result;
 
@@ -199,13 +201,21 @@ int GetBlockSize(int fd) {
 #endif
 #endif
 
+   if (err == -1) {
+      result = SECTOR_SIZE;
+      // ENOTTY = inappropriate ioctl; probably being called on a disk image
+      // file, so don't display the warning message....
+      if (errno != ENOTTY) {
+         printf("\aError %d when determining sector size! Setting sector size to %d\n",
+                errno, SECTOR_SIZE);
+      } // if
+   } // if
+
    if (result != 512) {
       printf("\aWARNING! Sector size is not 512 bytes! This program is likely to ");
       printf("misbehave!\nProceed at your own risk!\n\n");
    } // if
 
-   if (err == -1)
-      result = -1;
    return (result);
 } // GetBlockSize()
 
@@ -380,7 +390,37 @@ int OpenForWrite(char* deviceFilename) {
       fd = open(deviceFilename, O_WRONLY|O_SHLOCK);
    } // if
 #endif
-} // MyOpen()
+	return fd;
+} // OpenForWrite()
+
+// Resync disk caches so the OS uses the new partition table. This code varies
+// a lot from one OS to another.
+void DiskSync(int fd) {
+   int i;
+
+   sync();
+#ifdef __APPLE__
+   printf("Warning: The kernel may continue to use old or deleted partitions.\n"
+          "You should reboot or remove the drive.\n");
+	    /* don't know if this helps
+	     * it definitely will get things on disk though:
+            * http://topiks.org/mac-os-x/0321278542/ch12lev1sec8.html */
+   i = ioctl(fd, DKIOCSYNCHRONIZECACHE);
+#else
+#ifdef __FreeBSD__
+   sleep(2);
+   i = ioctl(fd, DIOCGFLUSH);
+   printf("Warning: The kernel may continue to use old or deleted partitions.\n"
+          "You should reboot or remove the drive.\n");
+#else
+   sleep(2);
+   i = ioctl(fd, BLKRRPART);
+   if (i)
+      printf("Warning: The kernel is still using the old partition table.\n"
+            "The new table will be used at the next reboot.\n");
+#endif
+#endif
+} // DiskSync()
 
 /**************************************************************************************
  *                                                                                    *
@@ -392,35 +432,62 @@ int OpenForWrite(char* deviceFilename) {
 // The disksize function is taken from the Linux fdisk code and modified
 // to work around a problem returning a uint64_t value on Mac OS.
 uint64_t disksize(int fd, int *err) {
-	long sz; // Do not delete; needed for Linux
-	long long b; // Do not delete; needed for Linux
-	uint64_t sectors;
+   long sz; // Do not delete; needed for Linux
+   long long b; // Do not delete; needed for Linux
+   uint64_t sectors = 0, bytes = 0; // size in sectors & bytes
+   struct stat st;
 
-	// Note to self: I recall testing a simplified version of
-	// this code, similar to what's in the __APPLE__ block,
-	// on Linux, but I had some problems. IIRC, it ran OK on 32-bit
-	// systems but not on 64-bit. Keep this in mind in case of
-	// 32/64-bit issues on MacOS....
+   // Note to self: I recall testing a simplified version of
+   // this code, similar to what's in the __APPLE__ block,
+   // on Linux, but I had some problems. IIRC, it ran OK on 32-bit
+   // systems but not on 64-bit. Keep this in mind in case of
+   // 32/64-bit issues on MacOS....
 #ifdef __APPLE__
-	*err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
+   *err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
 #else
 #ifdef __FreeBSD__
-        *err = ioctl(fd, DIOCGMEDIASIZE, &sz);
-        b = GetBlockSize(fd);
-        sectors = sz / b;
+   *err = ioctl(fd, DIOCGMEDIASIZE, &sz);
+   b = GetBlockSize(fd);
+   sectors = sz / b;
 #else
-	*err = ioctl(fd, BLKGETSIZE, &sz);
-	if (*err) {
-		sz = 0;
-		if (errno != EFBIG)
-			return sz;
-	}
-	*err = ioctl(fd, BLKGETSIZE64, &b);
-	if (*err || b == 0 || b == sz)
-		sectors = sz;
-	else
-		sectors = (b >> 9);
+   *err = ioctl(fd, BLKGETSIZE, &sz);
+   if (*err) {
+      sectors = sz = 0;
+   } // if
+   if ((errno == EFBIG) || (!*err)) {
+      *err = ioctl(fd, BLKGETSIZE64, &b);
+      if (*err || b == 0 || b == sz)
+         sectors = sz;
+      else
+         sectors = (b >> 9);
+   } // if
+
+//         if (*err) {
+//            sz = 0;
+//            if (errno != EFBIG)
+//               return sz;
+//         }
+//         *err = ioctl(fd, BLKGETSIZE64, &b);
+//         if (*err || b == 0 || b == sz)
+//            sectors = sz;
+//         else
+//            sectors = (b >> 9);
+
 #endif
 #endif
-	return sectors;
+
+   // The above methods have failed (or it's a bum filename reference),
+   // so let's assume it's a regular file (a QEMU image, dd backup, or
+   // what have you) and see what stat() gives us....
+   if (sectors == 0) {
+      if (fstat(fd, &st) == 0) {
+         bytes = (uint64_t) st.st_size;
+         if ((bytes % UINT64_C(512)) != 0)
+            fprintf(stderr, "Warning: File size is not a multiple of 512 bytes!"
+                            " Misbehavior is likely!\n\a");
+         sectors = bytes / UINT64_C(512);
+      } // if
+   } // if
+//   printf("In disksize(), sectors is %lld.\n", sectors);
+   return sectors;
 }

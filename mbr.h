@@ -105,6 +105,7 @@ public:
    void MakePart(int num, uint32_t startLBA, uint32_t lengthLBA, int type = 0x07,
                  int bootable = 0);
    int MakeBiggestPart(int i, int type); // Make partition filling most space
+   void DeletePartition(int i);
    int DeleteByLocation(uint64_t start64, uint64_t length64);
    void OptimizeEESize(void);
    void SetHybrid(void) {state = hybrid;} // Set hybrid flag

@@ -179,11 +179,12 @@ void MBRData::ReadMBRData(int fd, int checkBlockSize) {
 
    // Find block size
    if (checkBlockSize) {
-      if ((blockSize = GetBlockSize(fd)) == -1) {
-         blockSize = SECTOR_SIZE;
-         printf("Unable to determine sector size; assuming %lu bytes!\n",
-               (unsigned long) SECTOR_SIZE);
-      } // if
+      blockSize = GetBlockSize(fd);
+//      if ((blockSize = GetBlockSize(fd)) == -1) {
+//         blockSize = SECTOR_SIZE;
+//         printf("Unable to determine sector size; assuming %lu bytes!\n",
+//               (unsigned long) SECTOR_SIZE);
+//      } // if
    } // if (checkBlockSize)
 
    // Load logical partition data, if any is found....
@@ -291,6 +292,7 @@ void MBRData::WriteMBRData(int fd) {
    } // for i...
 
    // Now write that data structure...
+   lseek64(fd, 0, SEEK_SET);
    write(fd, &tempMBR, 512);
 
 /*   write(fd, code, 440);
@@ -298,7 +300,7 @@ void MBRData::WriteMBRData(int fd) {
    write(fd, &nulls, 2);
    write(fd, partitions, 64);
    write(fd, &MBRSignature, 2); */
-   
+
    // Reverse the byte order back, if necessary
    if (IsLittleEndian() == 0) {
       ReverseBytes(&diskSignature, 4);
@@ -496,6 +498,20 @@ int MBRData::MakeBiggestPart(int i, int type) {
    return found;
 } // MBRData::MakeBiggestPart(int i)
 
+// Delete partition #i
+void MBRData::DeletePartition(int i) {
+   int j;
+
+   partitions[i].firstLBA = UINT32_C(0);
+   partitions[i].lengthLBA = UINT32_C(0);
+   partitions[i].status = UINT8_C(0);
+   partitions[i].partitionType = UINT8_C(0);
+   for (j = 0; j < 3; j++) {
+      partitions[i].firstSector[j] = UINT8_C(0);
+      partitions[i].lastSector[j] = UINT8_C(0);
+   } // for j (CHS data blanking)
+} // MBRData::DeletePartition()
+
 // Delete a partition if one exists at the specified location.
 // Returns 1 if a partition was deleted, 0 otherwise....
 // Used to help keep GPT & hybrid MBR partitions in sync....
@@ -509,14 +525,7 @@ int MBRData::DeleteByLocation(uint64_t start64, uint64_t length64) {
       for (i = 0; i < 4; i++) {
          if ((partitions[i].firstLBA == start32) && (partitions[i].lengthLBA = length32) &&
              (partitions[i].partitionType != 0xEE)) {
-            partitions[i].firstLBA = UINT32_C(0);
-            partitions[i].lengthLBA = UINT32_C(0);
-            partitions[i].status = UINT8_C(0);
-            partitions[i].partitionType = UINT8_C(0);
-            for (j = 0; j < 3; j++) {
-               partitions[i].firstSector[j] = UINT8_C(0);
-               partitions[i].lastSector[j] = UINT8_C(0);
-            } // for j (CHS data blanking)
+            DeletePartition(i);
             OptimizeEESize();
             deleted = 1;
          } // if (match found)
@@ -594,7 +603,7 @@ void MBRData::ShowState(void) {
 // setup to begin with....
 void MBRData::MakePart(int num, uint32_t start, uint32_t length, int type,
                        int bootable) {
-   
+
    partitions[num].status = (uint8_t) bootable * (uint8_t) 0x80;
    partitions[num].firstSector[0] = UINT8_C(0);
    partitions[num].firstSector[1] = UINT8_C(0);
@@ -657,7 +666,7 @@ uint32_t MBRData::FindLastInFree(uint32_t start) {
 
 // Finds the first free sector on the disk from start backward.
 uint32_t MBRData::FindFirstInFree(uint32_t start) {
-   uint32_t nearestStart, bestLastLBA, thisLastLBA;
+   uint32_t bestLastLBA, thisLastLBA;
    int i;
 
    bestLastLBA = 1;
@@ -752,7 +761,7 @@ GPTPart MBRData::AsGPT(int i) {
       // partitions (Note similar protection is in GPTData::XFormPartitions(),
       // but I want it here too in case I call this function in another
       // context in the future....)
-      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) && 
+      if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) &&
           (origType != 0x00) && (origType != 0xEE)) {
          firstSector = (uint64_t) origPart->firstLBA;
          newPart.SetFirstLBA(firstSector);

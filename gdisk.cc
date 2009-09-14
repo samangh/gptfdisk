@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version 0.4.1\n\n");
+   printf("GPT fdisk (gdisk) version 0.4.2\n\n");
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {
@@ -90,9 +90,12 @@ int DoCommand(char* filename, struct GPTData* theGPT) {
          theGPT->CreatePartition();
          break;
       case 'o': case 'O':
-         theGPT->ClearGPTData();
-         theGPT->MakeProtectiveMBR();
-//         theGPT->BlankPartitions();
+         printf("This option deletes all partitions and creates a new "
+                "protective MBR.\nProceed? ");
+         if (GetYN() == 'Y') {
+            theGPT->ClearGPTData();
+            theGPT->MakeProtectiveMBR();
+         } // if
          break;
       case 'p': case 'P':
          theGPT->DisplayGPTData();

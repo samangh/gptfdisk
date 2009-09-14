@@ -1,3 +1,30 @@
+0.4.2:
+------
+
+- Code cleanup.
+
+- Fixed very small formatting bug in display of hex code when a match isn't
+  found when converting from an MBR/gdisk hex code to a GUID type code.
+
+- Added the ability to work on disk image files (raw files for virtual
+  machines, backup images, etc.). The program assumes that all such disk
+  image files have 512-byte sectors.
+
+- Added verification prompt to 'o' main-menu option to avoid accidental
+  erasures of all partitions.
+
+- The "destroy GPT data structures" option ('z' on the experts' menu) now
+  also destroys all EFI GPT (0xEE) partitions in the MBR.
+
+- Added an extra warning to the "destroy GPT data structures" option if an APM
+  or BSD disklabel was detected on the disk.
+
+- Added a buffer flush after destroying GPT data structures, to get the OS
+  to read the new (empty or MBR-only) partition table.
+
+- Fixed bug that allowed entry of nonexistent partition numbers when creating
+  a hybrid MBR.
+
 0.4.1:
 ------
 

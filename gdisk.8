@@ -1,6 +1,6 @@
 .\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH GDISK 8 "August 2009" "0.4.1" "GPT fdisk Manual"
+.TH GDISK 8 "August 2009" "0.4.2" "GPT fdisk Manual"
 .SH NAME
 gdisk \- GPT partition table manipulator for Linux and Unix
 .SH SYNOPSIS
@@ -425,7 +425,7 @@ menu provides unusually dangerous or obscure options. These are:
 Set attributes. GPT provides a 64-bit attributes field that can be used to
 set partition features.
 .B gdisk
-supports four attributes: 
+supports four attributes:
 .IR "system partition",
 .IR "read-only",
 .IR "hidden",
@@ -548,7 +548,7 @@ the main menu.
 .TP
 .B z
 Destroy the GPT data structures and exit. Use this option if you want to
-repartition a GPT disk using 
+repartition a GPT disk using
 .B "fdisk"
 or some other GPT-unaware program.
 You'll be given the choice of preserving the existing MBR, in case it's a
@@ -562,7 +562,7 @@ entering data. When only one option is possible,
 usually bypasses the prompt entirely.
 
 .SH BUGS
-As of August of 2009 (version 0.4.1),
+As of September 2009 (version 0.4.2),
 .B gdisk
 should be considered beta software. Known bugs and limitations include:
 

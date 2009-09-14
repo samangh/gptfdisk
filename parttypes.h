@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string>
+#include <string.h>
 #include "support.h"
 
 #ifndef __PARTITION_TYPES

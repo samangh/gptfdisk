@@ -68,6 +68,7 @@ GPTPart & GPTPart::operator=(const GPTPart & orig) {
    attributes = orig.attributes;
    for (i = 0; i < NAME_SIZE; i++)
       name[i] = orig.name[i];
+   return *this;
 } // assignment operator
 
 // Sets the unique GUID to a value of 0 or a random value,

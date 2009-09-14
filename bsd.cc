@@ -64,7 +64,6 @@ int BSDData::ReadBSDData(char* device, uint64_t startSector, uint64_t endSector)
 // file, starting with the specified sector number.
 void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
    uint8_t buffer[2048]; // I/O buffer
-   uint64_t startByte;
    int i, err, foundSig = 0, bigEnd = 0;
    int relative = 0; // assume absolute partition sector numbering
    uint32_t realSig;
