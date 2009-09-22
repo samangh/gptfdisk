@@ -28,6 +28,6 @@ clean:	#no pre-reqs
 depend: $(SRCS)
 	$(DEPEND) $(SRCS)
 
-$(OBJS):	
+$(OBJS):
 
 # DO NOT DELETE

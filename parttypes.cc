@@ -179,7 +179,7 @@ PartTypes::PartTypes(void) {
               "EFI System"); // EFI System (parted marks Linux boot
                              // partitions like this)
       AddType(0xEF01, UINT64_C(0x11d333e7024dee41), UINT64_C(0x9FF381C70800699d),
-              "MBR partition scheme"); // Whatever that is (from Wikipedia)
+              "MBR partition scheme"); // Used to nest an MBR table on a GPT disk
       AddType(0xEF02, UINT64_C(0x6E6F644921686148), UINT64_C(0x4946456465654E74),
               "BIOS boot partition"); //
 

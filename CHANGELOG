@@ -1,3 +1,45 @@
+0.5.0:
+------
+
+- Added GPT-to-MBR conversion function. It's very limited, but potentially
+  useful in some cases.
+
+- Fixed bug that caused incorrect file sizes to be reported on 32-bit
+  Linux, thus causing problems when editing partition tables in disk images
+  or when loading GPT backup files.
+
+- Fixed bug that caused bogus CRC error reports when loading backup GPT
+  data.
+
+- Reorganized menus. There are now three: the main menu, the experts' menu,
+  and the recovery & transformation menu. The last of these has most of the
+  items that had been on the earlier versions' experts' menu.
+
+- Added ability to re-load the MBR and generate a fresh GPT from it. This
+  is normally identical to quitting and re-running the program, but it
+  could be handy if, say, the GPT partitions on a hybrid configuration are
+  badly messed up; this will enable using the hybridized partitions as the
+  starting point for a new GPT setup.
+
+- The program now generates CHS values for hybrid and GPT-to-MBR conversion
+  MBRs. For the moment, the assumption is the maximum number of heads and
+  sectors per track (255 and 63, respectively), although the bulk of the
+  code supports other values -- it'd just be awkward to enter the data in
+  the user interface.
+
+- Fixed minor display bug that caused number of sectors on the disk to be
+  shown as 0 on large disks when running 32-bit binaries.
+
+- Reverted 0.4.2's zap (destroy GPT) changes, since I don't want to wipe
+  out a valid MBR if the user created that MBR over an older GPT without
+  first properly wiping out the GPT, and the user now wants to wipe out
+  the GPT.
+
+- Reformatted and edited the man page. Aside from edits related to the
+  preceding program changes, I've altered the markup slightly and trimmed
+  much of the more tutorial information from the man page to better
+  conform to typical terse man page style.
+
 0.4.2:
 ------
 

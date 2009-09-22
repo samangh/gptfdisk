@@ -9,8 +9,8 @@
 // Copyright: See COPYING file that comes with this distribution
 //
 //
-/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
-  under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
+// This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+// under the terms of the GNU GPL version 2, as detailed in the COPYING file.
 
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
@@ -25,6 +25,10 @@ using namespace std;
 PartTypes GPTPart::typeHelper;
 
 GPTPart::GPTPart(void) {
+   int i;
+
+   for (i = 0; i < NAME_SIZE; i++)
+      name[i] = '\0';
 } // Default constructor
 
 GPTPart::~GPTPart(void) {
@@ -128,16 +132,16 @@ void GPTPart::ReversePartBytes(void) {
 } // GPTPart::ReverseBytes()
 
 // Display summary information; does nothing if the partition is empty.
-void GPTPart::ShowSummary(int i, uint32_t blockSize, char* sizeInSI) {
-   int j;
+void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
+   char sizeInSI[255];
+   int j = 0;
 
    if (firstLBA != 0) {
       BytesToSI(blockSize * (lastLBA - firstLBA + 1), sizeInSI);
-      printf("%4d  %14lu  %14lu", i + 1, (unsigned long) firstLBA,
+      printf("%4d  %14lu  %14lu", partNum + 1, (unsigned long) firstLBA,
              (unsigned long) lastLBA);
       printf("   %-10s  %04X  ", sizeInSI,
              typeHelper.GUIDToID(partitionType));
-      j = 0;
       while ((name[j] != '\0') && (j < 44)) {
          printf("%c", name[j]);
          j += 2;

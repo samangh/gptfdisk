@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+
+#ifndef __GPTSUPPORT
+#define __GPTSUPPORT
 
 #if defined (__FreeBSD__) || defined (__APPLE__)
 // Darwin (Mac OS) only: disk IOCTLs are different, and there is no lseek64
@@ -18,10 +22,10 @@
 #include <linux/fs.h>
 #endif
 
-#include <string.h>
-
-#ifndef __GPTSUPPORT
-#define __GPTSUPPORT
+#ifdef __FreeBSD__
+#define fstat64 fstat
+#define stat64 stat
+#endif
 
 // Set this as a default
 #define SECTOR_SIZE UINT32_C(512)
@@ -39,7 +43,7 @@
 // Number and size of GPT entries...
 #define NUM_GPT_ENTRIES 128
 #define GPT_SIZE 128
-#define HEADER_SIZE 92
+#define HEADER_SIZE UINT32_C(92)
 #define GPT_RESERVED 420
 #define NAME_SIZE 72
 

@@ -67,7 +67,6 @@ protected:
    int secondPartsCrcOk;
    int apmFound; // set to 1 if APM detected
    int bsdFound; // set to 1 if BSD disklabel detected in MBR
-//   uint32_t units; // display units, in multiples of sectors
    PartTypes typeHelper;
 public:
    // Basic necessary functions....
@@ -87,6 +86,7 @@ public:
    int FindOverlaps(void);
 
    // Load or save data from/to disk
+   int LoadMBR(char* f) {return protectiveMBR.ReadMBRData(f);}
    void PartitionScan(int fd);
    int LoadPartitions(char* deviceFilename);
    int ForceLoadGPTData(int fd);
@@ -111,13 +111,15 @@ public:
    void DeletePartition(void);
    void ChangePartType(void);
    void SetAttributes(uint32_t partNum);
-   int DestroyGPT(void); // Returns 1 if user proceeds
+   int DestroyGPT(int prompt = 1); // Returns 1 if user proceeds
 
-   // Convert to GPT from other formats (may require user interaction)
+   // Convert between GPT and other formats (may require user interaction)
    WhichToUse UseWhichPartitions(void);
    int XFormPartitions(void);
    int XFormDisklabel(int OnGptPart = -1);
    int XFormDisklabel(BSDData* disklabel, int startPart);
+   int OnePartToMBR(uint32_t gptPart, int mbrPart); // add one partition to MBR. Returns 1 if successful
+   int XFormToMBR(void); // convert GPT to MBR, wiping GPT afterwards. Returns 1 if successful
    void MakeHybrid(void);
 
    // Adjust GPT structures WITHOUT user interaction...
@@ -139,6 +141,8 @@ public:
    uint64_t GetSecondPartsLBA(void) {return secondHeader.partitionEntriesLBA;}
    uint64_t GetBlocksInPartTable(void) {return (mainHeader.numParts *
                    mainHeader.sizeOfPartitionEntries) / blockSize;}
+   uint32_t CountParts(void);
+
 
    // Find information about free space
    uint64_t FindFirstAvailable(uint64_t start = 0);

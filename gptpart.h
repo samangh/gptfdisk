@@ -9,8 +9,8 @@
 // Copyright: See COPYING file that comes with this distribution
 //
 //
-/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
-  under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
+// This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+// under the terms of the GNU GPL version 2, as detailed in the COPYING file.
 
 #ifndef __GPTPART_H
 #define __GPTPART_H
@@ -23,11 +23,11 @@
 
 using namespace std;
 
-/*****************************************
- *                                       *
- * GUIDPart class and related structures *
- *                                       *
- *****************************************/
+/****************************************
+ *                                      *
+ * GPTPart class and related structures *
+ *                                      *
+ ****************************************/
 
 class GPTPart {
    protected:
@@ -73,7 +73,7 @@ class GPTPart {
 
       // Additional functions
       GPTPart & operator=(const GPTPart & orig);
-      void ShowSummary(int i, uint32_t blockSize, char* sizeInSI); // display summary information (1-line)
+      void ShowSummary(int partNum, uint32_t blockSize); // display summary information (1-line)
       void ShowDetails(uint32_t blockSize); // display detailed information (multi-line)
       void BlankPartition(void); // empty partition of data
       int DoTheyOverlap(GPTPart* other); // returns 1 if there's overlap

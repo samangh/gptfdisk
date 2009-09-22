@@ -205,7 +205,9 @@ int GetBlockSize(int fd) {
       result = SECTOR_SIZE;
       // ENOTTY = inappropriate ioctl; probably being called on a disk image
       // file, so don't display the warning message....
-      if (errno != ENOTTY) {
+      // 32-bit code returns EINVAL, I don't know why. I know I'm treading on
+      // thin ice here, but it should be OK in all but very weird cases....
+      if ((errno != ENOTTY) && (errno != EINVAL)) {
          printf("\aError %d when determining sector size! Setting sector size to %d\n",
                 errno, SECTOR_SIZE);
       } // if
@@ -434,8 +436,9 @@ void DiskSync(int fd) {
 uint64_t disksize(int fd, int *err) {
    long sz; // Do not delete; needed for Linux
    long long b; // Do not delete; needed for Linux
-   uint64_t sectors = 0, bytes = 0; // size in sectors & bytes
-   struct stat st;
+   uint64_t sectors = 0; // size in sectors
+   off_t bytes = 0; // size in bytes
+   struct stat64 st;
 
    // Note to self: I recall testing a simplified version of
    // this code, similar to what's in the __APPLE__ block,
@@ -462,17 +465,6 @@ uint64_t disksize(int fd, int *err) {
          sectors = (b >> 9);
    } // if
 
-//         if (*err) {
-//            sz = 0;
-//            if (errno != EFBIG)
-//               return sz;
-//         }
-//         *err = ioctl(fd, BLKGETSIZE64, &b);
-//         if (*err || b == 0 || b == sz)
-//            sectors = sz;
-//         else
-//            sectors = (b >> 9);
-
 #endif
 #endif
 
@@ -480,7 +472,7 @@ uint64_t disksize(int fd, int *err) {
    // so let's assume it's a regular file (a QEMU image, dd backup, or
    // what have you) and see what stat() gives us....
    if (sectors == 0) {
-      if (fstat(fd, &st) == 0) {
+      if (fstat64(fd, &st) == 0) {
          bytes = (uint64_t) st.st_size;
          if ((bytes % UINT64_C(512)) != 0)
             fprintf(stderr, "Warning: File size is not a multiple of 512 bytes!"

@@ -1,7 +1,7 @@
 /* mbr.cc -- Functions for loading, saving, and manipulating legacy MBR partition
    data. */
 
-/* By Rod Smith, January to February, 2009 */
+/* Initial coding by Rod Smith, January to February, 2009 */
 
 /* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
@@ -35,6 +35,8 @@ MBRData::MBRData(void) {
    strcpy(device, "");
    state = invalid;
    srand((unsigned int) time(NULL));
+   numHeads = MAX_HEADS;
+   numSecspTrack = MAX_SECSPERTRACK;
    EmptyMBR();
 } // MBRData default constructor
 
@@ -43,6 +45,8 @@ MBRData::MBRData(char *filename) {
    diskSize = 0;
    strcpy(device, filename);
    state = invalid;
+   numHeads = MAX_HEADS;
+   numSecspTrack = MAX_SECSPERTRACK;
 
    srand((unsigned int) time(NULL));
    // Try to read the specified partition table, but if it fails....
@@ -55,51 +59,11 @@ MBRData::MBRData(char *filename) {
 MBRData::~MBRData(void) {
 } // MBRData destructor
 
-// Empty all data. Meant mainly for calling by constructors, but it's also
-// used by the hybrid MBR functions in the GPTData class.
-void MBRData::EmptyMBR(int clearBootloader) {
-   int i;
-
-   // Zero out the boot loader section, the disk signature, and the
-   // 2-byte nulls area only if requested to do so. (This is the
-   // default.)
-   if (clearBootloader == 1) {
-      for (i = 0; i < 440; i++)
-         code[i] = 0;
-      diskSignature = (uint32_t) rand();
-      nulls = 0;
-   } // if
-
-   // Blank out the partitions
-   for (i = 0; i < 4; i++) {
-      partitions[i].status = UINT8_C(0);
-      partitions[i].firstSector[0] = UINT8_C(0);
-      partitions[i].firstSector[1] = UINT8_C(0);
-      partitions[i].firstSector[2] = UINT8_C(0);
-      partitions[i].partitionType = UINT8_C(0);
-      partitions[i].lastSector[0] = UINT8_C(0);
-      partitions[i].lastSector[1] = UINT8_C(0);
-      partitions[i].lastSector[2] = UINT8_C(0);
-      partitions[i].firstLBA = UINT32_C(0);
-      partitions[i].lengthLBA = UINT32_C(0);
-   } // for
-   MBRSignature = MBR_SIGNATURE;
-
-   blockSize = SECTOR_SIZE;
-   diskSize = 0;
-   for (i = 0; i < NUM_LOGICALS; i++) {
-      logicals[i].status = UINT8_C(0);
-      logicals[i].firstSector[0] = UINT8_C(0);
-      logicals[i].firstSector[1] = UINT8_C(0);
-      logicals[i].firstSector[2] = UINT8_C(0);
-      logicals[i].partitionType = UINT8_C(0);
-      logicals[i].lastSector[0] = UINT8_C(0);
-      logicals[i].lastSector[1] = UINT8_C(0);
-      logicals[i].lastSector[2] = UINT8_C(0);
-      logicals[i].firstLBA = UINT32_C(0);
-      logicals[i].lengthLBA = UINT32_C(0);
-   } // for
-} // MBRData::EmptyMBR()
+/**********************
+ *                    *
+ * Disk I/O functions *
+ *                    *
+ **********************/
 
 // Read data from MBR. Returns 1 if read was successful (even if the
 // data isn't a valid MBR), 0 if the read failed.
@@ -120,25 +84,18 @@ int MBRData::ReadMBRData(char* deviceFilename) {
    return allOK;
 } // MBRData::ReadMBRData(char* deviceFilename)
 
-// Read data from MBR.
+// Read data from MBR. If checkBlockSize == 1 (the default), the block
+// size is checked; otherwise it's set to the default (512 bytes).
+// Note that any extended partition(s) present will be explicitly stored
+// in the partitions[] array, along with their contained partitions; the
+// extended container partition(s) should be ignored by other functions.
 void MBRData::ReadMBRData(int fd, int checkBlockSize) {
-   int allOK = 1, i, j, maxLogicals = 0;
+   int allOK = 1, i, j, logicalNum;
    int err;
    TempMBR tempMBR;
 
-   // Clear logical partition array
-   for (i = 0; i < NUM_LOGICALS; i++) {
-      logicals[i].status = UINT8_C(0);
-      logicals[i].firstSector[0] = UINT8_C(0);
-      logicals[i].firstSector[1] = UINT8_C(0);
-      logicals[i].firstSector[2] = UINT8_C(0);
-      logicals[i].partitionType = UINT8_C(0);
-      logicals[i].lastSector[0] = UINT8_C(0);
-      logicals[i].lastSector[1] = UINT8_C(0);
-      logicals[i].lastSector[2] = UINT8_C(0);
-      logicals[i].firstLBA = UINT32_C(0);
-      logicals[i].lengthLBA = UINT32_C(0);
-   } // for
+   // Empty existing MBR data, including the logical partitions...
+   EmptyMBR(0);
 
    err = lseek64(fd, 0, SEEK_SET);
    err = read(fd, &tempMBR, 512);
@@ -154,8 +111,8 @@ void MBRData::ReadMBRData(int fd, int checkBlockSize) {
       for (j = 0; j < 3; j++) {
          partitions[i].firstSector[j] = tempMBR.partitions[i].firstSector[j];
          partitions[i].lastSector[j] = tempMBR.partitions[i].lastSector[j];
-      } // for j...
-   } // for i...
+      } // for j... (reading parts of CHS geometry)
+   } // for i... (reading all four partitions)
    MBRSignature = tempMBR.MBRSignature;
 
    // Reverse the byte order, if necessary
@@ -180,21 +137,16 @@ void MBRData::ReadMBRData(int fd, int checkBlockSize) {
    // Find block size
    if (checkBlockSize) {
       blockSize = GetBlockSize(fd);
-//      if ((blockSize = GetBlockSize(fd)) == -1) {
-//         blockSize = SECTOR_SIZE;
-//         printf("Unable to determine sector size; assuming %lu bytes!\n",
-//               (unsigned long) SECTOR_SIZE);
-//      } // if
    } // if (checkBlockSize)
 
    // Load logical partition data, if any is found....
    if (allOK) {
       for (i = 0; i < 4; i++) {
          if ((partitions[i].partitionType == 0x05) || (partitions[i].partitionType == 0x0f)
-             || (partitions[i].partitionType == 0x85)) {
+              || (partitions[i].partitionType == 0x85)) {
             // Found it, so call a recursive algorithm to load everything from them....
-            maxLogicals = ReadLogicalPart(fd, partitions[i].firstLBA, UINT32_C(0), maxLogicals);
-            if ((maxLogicals < 0) || (maxLogicals > NUM_LOGICALS)) {
+            logicalNum = ReadLogicalPart(fd, partitions[i].firstLBA, UINT32_C(0), 4);
+            if ((logicalNum < 0) || (logicalNum >= MAX_MBR_PARTS)) {
                allOK = 0;
                fprintf(stderr, "Error reading logical partitions! List may be truncated!\n");
             } // if maxLogicals valid
@@ -224,26 +176,70 @@ void MBRData::ReadMBRData(int fd, int checkBlockSize) {
              (partitions[i].partitionType != UINT8_C(0x00)))
             state = hybrid;
       } // for
-   } // if hybrid
-
-/*   // Tell the user what the MBR state is...
-   switch (state) {
-      case invalid:
-         printf("Information: MBR appears to be empty or invalid.\n");
-	 break;
-      case gpt:
-         printf("Information: MBR holds GPT placeholder partitions.\n");
-         break;
-      case hybrid:
-         printf("Information: MBR holds hybrid GPT/MBR data.\n");
-         break;
-      case mbr:
-         printf("Information: MBR data appears to be valid.\n");
-         break;
-   } // switch */
+   } // if (hybrid detection code)
 } // MBRData::ReadMBRData(int fd)
 
-// Write the MBR data to the default defined device.
+// This is a recursive function to read all the logical partitions, following the
+// logical partition linked list from the disk and storing the basic data in the
+// partitions[] array. Returns last index to partitions[] used, or -1 if there was
+// a problem.
+// Parameters:
+// fd = file descriptor
+// extendedStart = LBA of the start of the extended partition
+// diskOffset = LBA offset WITHIN the extended partition of the one to be read
+// partNum = location in partitions[] array to store retrieved data
+int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
+                             uint32_t diskOffset, int partNum) {
+   struct TempMBR ebr;
+   off_t offset;
+
+   // Check for a valid partition number. Note that partitions MAY be read into
+   // the area normally used by primary partitions, although the only calling
+   // function as of GPT fdisk version 0.5.0 doesn't do so.
+   if ((partNum < MAX_MBR_PARTS) && (partNum >= 0)) {
+      offset = (off_t) (extendedStart + diskOffset) * blockSize;
+      if (lseek64(fd, offset, SEEK_SET) == (off_t) -1) { // seek to EBR record
+         fprintf(stderr, "Unable to seek to %lu! Aborting!\n", (unsigned long) offset);
+         partNum = -1;
+      }
+      if (read(fd, &ebr, 512) != 512) { // Load the data....
+         fprintf(stderr, "Error seeking to or reading logical partition data from %lu!\nAborting!\n",
+                 (unsigned long) offset);
+         partNum = -1;
+      } else if (IsLittleEndian() != 1) { // Reverse byte ordering of some data....
+         ReverseBytes(&ebr.MBRSignature, 2);
+         ReverseBytes(&ebr.partitions[0].firstLBA, 4);
+         ReverseBytes(&ebr.partitions[0].lengthLBA, 4);
+         ReverseBytes(&ebr.partitions[1].firstLBA, 4);
+         ReverseBytes(&ebr.partitions[1].lengthLBA, 4);
+      } // if/else/if
+
+      if (ebr.MBRSignature != MBR_SIGNATURE) {
+         partNum = -1;
+         fprintf(stderr, "MBR signature in logical partition invalid; read 0x%04X, but should be 0x%04X\n",
+                (unsigned int) ebr.MBRSignature, (unsigned int) MBR_SIGNATURE);
+      } // if
+
+      // Copy over the basic data....
+      partitions[partNum].status = ebr.partitions[0].status;
+      partitions[partNum].firstLBA = ebr.partitions[0].firstLBA + diskOffset + extendedStart;
+      partitions[partNum].lengthLBA = ebr.partitions[0].lengthLBA;
+      partitions[partNum].partitionType = ebr.partitions[0].partitionType;
+
+      // Find the next partition (if there is one) and recurse....
+      if ((ebr.partitions[1].firstLBA != UINT32_C(0)) && (partNum >= 4) &&
+          (partNum < (MAX_MBR_PARTS - 1))) {
+         partNum = ReadLogicalPart(fd, extendedStart, ebr.partitions[1].firstLBA,
+                                   partNum + 1);
+      } else {
+         partNum++;
+      } // if another partition
+   } // Not enough space for all the logicals (or previous error encountered)
+   return (partNum);
+} // MBRData::ReadLogicalPart()
+
+// Write the MBR data to the default defined device. Note that this writes
+// ONLY the MBR itself, not the logical partition data.
 int MBRData::WriteMBRData(void) {
    int allOK = 1, fd;
 
@@ -295,12 +291,6 @@ void MBRData::WriteMBRData(int fd) {
    lseek64(fd, 0, SEEK_SET);
    write(fd, &tempMBR, 512);
 
-/*   write(fd, code, 440);
-   write(fd, &diskSignature, 4);
-   write(fd, &nulls, 2);
-   write(fd, partitions, 64);
-   write(fd, &MBRSignature, 2); */
-
    // Reverse the byte order back, if necessary
    if (IsLittleEndian() == 0) {
       ReverseBytes(&diskSignature, 4);
@@ -313,56 +303,11 @@ void MBRData::WriteMBRData(int fd) {
    }// if
 } // MBRData::WriteMBRData(int fd)
 
-// This is a recursive function to read all the logical partitions, following the
-// logical partition linked list from the disk and storing the basic data in the
-// logicals[] array. Returns last index to logicals[] uses, or -1 if there was a
-// problem
-int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
-                             uint32_t diskOffset, int partNum) {
-   struct EBRRecord ebr;
-   off_t offset;
-
-   if ((partNum < NUM_LOGICALS) && (partNum >= 0)) {
-      offset = (off_t) (extendedStart + diskOffset) * blockSize;
-      if (lseek64(fd, offset, SEEK_SET) == (off_t) -1) { // seek to EBR record
-         fprintf(stderr, "Unable to seek to %lu! Aborting!\n", (unsigned long) offset);
-         partNum = -1;
-      }
-      if (read(fd, &ebr, 512) != 512) { // Load the data....
-         fprintf(stderr, "Error seeking to or reading logical partition data from %lu!\nAborting!\n",
-                 (unsigned long) offset);
-         partNum = -1;
-      } else if (IsLittleEndian() != 1) { // Reverse byte ordering of some data....
-         ReverseBytes(&ebr.MBRSignature, 2);
-         ReverseBytes(&ebr.partitions[0].firstLBA, 4);
-         ReverseBytes(&ebr.partitions[0].lengthLBA, 4);
-         ReverseBytes(&ebr.partitions[1].firstLBA, 4);
-         ReverseBytes(&ebr.partitions[1].lengthLBA, 4);
-      } // if/else/if
-
-      if (ebr.MBRSignature != MBR_SIGNATURE) {
-         partNum = -1;
-         fprintf(stderr, "MBR signature in logical partition invalid; read 0x%04X, but should be 0x%04X\n",
-                (unsigned int) ebr.MBRSignature, (unsigned int) MBR_SIGNATURE);
-      } // if
-
-      // Copy over the basic data....
-      logicals[partNum].status = ebr.partitions[0].status;
-      logicals[partNum].firstLBA = ebr.partitions[0].firstLBA + diskOffset + extendedStart;
-      logicals[partNum].lengthLBA = ebr.partitions[0].lengthLBA;
-      logicals[partNum].partitionType = ebr.partitions[0].partitionType;
-
-      // Find the next partition (if there is one) and recurse....
-      if ((ebr.partitions[1].firstLBA != UINT32_C(0)) && (partNum >= 0) &&
-          (partNum < (NUM_LOGICALS - 1))) {
-         partNum = ReadLogicalPart(fd, extendedStart, ebr.partitions[1].firstLBA,
-                                   partNum + 1);
-         } else {
-            partNum++;
-      } // if another partition
-   } // Not enough space for all the logicals (or previous error encountered)
-   return (partNum);
-} // MBRData::ReadLogicalPart()
+/********************************************
+ *                                          *
+ * Functions that display data for the user *
+ *                                          *
+ ********************************************/
 
 // Show the MBR data to the user....
 void MBRData::DisplayMBRData(void) {
@@ -373,10 +318,10 @@ void MBRData::DisplayMBRData(void) {
    printf("MBR disk identifier: 0x%08X\n", (unsigned int) diskSignature);
    printf("MBR partitions:\n");
    printf("Number\t Boot\t Start (sector)\t Length (sectors)\tType\n");
-   for (i = 0; i < 4; i++) {
+   for (i = 0; i < MAX_MBR_PARTS; i++) {
       if (partitions[i].lengthLBA != 0) {
          if (partitions[i].status && 0x80) // it's bootable
-	    bootCode = '*';
+            bootCode = '*';
          else
             bootCode = ' ';
          printf("%4d\t   %c\t%13lu\t%15lu \t0x%02X\n", i + 1, bootCode,
@@ -384,30 +329,143 @@ void MBRData::DisplayMBRData(void) {
                 (unsigned long) partitions[i].lengthLBA, partitions[i].partitionType);
       } // if
    } // for
-
-   // Now display logical partition data....
-   for (i = 0; i < NUM_LOGICALS; i++) {
-      if (logicals[i].lengthLBA != 0) {
-         printf("%4d\t%13lu\t%15lu \t0x%02X\n", i + 5, (unsigned long) logicals[i].firstLBA,
-                (unsigned long) logicals[i].lengthLBA, logicals[i].partitionType);
-      } // if
-   } // for
-   printf("\nDisk size is %lu sectors (%s)\n", (unsigned long) diskSize,
+   printf("\nDisk size is %llu sectors (%s)\n", (unsigned long long) diskSize,
           BytesToSI(diskSize * (uint64_t) blockSize, tempStr));
 } // MBRData::DisplayMBRData()
 
+// Displays the state, as a word, on stdout. Used for debugging & to
+// tell the user about the MBR state when the program launches....
+void MBRData::ShowState(void) {
+   switch (state) {
+      case invalid:
+         printf("  MBR: not present\n");
+         break;
+      case gpt:
+         printf("  MBR: protective\n");
+         break;
+      case hybrid:
+         printf("  MBR: hybrid\n");
+         break;
+      case mbr:
+         printf("  MBR: MBR only\n");
+         break;
+      default:
+         printf("\a  MBR: unknown -- bug!\n");
+         break;
+   } // switch
+} // MBRData::ShowState()
+
+/*********************************************************************
+ *                                                                   *
+ * Functions that set or get disk metadata (CHS geometry, disk size, *
+ * etc.)                                                             *
+ *                                                                   *
+ *********************************************************************/
+
+// Sets the CHS geometry. CHS geometry is used by LBAtoCHS() function.
+// Note that this only sets the heads and sectors; the number of
+// cylinders is determined by these values and the disk size.
+void MBRData::SetCHSGeom(uint32_t h, uint32_t s) {
+   if ((h <= MAX_HEADS) && (s <= MAX_SECSPERTRACK)) {
+      numHeads = h;
+      numSecspTrack = s;
+   } else {
+      printf("Warning! Attempt to set invalid CHS geometry!\n");
+   } // if/else
+} // MBRData::SetCHSGeom()
+
+// Converts 64-bit LBA value to MBR-style CHS value. Returns 1 if conversion
+// was within the range that can be expressed by CHS (including 0, for an
+// empty partition), 0 if the value is outside that range, and -1 if chs is
+// invalid.
+int MBRData::LBAtoCHS(uint64_t lba, uint8_t * chs) {
+   uint64_t cylinder, head, sector; // all numbered from 0
+   uint64_t remainder;
+   int retval = 1;
+   int done = 0;
+
+   if (chs != NULL) {
+      // Special case: In case of 0 LBA value, zero out CHS values....
+      if (lba == 0) {
+         chs[0] = chs[1] = chs[2] = UINT8_C(0);
+         done = 1;
+      } // if
+      // If LBA value is too large for CHS, max out CHS values....
+      if ((!done) && (lba >= (numHeads * numSecspTrack * MAX_CYLINDERS))) {
+         chs[0] = 254;
+         chs[1] = chs[2] = 255;
+         done = 1;
+         retval = 0;
+      } // if
+      // If neither of the above applies, compute CHS values....
+      if (!done) {
+         cylinder = lba / (uint64_t) (numHeads * numSecspTrack);
+         remainder = lba - (cylinder * numHeads * numSecspTrack);
+         head = remainder / numSecspTrack;
+         remainder -= head * numSecspTrack;
+         sector = remainder;
+         if (head < numHeads)
+            chs[0] = head;
+         else
+            retval = 0;
+         if (sector < numSecspTrack) {
+            chs[1] = (uint8_t) ((sector + 1) + (cylinder >> 8) * 64);
+            chs[2] = (uint8_t) (cylinder & UINT64_C(0xFF));
+         } else {
+            retval = 0;
+         } // if/else
+      } // if value is expressible and non-0
+   } else { // Invalid (NULL) chs pointer
+      retval = -1;
+   } // if CHS pointer valid
+   return (retval);
+} // MBRData::LBAtoCHS()
+
+/*****************************************************
+ *                                                   *
+ * Functions to create, delete, or change partitions *
+ *                                                   *
+ *****************************************************/
+
+// Empty all data. Meant mainly for calling by constructors, but it's also
+// used by the hybrid MBR functions in the GPTData class.
+void MBRData::EmptyMBR(int clearBootloader) {
+   int i;
+
+   // Zero out the boot loader section, the disk signature, and the
+   // 2-byte nulls area only if requested to do so. (This is the
+   // default.)
+   if (clearBootloader == 1) {
+      for (i = 0; i < 440; i++)
+         code[i] = 0;
+      diskSignature = (uint32_t) rand();
+      nulls = 0;
+   } // if
+
+   // Blank out the partitions
+   for (i = 0; i < MAX_MBR_PARTS; i++) {
+      partitions[i].status = UINT8_C(0);
+      partitions[i].firstSector[0] = UINT8_C(0);
+      partitions[i].firstSector[1] = UINT8_C(0);
+      partitions[i].firstSector[2] = UINT8_C(0);
+      partitions[i].partitionType = UINT8_C(0);
+      partitions[i].lastSector[0] = UINT8_C(0);
+      partitions[i].lastSector[1] = UINT8_C(0);
+      partitions[i].lastSector[2] = UINT8_C(0);
+      partitions[i].firstLBA = UINT32_C(0);
+      partitions[i].lengthLBA = UINT32_C(0);
+   } // for
+   MBRSignature = MBR_SIGNATURE;
+} // MBRData::EmptyMBR()
+
 // Create a protective MBR. Clears the boot loader area if clearBoot > 0.
 void MBRData::MakeProtectiveMBR(int clearBoot) {
-   int i;
+
+   EmptyMBR(clearBoot);
 
    // Initialize variables
    nulls = 0;
    MBRSignature = MBR_SIGNATURE;
-
-   if (clearBoot > 0) {
-      for (i = 0; i < 440; i++)
-         code[i] = (uint8_t) 0;
-   } // if
 
    partitions[0].status = UINT8_C(0); // Flag the protective part. as unbootable
 
@@ -427,43 +485,42 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
    partitions[0].partitionType = UINT8_C(0xEE);
    partitions[0].firstLBA = UINT32_C(1);
    if (diskSize < UINT32_MAX) { // If the disk is under 2TiB
-      partitions[0].lengthLBA = diskSize - 1;
+      partitions[0].lengthLBA = (uint32_t) diskSize - UINT32_C(1);
    } else { // disk is too big to represent, so fake it...
       partitions[0].lengthLBA = UINT32_MAX;
    } // if/else
 
-   // Zero out three unused primary partitions...
-   for (i = 1; i < 4; i++) {
-      partitions[i].status = UINT8_C(0);
-      partitions[i].firstSector[0] = UINT8_C(0);
-      partitions[i].firstSector[1] = UINT8_C(0);
-      partitions[i].firstSector[2] = UINT8_C(0);
-      partitions[i].partitionType = UINT8_C(0);
-      partitions[i].lastSector[0] = UINT8_C(0);
-      partitions[i].lastSector[1] = UINT8_C(0);
-      partitions[i].lastSector[2] = UINT8_C(0);
-      partitions[i].firstLBA = UINT32_C(0);
-      partitions[i].lengthLBA = UINT32_C(0);
-   } // for
-
-   // Zero out all the logical partitions. Not necessary for data
-   // integrity on write, but eliminates stray entries if user wants
-   // to view the MBR after converting the disk
-   for (i = 0; i < NUM_LOGICALS; i++) {
-      logicals[i].status = UINT8_C(0);
-      logicals[i].firstSector[0] = UINT8_C(0);
-      logicals[i].firstSector[1] = UINT8_C(0);
-      logicals[i].firstSector[2] = UINT8_C(0);
-      logicals[i].partitionType = UINT8_C(0);
-      logicals[i].lastSector[0] = UINT8_C(0);
-      logicals[i].lastSector[1] = UINT8_C(0);
-      logicals[i].lastSector[2] = UINT8_C(0);
-      logicals[i].firstLBA = UINT32_C(0);
-      logicals[i].lengthLBA = UINT32_C(0);
-   } // for
-
    state = gpt;
 } // MBRData::MakeProtectiveMBR()
+
+// Create a partition of the specified number, starting LBA, and
+// length. This function does *NO* error checking, so it's possible
+// to seriously screw up a partition table using this function!
+// Note: This function should NOT be used to create the 0xEE partition
+// in a conventional GPT configuration, since that partition has
+// specific size requirements that this function won't handle. It may
+// be used for creating the 0xEE partition(s) in a hybrid MBR, though,
+// since those toss the rulebook away anyhow....
+void MBRData::MakePart(int num, uint32_t start, uint32_t length, int type,
+                       int bootable) {
+   if ((num >= 0) && (num < MAX_MBR_PARTS)) {
+      partitions[num].status = (uint8_t) bootable * (uint8_t) 0x80;
+      partitions[num].firstSector[0] = UINT8_C(0);
+      partitions[num].firstSector[1] = UINT8_C(0);
+      partitions[num].firstSector[2] = UINT8_C(0);
+      partitions[num].partitionType = (uint8_t) type;
+      partitions[num].lastSector[0] = UINT8_C(0);
+      partitions[num].lastSector[1] = UINT8_C(0);
+      partitions[num].lastSector[2] = UINT8_C(0);
+      partitions[num].firstLBA = start;
+      partitions[num].lengthLBA = length;
+      // If this is a "real" partition, set its CHS geometry
+      if (length > 0) {
+         LBAtoCHS((uint64_t) start, partitions[num].firstSector);
+         LBAtoCHS((uint64_t) (start + length - 1), partitions[num].lastSector);
+      } // if (length > 0)
+   } // if valid partition number
+} // MBRData::MakePart()
 
 // Create a partition that fills the most available space. Returns
 // 1 if partition was created, 0 otherwise. Intended for use in
@@ -482,11 +539,11 @@ int MBRData::MakeBiggestPart(int i, int type) {
       if (firstBlock != UINT32_C(0)) { // something's free...
          lastBlock = FindLastInFree(firstBlock);
          segmentSize = lastBlock - firstBlock + UINT32_C(1);
-	 if (segmentSize > selectedSize) {
+         if (segmentSize > selectedSize) {
             selectedSize = segmentSize;
-	    selectedSegment = firstBlock;
-	 } // if
-	 start = lastBlock + 1;
+            selectedSegment = firstBlock;
+         } // if
+         start = lastBlock + 1;
       } // if
    } while (firstBlock != 0);
    if ((selectedSize > UINT32_C(0)) && ((uint64_t) selectedSize < diskSize)) {
@@ -517,18 +574,19 @@ void MBRData::DeletePartition(int i) {
 // Used to help keep GPT & hybrid MBR partitions in sync....
 int MBRData::DeleteByLocation(uint64_t start64, uint64_t length64) {
    uint32_t start32, length32;
-   int i, j, deleted = 0;
+   int i, deleted = 0;
 
-   if ((state == hybrid) && (start64 < UINT32_MAX) && (length64 < UINT32_MAX)) {
+   if ((start64 < UINT32_MAX) && (length64 < UINT32_MAX)) {
       start32 = (uint32_t) start64;
       length32 = (uint32_t) length64;
-      for (i = 0; i < 4; i++) {
+      for (i = 0; i < MAX_MBR_PARTS; i++) {
          if ((partitions[i].firstLBA == start32) && (partitions[i].lengthLBA = length32) &&
-             (partitions[i].partitionType != 0xEE)) {
+              (partitions[i].partitionType != 0xEE)) {
             DeletePartition(i);
-            OptimizeEESize();
+            if (state == hybrid)
+               OptimizeEESize();
             deleted = 1;
-         } // if (match found)
+              } // if (match found)
       } // for i (partition scan)
    } // if (hybrid & GPT partition < 2TiB)
    return deleted;
@@ -554,74 +612,24 @@ void MBRData::OptimizeEESize(void) {
             partitions[i].lengthLBA = FindLastInFree(after) - partitions[i].firstLBA + 1;
          } // if free space after
       } // if partition is 0xEE
-      if (typeFlag == 0) { // No non-hybrid partitions found
-         MakeProtectiveMBR(); // ensure it's a fully compliant hybrid MBR.
-      } // if
    } // for partition loop
+   if (typeFlag == 0) { // No non-hybrid partitions found
+      MakeProtectiveMBR(); // ensure it's a fully compliant hybrid MBR.
+   } // if
 } // MBRData::OptimizeEESize()
 
-// Return a pointer to a primary or logical partition, or NULL if
-// the partition is out of range....
-struct MBRRecord* MBRData::GetPartition(int i) {
-   MBRRecord* thePart = NULL;
-
-   if ((i >= 0) && (i < 4)) { // primary partition
-      thePart = &partitions[i];
-   } // if
-   if ((i >= 4) && (i < (NUM_LOGICALS + 4))) {
-      thePart = &logicals[i - 4];
-   } // if
-   return thePart;
-} // GetPartition()
-
-// Displays the state, as a word, on stdout. Used for debugging & to
-// tell the user about the MBR state when the program launches....
-void MBRData::ShowState(void) {
-   switch (state) {
-      case invalid:
-         printf("  MBR: not present\n");
-         break;
-      case gpt:
-         printf("  MBR: protective\n");
-         break;
-      case hybrid:
-         printf("  MBR: hybrid\n");
-         break;
-      case mbr:
-         printf("  MBR: MBR only\n");
-         break;
-      default:
-         printf("\a  MBR: unknown -- bug!\n");
-         break;
-   } // switch
-} // MBRData::ShowState()
-
-// Create a primary partition of the specified number, starting LBA,
-// and length. This function does *NO* error checking, so it's possible
-// to seriously screw up a partition table using this function! It's
-// intended as a way to create a hybrid MBR, which is a pretty funky
-// setup to begin with....
-void MBRData::MakePart(int num, uint32_t start, uint32_t length, int type,
-                       int bootable) {
-
-   partitions[num].status = (uint8_t) bootable * (uint8_t) 0x80;
-   partitions[num].firstSector[0] = UINT8_C(0);
-   partitions[num].firstSector[1] = UINT8_C(0);
-   partitions[num].firstSector[2] = UINT8_C(0);
-   partitions[num].partitionType = (uint8_t) type;
-   partitions[num].lastSector[0] = UINT8_C(0);
-   partitions[num].lastSector[1] = UINT8_C(0);
-   partitions[num].lastSector[2] = UINT8_C(0);
-   partitions[num].firstLBA = start;
-   partitions[num].lengthLBA = length;
-} // MakePart()
+/****************************************
+ *                                      *
+ * Functions to find data on free space *
+ *                                      *
+ ****************************************/
 
 // Finds the first free space on the disk from start onward; returns 0
 // if none available....
 uint32_t MBRData::FindFirstAvailable(uint32_t start) {
    uint32_t first;
    uint32_t i;
-   int firstMoved = 0;
+   int firstMoved;
 
    first = start;
 
@@ -638,7 +646,7 @@ uint32_t MBRData::FindFirstAvailable(uint32_t start) {
              (first < (partitions[i].firstLBA + partitions[i].lengthLBA))) {
             first = partitions[i].firstLBA + partitions[i].lengthLBA;
             firstMoved = 1;
-          } // if
+         } // if
       } // for
    } while (firstMoved == 1);
    if (first >= diskSize)
@@ -651,7 +659,7 @@ uint32_t MBRData::FindLastInFree(uint32_t start) {
    uint32_t nearestStart;
    uint32_t i;
 
-   if (diskSize <= UINT32_MAX)
+   if ((diskSize <= UINT32_MAX) && (diskSize > 0))
       nearestStart = diskSize - 1;
    else
       nearestStart = UINT32_MAX - 1;
@@ -688,6 +696,8 @@ int MBRData::IsFree(uint32_t sector) {
 
    for (i = 0; i < 4; i++) {
       first = partitions[i].firstLBA;
+      // Note: Weird two-line thing to avoid subtracting 1 from a 0 value
+      // for an unsigned int....
       last = first + partitions[i].lengthLBA;
       if (last > 0) last--;
       if ((first <= sector) && (last >= sector))
@@ -695,6 +705,12 @@ int MBRData::IsFree(uint32_t sector) {
    } // for
    return isFree;
 } // MBRData::IsFree()
+
+/******************************************************
+ *                                                    *
+ * Functions that extract data on specific partitions *
+ *                                                    *
+ ******************************************************/
 
 uint8_t MBRData::GetStatus(int i) {
    MBRRecord* thePart;
@@ -729,7 +745,7 @@ uint32_t MBRData::GetFirstSector(int i) {
       retval = thePart->firstLBA;
    } else
       retval = UINT32_C(0);
-   return retval;
+      return retval;
 } // MBRData::GetFirstSector()
 
 uint32_t MBRData::GetLength(int i) {
@@ -741,7 +757,7 @@ uint32_t MBRData::GetLength(int i) {
       retval = thePart->lengthLBA;
    } else
       retval = UINT32_C(0);
-   return retval;
+      return retval;
 } // MBRData::GetLength()
 
 // Return the MBR data as a GPT partition....
@@ -772,7 +788,23 @@ GPTPart MBRData::AsGPT(int i) {
          newPart.SetUniqueGUID(1);
          newPart.SetAttributes(0);
          newPart.SetName((unsigned char*) newPart.GetNameType(tempStr));
-      } // if
-   } // if
+      } // if not extended, protective, or non-existent
+   } // if (origPart != NULL)
    return newPart;
 } // MBRData::AsGPT()
+
+/***********************
+ *                     *
+ * Protected functions *
+ *                     *
+ ***********************/
+
+// Return a pointer to a primary or logical partition, or NULL if
+// the partition is out of range....
+struct MBRRecord* MBRData::GetPartition(int i) {
+   MBRRecord* thePart = NULL;
+
+   if ((i >= 0) && (i < MAX_MBR_PARTS))
+      thePart = &partitions[i];
+   return thePart;
+} // GetPartition()

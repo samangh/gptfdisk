@@ -112,7 +112,24 @@ int GPTData::Verify(void) {
             "table when you save your partitions.\n");
    } // if
 
-   // Now check that critical main and backup GPT entries match
+   // Now check that the main and backup headers both point to themselves....
+   if (mainHeader.currentLBA != 1) {
+      problems++;
+      printf("\nProblem: The main header's self-pointer doesn't point to itself. This problem\n"
+             "is being automatically corrected, but it may be a symptom of more serious\n"
+             "problems. Think carefully before saving changes with 'w' or using this disk.\n");
+      mainHeader.currentLBA = 1;
+   } // if
+   if (secondHeader.currentLBA != (diskSize - UINT64_C(1))) {
+      problems++;
+      printf("\nProblem: The secondary header's self-pointer doesn't point to itself. This\n"
+             "problem is being automatically corrected, but it may be a symptom of more\n"
+             "serious problems. Think carefully before saving changes with 'w' or using this\n"
+             "disk.\n");
+      secondHeader.currentLBA = diskSize - UINT64_C(1);
+   } // if
+
+   // Now check that critical main and backup GPT entries match each other
    if (mainHeader.currentLBA != secondHeader.backupLBA) {
       problems++;
       printf("\nProblem: main GPT header's current LBA pointer (%llu) doesn't\n"
@@ -295,34 +312,38 @@ int GPTData::CheckHeaderValidity(void) {
 // Note: Must be called BEFORE byte-order reversal on big-endian
 // systems!
 int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
-   uint32_t oldCRC, newCRC;
+   uint32_t oldCRC, newCRC, hSize;
 
    // Back up old header CRC and then blank it, since it must be 0 for
    // computation to be valid
    oldCRC = header->headerCRC;
-   if (IsLittleEndian() == 0)
-      ReverseBytes(&oldCRC, 4);
    header->headerCRC = UINT32_C(0);
+   hSize = header->headerSize;
+
+   // If big-endian system, reverse byte order
+   if (IsLittleEndian() == 0) {
+      ReverseBytes(&oldCRC, 4);
+   } // if
 
    // Initialize CRC functions...
    chksum_crc32gentab();
 
    // Compute CRC, restore original, and return result of comparison
    newCRC = chksum_crc32((unsigned char*) header, HEADER_SIZE);
-   mainHeader.headerCRC = oldCRC;
+   header->headerCRC = oldCRC;
    return (oldCRC == newCRC);
 } // GPTData::CheckHeaderCRC()
 
 // Recompute all the CRCs. Must be called before saving (but after reversing
 // byte order on big-endian systems) if any changes have been made.
 void GPTData::RecomputeCRCs(void) {
-   uint32_t crc;
-   uint32_t trueNumParts;
+   uint32_t crc, hSize, trueNumParts;
    int littleEndian = 1;
 
    // Initialize CRC functions...
    chksum_crc32gentab();
 
+   hSize = mainHeader.headerSize;
    littleEndian = IsLittleEndian();
 
    // Compute CRC of partition tables & store in main and secondary headers
@@ -342,11 +363,11 @@ void GPTData::RecomputeCRCs(void) {
    secondHeader.headerCRC = 0;
 
    // Compute & store CRCs of main & secondary headers...
-   crc = chksum_crc32((unsigned char*) &mainHeader, HEADER_SIZE);
+   crc = chksum_crc32((unsigned char*) &mainHeader, hSize);
    if (littleEndian == 0)
       ReverseBytes(&crc, 4);
    mainHeader.headerCRC = crc;
-   crc = chksum_crc32((unsigned char*) &secondHeader, HEADER_SIZE);
+   crc = chksum_crc32((unsigned char*) &secondHeader, hSize);
    if (littleEndian == 0)
       ReverseBytes(&crc, 4);
    secondHeader.headerCRC = crc;
@@ -359,7 +380,7 @@ void GPTData::RebuildMainHeader(void) {
 
    mainHeader.signature = GPT_SIGNATURE;
    mainHeader.revision = secondHeader.revision;
-   mainHeader.headerSize = HEADER_SIZE;
+   mainHeader.headerSize = secondHeader.headerSize;
    mainHeader.headerCRC = UINT32_C(0);
    mainHeader.reserved = secondHeader.reserved;
    mainHeader.currentLBA = secondHeader.backupLBA;
@@ -382,7 +403,7 @@ void GPTData::RebuildSecondHeader(void) {
 
    secondHeader.signature = GPT_SIGNATURE;
    secondHeader.revision = mainHeader.revision;
-   secondHeader.headerSize = HEADER_SIZE;
+   secondHeader.headerSize = mainHeader.headerSize;
    secondHeader.headerCRC = UINT32_C(0);
    secondHeader.reserved = mainHeader.reserved;
    secondHeader.currentLBA = mainHeader.backupLBA;
@@ -486,12 +507,6 @@ void GPTData::PartitionScan(int fd) {
       printf("It will be destroyed if you continue!\n");
       printf("*******************************************************************\n\n\a");
    } // if
-/*   if (bsdFound) {
-   printf("\n*************************************************************************\n");
-   printf("This disk appears to contain a BSD disklabel! It will be destroyed if you\n"
-   "continue!\n");
-   printf("*************************************************************************\n\n\a");
-} // if */
 } // GPTData::PartitionScan()
 
 // Read GPT data from a disk.
@@ -703,7 +718,7 @@ void GPTData::LoadSecondTableAsMain(void) {
 // Writes GPT (and protective MBR) to disk. Returns 1 on successful
 // write, 0 if there was a problem.
 int GPTData::SaveGPTData(void) {
-   int allOK = 1, i;
+   int allOK = 1;
    char answer, line[256];
    int fd;
    uint64_t secondTable;
@@ -855,6 +870,12 @@ int GPTData::SaveGPTBackup(char* filename) {
          ReverseHeaderBytes(&mainHeader);
          ReverseHeaderBytes(&secondHeader);
       } // if
+
+      // Recomputing the CRCs is likely to alter them, which could be bad
+      // if the intent is to save a potentially bad GPT for later analysis;
+      // but if we don't do this, we get bogus errors when we load the
+      // backup. I'm favoring misses over false alarms....
+      RecomputeCRCs();
 
       // Now write the protective MBR...
       protectiveMBR.WriteMBRData(fd);
@@ -1021,8 +1042,8 @@ void GPTData::DisplayGPTData(void) {
    uint64_t temp, totalFree;
 
    BytesToSI(diskSize * blockSize, sizeInSI);
-   printf("Disk %s: %lu sectors, %s\n", device,
-          (unsigned long) diskSize, sizeInSI);
+   printf("Disk %s: %llu sectors, %s\n", device,
+          (unsigned long long) diskSize, sizeInSI);
    printf("Disk identifier (GUID): %s\n", GUIDToStr(mainHeader.diskGUID, tempStr));
    printf("Partition table holds up to %lu entries\n", (unsigned long) mainHeader.numParts);
    printf("First usable sector is %lu, last usable sector is %lu\n",
@@ -1033,7 +1054,7 @@ void GPTData::DisplayGPTData(void) {
           BytesToSI(totalFree * (uint64_t) blockSize, sizeInSI));
    printf("\nNumber  Start (sector)    End (sector)  Size       Code  Name\n");
    for (i = 0; i < mainHeader.numParts; i++) {
-      partitions[i].ShowSummary(i, blockSize, sizeInSI);
+      partitions[i].ShowSummary(i, blockSize);
    } // for
 } // GPTData::DisplayGPTData()
 
@@ -1212,20 +1233,24 @@ void GPTData::SetAttributes(uint32_t partNum) {
 
 // This function destroys the on-disk GPT structures. Returns 1 if the
 // user confirms destruction, 0 if the user aborts.
-int GPTData::DestroyGPT(void) {
+// If prompt == 0, don't ask user about proceeding and do NOT wipe out
+// MBR. (Set prompt == 0 when doing a GPT-to-MBR conversion.)
+int GPTData::DestroyGPT(int prompt) {
    int fd, i;
-   char blankSector[512], goOn;
+   char blankSector[512], goOn = 'Y', blank = 'N';
 
    for (i = 0; i < 512; i++) {
       blankSector[i] = '\0';
    } // for
 
-   if ((apmFound) || (bsdFound)) {
+   if (((apmFound) || (bsdFound)) && prompt) {
       printf("WARNING: APM or BSD disklabel structures detected! This operation could\n"
              "damage any APM or BSD partitions on this disk!\n");
    } // if APM or BSD
-   printf("\a\aAbout to wipe out GPT on %s. Proceed? ", device);
-   goOn = GetYN();
+   if (prompt) {
+      printf("\a\aAbout to wipe out GPT on %s. Proceed? ", device);
+      goOn = GetYN();
+   } // if
    if (goOn == 'Y') {
       fd = open(device, O_WRONLY);
 #ifdef __APPLE__
@@ -1245,18 +1270,21 @@ int GPTData::DestroyGPT(void) {
             write(fd, blankSector, 512);
          lseek64(fd, secondHeader.currentLBA * 512, SEEK_SET); // seek to GPT header
          write(fd, blankSector, 512); // blank it out
-         printf("Blank out MBR? ");
-         if (GetYN() == 'Y') {
+         if (prompt) {
+            printf("Blank out MBR? ");
+            blank = GetYN();
+         }// if
+         // Note on below: Touch the MBR only if the user wants it completely
+         // blanked out. Version 0.4.2 deleted the 0xEE partition and re-wrote
+         // the MBR, but this could wipe out a valid MBR that the program
+         // had subsequently discarded (say, if it conflicted with older GPT
+         // structures).
+         if (blank == 'Y') {
             lseek64(fd, 0, SEEK_SET);
             write(fd, blankSector, 512); // blank it out
-         } else { // write current protective MBR, in case it's hybrid....
-            // find and delete 0xEE partitions in MBR
-            for (i = 0; i < 4; i++) {
-               if (protectiveMBR.GetType(i) == (uint8_t) 0xEE) {
-                  protectiveMBR.DeletePartition(i);
-               } // if
-            } // for
-            protectiveMBR.WriteMBRData(fd);
+         } else {
+            printf("MBR is unchanged. You may need to delete an EFI GPT (0xEE) partition\n"
+                   "with fdisk or another tool.\n");
          } // if/else
          DiskSync(fd);
          close(fd);
@@ -1374,8 +1402,8 @@ int GPTData::XFormPartitions(void) {
    ClearGPTData();
 
    // Convert the smaller of the # of GPT or MBR partitions
-   if (mainHeader.numParts > (NUM_LOGICALS + 4))
-      numToConvert = NUM_LOGICALS + 4;
+   if (mainHeader.numParts > (MAX_MBR_PARTS))
+      numToConvert = MAX_MBR_PARTS;
    else
       numToConvert = mainHeader.numParts;
 
@@ -1467,15 +1495,102 @@ int GPTData::XFormDisklabel(BSDData* disklabel, int startPart) {
    return numDone;
 } // GPTData::XFormDisklabel(BSDData* disklabel)
 
+// Add one GPT partition to MBR. Used by XFormToMBR() and MakeHybrid()
+// functions. Returns 1 if operation was successful.
+int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
+   int allOK = 1, typeCode, bootable;
+   uint64_t length;
+   char line[255];
+
+   if ((mbrPart < 0) || (mbrPart > 3)) {
+      printf("MBR partition %d is out of range; omitting it.\n", mbrPart + 1);
+      allOK = 0;
+   } // if
+   if (gptPart >= mainHeader.numParts) {
+      printf("GPT partition %d is out of range; omitting it.\n", gptPart + 1);
+      allOK = 0;
+   } // if
+   if (allOK && (partitions[gptPart].GetLastLBA() == UINT64_C(0))) {
+      printf("GPT partition %d is undefined; omitting it.\n", gptPart + 1);
+      allOK = 0;
+   } // if
+   if (allOK && (partitions[gptPart].GetFirstLBA() <= UINT32_MAX) &&
+       (partitions[gptPart].GetLengthLBA() <= UINT32_MAX)) {
+      if (partitions[gptPart].GetLastLBA() > UINT32_MAX) {
+         printf("Caution: Partition end point past 32-bit pointer boundary;"
+                " some OSes may\nreact strangely.\n");
+      } // if partition ends past 32-bit (usually 2TiB) boundary
+      do {
+         printf("Enter an MBR hex code (default %02X): ",
+                  typeHelper.GUIDToID(partitions[gptPart].GetType()) / 256);
+         fgets(line, 255, stdin);
+         sscanf(line, "%x", &typeCode);
+         if (line[0] == '\n')
+            typeCode = partitions[gptPart].GetHexType() / 256;
+      } while ((typeCode <= 0) || (typeCode > 255));
+      printf("Set the bootable flag? ");
+      bootable = (GetYN() == 'Y');
+      length = partitions[gptPart].GetLengthLBA();
+      protectiveMBR.MakePart(mbrPart, (uint32_t) partitions[gptPart].GetFirstLBA(),
+                             (uint32_t) length, typeCode, bootable);
+   } else { // partition out of range
+      printf("Partition %d begins beyond the 32-bit pointer limit of MBR "
+             "partitions, or is\n too big; omitting it.\n", gptPart + 1);
+      allOK = 0;
+   } // if/else
+   return allOK;
+} // GPTData::OnePartToMBR()
+
+// Convert the GPT to MBR form. This function is necessarily limited; it
+// handles at most four partitions and creates layouts that ignore CHS
+// geometries. Returns the number of converted partitions; if this value
+// is over 0, the calling function should call DestroyGPT() to destroy
+// the GPT data, and then exit.
+int GPTData::XFormToMBR(void) {
+   char line[255];
+   int i, j, numParts, numConverted = 0;
+   uint32_t partNums[4];
+
+   // Get the numbers of up to four partitions to add to the
+   // hybrid MBR....
+   numParts = CountParts();
+   printf("Counted %d partitions.\n", numParts);
+
+   // Prepare the MBR for conversion (empty it of existing partitions).
+   protectiveMBR.EmptyMBR(0);
+   protectiveMBR.SetDiskSize(diskSize);
+
+   if (numParts > 4) { // Over four partitions; engage in triage
+      printf("Type from one to four GPT partition numbers, separated by spaces, to be\n"
+            "used in the MBR, in sequence: ");
+      fgets(line, 255, stdin);
+      numParts = sscanf(line, "%d %d %d %d", &partNums[0], &partNums[1],
+                        &partNums[2], &partNums[3]);
+   } else { // Four or fewer partitions; convert them all
+      i = j = 0;
+      while ((j < numParts) && (i < mainHeader.numParts)) {
+         if (partitions[i].GetFirstLBA() > 0) { // if GPT part. is defined
+            partNums[j++] = ++i; // flag it for conversion
+         } else i++;
+      } // while
+   } // if/else
+
+   for (i = 0; i < numParts; i++) {
+      j = partNums[i] - 1;
+      printf("\nCreating entry for partition #%d\n", j + 1);
+      numConverted += OnePartToMBR(j, i);
+   } // for
+   return numConverted;
+} // GPTData::XFormToMBR()
+
 // Create a hybrid MBR -- an ugly, funky thing that helps GPT work with
 // OSes that don't understand GPT.
 void GPTData::MakeHybrid(void) {
    uint32_t partNums[3];
    char line[255];
-   int numParts, i, j, typeCode, bootable, mbrNum;
-   uint64_t length;
+   int numParts, numConverted = 0, i, j, typeCode, mbrNum;
    char fillItUp = 'M'; // fill extra partition entries? (Yes/No/Maybe)
-   char eeFirst; // Whether EFI GPT (0xEE) partition comes first in table
+   char eeFirst = 'Y'; // Whether EFI GPT (0xEE) partition comes first in table
 
    printf("\nWARNING! Hybrid MBRs are flaky and potentially dangerous! If you decide not\n"
          "to use one, just hit the Enter key at the below prompt and your MBR\n"
@@ -1500,38 +1615,14 @@ void GPTData::MakeHybrid(void) {
    for (i = 0; i < numParts; i++) {
       j = partNums[i] - 1;
       printf("\nCreating entry for partition #%d\n", j + 1);
-      if ((j >= 0) && (j < mainHeader.numParts)) {
-         if ((partitions[j].GetLastLBA() < UINT32_MAX) &&
-             (partitions[j].GetLastLBA() > UINT64_C(0))) {
-            do {
-               printf("Enter an MBR hex code (default %02X): ",
-                      typeHelper.GUIDToID(partitions[j].GetType()) / 256);
-               fgets(line, 255, stdin);
-               sscanf(line, "%x", &typeCode);
-               if (line[0] == '\n')
-                  typeCode = partitions[j].GetHexType() / 256;
-            } while ((typeCode <= 0) || (typeCode > 255));
-            printf("Set the bootable flag? ");
-            bootable = (GetYN() == 'Y');
-            length = partitions[j].GetLengthLBA();
-            if (eeFirst == 'Y')
-               mbrNum = i + 1;
-            else
-               mbrNum = i;
-            protectiveMBR.MakePart(mbrNum, (uint32_t) partitions[j].GetFirstLBA(),
-                                   (uint32_t) length, typeCode, bootable);
-            protectiveMBR.SetHybrid();
-         } else { // partition out of range
-            printf("Partition %d ends beyond the 2TiB limit of MBR partitions or does not exist;\n"
-                   "omitting it.\n",
-                   j + 1);
-         } // if/else
-      } else {
-         printf("Partition %d is out of range; omitting it.\n", j + 1);
-      } // if/else
+      if (eeFirst == 'Y')
+         mbrNum = i + 1;
+      else
+         mbrNum = i;
+      numConverted += OnePartToMBR(j, mbrNum);
    } // for
 
-   if (numParts > 0) { // User opted to create a hybrid MBR....
+   if ((numParts > 0) && (numConverted > 0)) { // User opted to create a hybrid MBR....
       // Create EFI protective partition that covers the start of the disk.
       // If this location (covering the main GPT data structures) is omitted,
       // Linux won't find any partitions on the disk. Note that this is
@@ -1544,6 +1635,7 @@ void GPTData::MakeHybrid(void) {
       else
          mbrNum = numParts;
       protectiveMBR.MakePart(mbrNum, 1, protectiveMBR.FindLastInFree(1), 0xEE);
+      protectiveMBR.SetHybrid();
 
       // ... and for good measure, if there are any partition spaces left,
       // optionally create another protective EFI partition to cover as much
@@ -1692,7 +1784,7 @@ int GPTData::ClearGPTData(void) {
    // Now initialize a bunch of stuff that's static....
    mainHeader.signature = GPT_SIGNATURE;
    mainHeader.revision = 0x00010000;
-   mainHeader.headerSize = (uint32_t) HEADER_SIZE;
+   mainHeader.headerSize = HEADER_SIZE;
    mainHeader.reserved = 0;
    mainHeader.currentLBA = UINT64_C(1);
    mainHeader.partitionEntriesLBA = (uint64_t) 2;
@@ -1789,6 +1881,17 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
       *low = 0;
    return numFound;
 } // GPTData::GetPartRange()
+
+// Returns the number of defined partitions.
+uint32_t GPTData::CountParts(void) {
+   int i, counted = 0;
+
+   for (i = 0; i < mainHeader.numParts; i++) {
+      if (partitions[i].GetFirstLBA() > 0)
+         counted++;
+   } // for
+   return counted;
+} // GPTData::CountParts()
 
 /****************************************************
  *                                                  *
@@ -2017,8 +2120,8 @@ int SizesOK(void) {
       fprintf(stderr, "MBRRecord is %d bytes, should be 16 bytes; aborting!\n", sizeof(MBRRecord));
       allOK = 0;
    } // if
-   if (sizeof(struct EBRRecord) != 512) {
-      fprintf(stderr, "EBRRecord is %d bytes, should be 512 bytes; aborting!\n", sizeof(EBRRecord));
+   if (sizeof(struct TempMBR) != 512) {
+      fprintf(stderr, "TempMBR is %d bytes, should be 512 bytes; aborting!\n", sizeof(TempMBR));
       allOK = 0;
    } // if
    if (sizeof(struct GPTHeader) != 512) {
