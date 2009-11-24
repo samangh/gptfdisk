@@ -900,7 +900,7 @@ int GPTData::SaveGPTBackup(char* filename) {
          printf("The operation has completed successfully.\n");
       } else {
          printf("Warning! An error was reported when writing the backup file.\n");
-         printf("It may not be useable!\n");
+         printf("It may not be usable!\n");
       } // if/else
       close(fd);
 
@@ -1816,6 +1816,14 @@ int GPTData::ClearGPTData(void) {
 
    return (goOn);
 } // GPTData::ClearGPTData()
+
+// Set the location of the second GPT header data to the correct location.
+// Intended to help users of RAID arrays that have been resized.
+void GPTData::FixSecondHeaderLocation() {
+   mainHeader.backupLBA = secondHeader.currentLBA = diskSize - UINT64_C(1);
+   mainHeader.lastUsableLBA = secondHeader.lastUsableLBA = diskSize - mainHeader.firstUsableLBA;
+   secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
+} // GPTData::FixSecondHeaderLocation()
 
 void GPTData::SetName(uint32_t partNum, char* theName) {
    if ((partNum >= 0) && (partNum < mainHeader.numParts))

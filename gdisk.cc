@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version 0.5.0\n\n");
+   printf("GPT fdisk (gdisk) version 0.5.1-pre1\n\n");
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {
@@ -309,6 +309,10 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
                theGPT->SetPartitionGUID(pn, GetGUID());
             } else printf("No partitions\n");
             break;
+         case 'e': case 'E':
+            printf("Relocating backup data structures to the end of the disk\n");
+            theGPT->FixSecondHeaderLocation();
+            break;
          case 'g': case 'G':
             printf("Enter the disk's unique GUID:\n");
             theGPT->SetDiskGUID(GetGUID());
@@ -362,6 +366,7 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
 void ShowExpertCommands(void) {
    printf("a\tset attributes\n");
    printf("c\tchange partition GUID\n");
+   printf("e\trelocate backup data structures\n");
    printf("g\tchange disk GUID\n");
    printf("i\tshow detailed information on a partition\n");
    printf("m\treturn to main menu\n");

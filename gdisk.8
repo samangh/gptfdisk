@@ -2,7 +2,7 @@
 .\" May be distributed under the GNU General Public License
 .TH "GDISK" "8" "0.5.0" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
-gdisk \- GPT partition table manipulator for Linux and Unix
+gdisk \- GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
 .BI "gdisk "
 [ \-l ]
@@ -14,7 +14,7 @@ GPT fdisk (aka \fBgdisk\fR) is a text\-mode menu\-driven program for
 creation and manipulation of partition tables. It will automatically
 convert an old\-style Master Boot Record (MBR) partition table or BSD
 disklabel stored without an MBR carrier partition to the newer Globally
-Unique Identifier (GUID) Partition Table (GPT) format, or will load a GPT
+Unique Identifier (GUID) Partition Table (GPT) format, or will load a GUID
 partition table. When used with the \fI\-l\fR command\-line option, the
 program displays the current partition table and then exits.
 
@@ -31,13 +31,12 @@ structure, see the extended \fBgdisk\fR documentation at
 \fIhttp://www.rodsbooks.com/gdisk/\fR or consult Wikipedia.
 
 The \fBgdisk\fR program employs a user interface similar to that of Linux's
-\fBfdisk\fR, but \fBgdisk\fR
-modifies GPT partitions. It also has the capability of transforming MBR
-partitions or BSD disklabels into GPT partitions. Like the original
-\fBfdisk\fR program, \fBgdisk\fR
-does not modify disk structures until you explicitly write them to disk, so
-if you make a mistake, you can exit from the program with the 'q' option to
-save your partitions.
+\fBfdisk\fR, but \fBgdisk\fR modifies GPT partitions. It also has the
+capability of transforming MBR partitions or BSD disklabels into GPT
+partitions. Like the original \fBfdisk\fR program, \fBgdisk\fR does not
+modify disk structures until you explicitly write them to disk, so if you
+make a mistake, you can exit from the program with the 'q' option to save
+your partitions.
 
 Ordinarily, \fBgdisk\fR operates on disk device files, such as
 \fI/dev/sda\fR or \fI/dev/hda\fR under Linux, \fI/dev/disk0\fR under
@@ -61,21 +60,21 @@ program whenever possible. For example, you should make Mac OS X
 partitions with the Mac OS X Disk Utility program and Linux partitions
 with the Linux \fBgdisk\fR or GNU Parted program.
 
-Upon start, \fBgdisk\fR attempts to identify the partition type in use
-on the disk. If it finds valid GPT data, \fBgdisk\fR
-will use it. If \fBgdisk\fR
-finds a valid MBR or BSD disklabel but no GPT data, it will attempt to
-convert the MBR or disklabel into GPT form. (BSD disklabels are likely to
-have unusable first and/or final partitions because they overlap with the
-GPT data structures, though.) GPT fdisk can identify, but not use data in,
-Apple Partition Map (APM) disks, which are used on 680x0\- and PowerPC\-based
-Macintoshes. Upon exiting with the 'w' option, \fBgdisk\fR replaces
-the MBR or disklabel with a GPT. \fIThis action is potentially dangerous!\fR
-Your system may become unbootable, and partition type codes may become
-corrupted if the disk uses unrecognized type codes. Boot problems are
-particularly likely if you're multi\-booting with any GPT\-unaware OS. If you
-mistakenly launch \fBgdisk\fR on an MBR disk, you can safely exit
-the program without making any changes by using the 'q' option.
+Upon start, \fBgdisk\fR attempts to identify the partition type in use on
+the disk. If it finds valid GPT data, \fBgdisk\fR will use it. If
+\fBgdisk\fR finds a valid MBR or BSD disklabel but no GPT data, it will
+attempt to convert the MBR or disklabel into GPT form. (BSD disklabels are
+likely to have unusable first and/or final partitions because they overlap
+with the GPT data structures, though.) GPT fdisk can identify, but not use
+data in, Apple Partition Map (APM) disks, which are used on 680x0\- and
+PowerPC\-based Macintoshes. Upon exiting with the 'w' option, \fBgdisk\fR
+replaces the MBR or disklabel with a GPT. \fIThis action is potentially
+dangerous!\fR Your system may become unbootable, and partition type codes
+may become corrupted if the disk uses unrecognized type codes. Boot
+problems are particularly likely if you're multi\-booting with any
+GPT\-unaware OS. If you mistakenly launch \fBgdisk\fR on an MBR disk, you
+can safely exit the program without making any changes by using the 'q'
+option.
 
 The MBR\-to\-GPT conversion will leave at least one gap in the partition
 numbering if the original MBR used logical partitions. These gaps are
@@ -95,18 +94,17 @@ and in whatever sizes are desired.
 .B *
 Boot disks for EFI\-based systems require an \fIEFI System
 Partition\fR (\fBgdisk\fR internal code 0xEF00) formatted as FAT\-32.
-The recommended size of this partition between 100 and 200 MiB.
+The recommended size of this partition is between 100 and 200 MiB.
 Boot\-related files are stored here. (Note that GNU Parted identifies
 such partitions as having the "boot flag" set.)
 
 .TP 
 .B *
 Some boot loaders for BIOS\-based systems make use of a \fIBIOS Boot
-Partition\fR (\fBgdisk\fR
-internal code 0xEF02), in which the secondary boot loader is stored,
-possibly without the benefit of a filesystem. This partition can
-typically be quite small (a few tens of kilobytes), but you should
-consult your boot loader documentation for details.
+Partition\fR (\fBgdisk\fR internal code 0xEF02), in which the secondary
+boot loader is stored, possibly without the benefit of a filesystem. This
+partition can typically be quite small (roughly 32 to 200 KiB), but you
+should consult your boot loader documentation for details.
 
 .TP 
 .B *
@@ -140,12 +138,15 @@ menu provides the functions that are most likely to be useful for typical partit
 
 .TP 
 .B b
-Save partition data to a backup file. You can back up your partition table
-to a disk file using this option. The resulting file is a binary file
-consisting of the protective MBR, the main GPT header, the backup GPT
-header, and one copy of the partition table, in that order. Note that the
-restore option is on the recovery & transformation menu; the backup
-option is on the main menu to encourage its use.
+Save partition data to a backup file. You can back up your current
+in-memory partition table to a disk file using this option. The resulting
+file is a binary file consisting of the protective MBR, the main GPT
+header, the backup GPT header, and one copy of the partition table, in that
+order. Note that the backup is of the current in-memory data structures, so
+if you launch the program, make changes, and then use this option, the
+backup will reflect your changes. Note also that the restore option is on
+the recovery & transformation menu; the backup option is on the main menu
+to encourage its use.
 
 
 .TP 
@@ -193,17 +194,16 @@ these two\-byte codes are unique to \fBgdisk\fR.
 Create a new partition. This command is modelled after the equivalent
 \fBfdisk\fR option, although some differences exist. You enter a partition
 number, starting sector, and an ending sector. Both start and end sectors
-can be specified in absolute terms as sector numbers or as positions measured
-in kilobytes (K), megabytes (M), gigabytes (G), or terabytes (T); for
-instance, \fI\fB40M\fR\fR
-specifies a position 40MiB from the start of the disk. You can specify
-locations relative to the start or end of the specified range by preceding
-the number by a '+' or '\-' symbol, as in \fI\fB+2G\fR\fR
-to specify a point 2GiB after the first available sector, or \fI\fB\-200M\fR\fR
-to specify a point 200MiB before the last available sector. Pressing the
-Enter key with no input specifies the default value, which is the start of
-the largest available block for the start sector and the last available
-block for the end sector.
+can be specified in absolute terms as sector numbers or as positions
+measured in kilobytes (K), megabytes (M), gigabytes (G), or terabytes (T);
+for instance, \fI\fB40M\fR\fR specifies a position 40MiB from the start of
+the disk. You can specify locations relative to the start or end of the
+specified range by preceding the number by a '+' or '\-' symbol, as in
+\fI\fB+2G\fR\fR to specify a point 2GiB after the first available sector,
+or \fI\fB\-200M\fR\fR to specify a point 200MiB before the last available
+sector. Pressing the Enter key with no input specifies the default value,
+which is the start of the largest available block for the start sector and
+the last available block for the end sector.
 
 .TP 
 .B o
@@ -234,10 +234,9 @@ hybrid MBRs.
 .B s
 Sort partition entries. GPT partition numbers need not match the order of
 partitions on the disk. If you want them to match, you can use this option.
-Note that some partitioning utilities sort
-partitions whenever they make changes. Such changes will be reflected in
-your device filenames, so you may need to edit
-\fI/etc/fstab\fR if you use this option.
+Note that some partitioning utilities sort partitions whenever they make
+changes. Such changes will be reflected in your device filenames, so you
+may need to edit \fI/etc/fstab\fR if you use this option.
 
 .TP 
 .B t
@@ -417,6 +416,13 @@ you might want to adjust the number manually if you've wound up with the
 same GUID on two partitions because of buggy GUID assignments (hopefully
 not in \fBgdisk\fR) or sheer incredible coincidence.
 
+.TP
+.B e
+Relocate backup GPT data structures. Use this command if you've added
+disks to a RAID array, thus creating a virtual disk with space that follows
+the backup GPT data structures. This command moves the backup GPT data
+structures to the end of the disk, where they belong.
+
 .TP 
 .B g
 Change disk GUID. Each disk has a unique GUID code, which \fBgdisk\fR
@@ -534,9 +540,9 @@ The program can load only up to 128 partitions (4 primary partitions and
 124 logical partitions) when converting from MBR format. This limit can
 be raised by changing the \fI#define MAX_MBR_PARTS\fR line in the
 \fImbr.h\fR source code file and recompiling; however, such a change
-will require using a larger\-than\-normal GPT partition table. (The limit
+will require using a larger\-than\-normal partition table. (The limit
 of 128 partitions was chosen because that number equals the 128 partitions
-supported by the most common GPT partition table size.)
+supported by the most common partition table size.)
 
 .TP 
 .B *

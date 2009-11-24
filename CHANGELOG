@@ -1,3 +1,14 @@
+0.5.1:
+------
+
+- Made some minor edits to the man page.
+
+- Incorporated RPM .spec file changes contributed by Scott Collier
+  (boodle11@gmail.com).
+
+- Added 'e' option (relocate backup GPT data structures) to the experts'
+  menu.
+
 0.5.0:
 ------
 
