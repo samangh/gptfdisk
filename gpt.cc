@@ -122,11 +122,10 @@ int GPTData::Verify(void) {
    } // if
    if (secondHeader.currentLBA != (diskSize - UINT64_C(1))) {
       problems++;
-      printf("\nProblem: The secondary header's self-pointer doesn't point to itself. This\n"
-             "problem is being automatically corrected, but it may be a symptom of more\n"
-             "serious problems. Think carefully before saving changes with 'w' or using this\n"
-             "disk.\n");
-      secondHeader.currentLBA = diskSize - UINT64_C(1);
+      printf("\nProblem: The secondary header's self-pointer indicates that it doesn't reside\n"
+             "at the end of the disk. If you've added a disk to a RAID array, use the 'e'\n"
+             "option on the experts' menu to adjust the secondary header's and partition"
+             "table's locations.");
    } // if
 
    // Now check that critical main and backup GPT entries match each other
@@ -303,7 +302,7 @@ int GPTData::CheckHeaderValidity(void) {
         (((mainHeader.signature << 32) == APM_SIGNATURE1) ||
         (mainHeader.signature << 32) == APM_SIGNATURE2)) {
       apmFound = 1; // Will display warning message later
-        } // if
+   } // if
 
         return valid;
 } // GPTData::CheckHeaderValidity()
@@ -589,9 +588,25 @@ int GPTData::ForceLoadGPTData(int fd) {
    if (IsLittleEndian() == 0) // big-endian system; adjust header byte order....
       ReverseHeaderBytes(&mainHeader);
 
-   // Load backup header, check its CRC, and store the results of
-   // the check for future reference
-   seekTo = (diskSize * blockSize) - UINT64_C(512);
+   // Load backup header, check its CRC, and store the results of the
+   // check for future reference. Load backup header using pointer in main
+   // header if possible; but if main header has a CRC error, or if it
+   // points to beyond the end of the disk, load the last sector of the
+   // disk instead.
+   if (mainCrcOk) {
+      if (mainHeader.backupLBA < diskSize) {
+         seekTo = mainHeader.backupLBA * blockSize;
+      } else {
+         seekTo = (diskSize * blockSize) - UINT64_C(512);
+         printf("Warning! Disk size is smaller than the main header indicates! Loading\n"
+                "secondary header from the last sector of the disk! You should use 'v' to\n"
+                "verify disk integrity, and perhaps options on the experts' menu to repair\n"
+                "the disk.\n");
+      } // else
+   } else {
+      seekTo = (diskSize * blockSize) - UINT64_C(512);
+   } // if/else (mainCrcOk)
+
    if (lseek64(fd, seekTo, SEEK_SET) != (off_t) -1) {
       read(fd, &secondHeader, 512); // read secondary GPT header
       secondCrcOk = CheckHeaderCRC(&secondHeader);
@@ -600,7 +615,7 @@ int GPTData::ForceLoadGPTData(int fd) {
    } else {
       allOK = 0;
       state = gpt_invalid;
-      fprintf(stderr, "Unable to seek to secondary GPT at sector %llu!\n",
+      fprintf(stderr, "Unable to seek to secondary GPT header at sector %llu!\n",
               diskSize - (UINT64_C(1)));
    } // if/else lseek
 

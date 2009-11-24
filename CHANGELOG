@@ -6,6 +6,10 @@
 - Incorporated RPM .spec file changes contributed by Scott Collier
   (boodle11@gmail.com).
 
+- Changed method of locating and loading backup GPT data, to use the
+  main header's pointer, if it's valid, rather than seeking to the
+  end of the disk.
+
 - Added 'e' option (relocate backup GPT data structures) to the experts'
   menu.
 
