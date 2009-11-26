@@ -127,7 +127,7 @@ public:
    void BlankPartitions(void);
    void SortGPT(void);
    int ClearGPTData(void);
-   void FixSecondHeaderLocation();
+   void MoveSecondHeaderToEnd();
    void SetName(uint32_t partNum, char* theName = NULL);
    void SetDiskGUID(GUIDData newGUID);
    int SetPartitionGUID(uint32_t pn, GUIDData theGUID);

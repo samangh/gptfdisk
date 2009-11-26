@@ -124,8 +124,8 @@ int GPTData::Verify(void) {
       problems++;
       printf("\nProblem: The secondary header's self-pointer indicates that it doesn't reside\n"
              "at the end of the disk. If you've added a disk to a RAID array, use the 'e'\n"
-             "option on the experts' menu to adjust the secondary header's and partition"
-             "table's locations.");
+             "option on the experts' menu to adjust the secondary header's and partition\n"
+             "table's locations.\n");
    } // if
 
    // Now check that critical main and backup GPT entries match each other
@@ -676,7 +676,7 @@ int GPTData::ForceLoadGPTData(int fd) {
    return allOK;
 } // GPTData::ForceLoadGPTData()
 
-// Loads the partition tables pointed to by the main GPT header. The
+// Loads the partition table pointed to by the main GPT header. The
 // main GPT header in memory MUST be valid for this call to do anything
 // sensible!
 int GPTData::LoadMainTable(void) {
@@ -753,11 +753,23 @@ int GPTData::SaveGPTData(void) {
 
    // Check that disk is really big enough to handle this...
    if (mainHeader.backupLBA > diskSize) {
-      fprintf(stderr, "Error! Disk is too small -- either the original MBR is corrupt or you're\n");
-      fprintf(stderr, "working from an MBR copied to a file! Aborting!\n");
+      fprintf(stderr, "Error! Disk is too small! The 'e' option on the experts' menu might fix the\n"
+              "problem (or it might not). Aborting!\n");
       printf("(Disk size is %ld sectors, needs to be %ld sectors.)\n", diskSize,
              mainHeader.backupLBA);
       allOK = 0;
+   } // if
+   // Check that second header is properly placed. Warn and ask if this should
+   // be corrected if the test fails....
+   if (mainHeader.backupLBA < (diskSize - UINT64_C(1))) {
+      printf("Warning! Secondary header is placed too early on the disk! Do you want to\n"
+             "correct this problem? ");
+      if (GetYN() == 'Y') {
+         MoveSecondHeaderToEnd();
+         printf("Have moved second header and partition table to correct location.\n");
+      } else {
+         printf("Have not corrected the problem. Strange problems may occur in the future!\n");
+      } // if correction requested
    } // if
 
    // Check for overlapping partitions....
@@ -988,10 +1000,7 @@ int GPTData::LoadGPTBackup(char* filename) {
          if (secondHeader.currentLBA != diskSize - UINT64_C(1)) {
             printf("Warning! Current disk size doesn't match that of the backup!\n"
                   "Adjusting sizes to match, but subsequent problems are possible!\n");
-            secondHeader.currentLBA = mainHeader.backupLBA = diskSize - UINT64_C(1);
-            mainHeader.lastUsableLBA = diskSize - mainHeader.firstUsableLBA;
-            secondHeader.lastUsableLBA = mainHeader.lastUsableLBA;
-            secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
+            MoveSecondHeaderToEnd();
          } // if
 
          // Load main partition table, and record whether its CRC
@@ -1398,6 +1407,7 @@ WhichToUse GPTData::UseWhichPartitions(void) {
                "Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk\n"
                "verification and recovery are STRONGLY recommended.\n"
                "****************************************************************************\n");
+         which = use_gpt;
       } // if/else/else
    } // if (corrupt GPT)
 
@@ -1703,42 +1713,47 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
       printf("to %lu to fill the sector\n", (unsigned long) numEntries);
    } // if
 
-   newParts = (GPTPart*) calloc(numEntries, sizeof (GPTPart));
-   if (newParts != NULL) {
-      if (partitions != NULL) { // existing partitions; copy them over
-         GetPartRange(&i, &high);
-         if (numEntries < (high + 1)) { // Highest entry too high for new #
-            printf("The highest-numbered partition is %lu, which is greater than the requested\n"
-                  "partition table size of %d; cannot resize. Perhaps sorting will help.\n",
-                  (unsigned long) (high + 1), numEntries);
-            allOK = 0;
-         } else { // go ahead with copy
-            if (numEntries < mainHeader.numParts)
-               copyNum = numEntries;
-            else
-               copyNum = mainHeader.numParts;
-            for (i = 0; i < copyNum; i++) {
-               newParts[i] = partitions[i];
-            } // for
-            trash = partitions;
+   // Do the work only if the # of partitions is changing. Along with being
+   // efficient, this prevents mucking the with location of the secondary
+   // partition table, which causes problems when loading data from a RAID
+   // array that's been expanded because this function is called when loading
+   // data.
+   if ((numEntries != mainHeader.numParts) || (partitions == NULL)) {
+      newParts = (GPTPart*) calloc(numEntries, sizeof (GPTPart));
+      if (newParts != NULL) {
+         if (partitions != NULL) { // existing partitions; copy them over
+            GetPartRange(&i, &high);
+            if (numEntries < (high + 1)) { // Highest entry too high for new #
+               printf("The highest-numbered partition is %lu, which is greater than the requested\n"
+                     "partition table size of %d; cannot resize. Perhaps sorting will help.\n",
+                     (unsigned long) (high + 1), numEntries);
+               allOK = 0;
+            } else { // go ahead with copy
+               if (numEntries < mainHeader.numParts)
+                  copyNum = numEntries;
+               else
+                  copyNum = mainHeader.numParts;
+               for (i = 0; i < copyNum; i++) {
+                  newParts[i] = partitions[i];
+               } // for
+               trash = partitions;
+               partitions = newParts;
+               free(trash);
+            } // if
+         } else { // No existing partition table; just create it
             partitions = newParts;
-            free(trash);
-         } // if
-      } else { // No existing partition table; just create it
-         partitions = newParts;
-      } // if/else existing partitions
-      mainHeader.numParts = numEntries;
-      secondHeader.numParts = numEntries;
-      mainHeader.firstUsableLBA = ((numEntries * GPT_SIZE) / blockSize) + 2 ;
-      secondHeader.firstUsableLBA = mainHeader.firstUsableLBA;
-      mainHeader.lastUsableLBA = diskSize - mainHeader.firstUsableLBA;
-      secondHeader.lastUsableLBA = mainHeader.lastUsableLBA;
-      secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
-      if (diskSize > 0)
-         CheckGPTSize();
-   } else { // Bad memory allocation
-      fprintf(stderr, "Error allocating memory for partition table!\n");
-      allOK = 0;
+         } // if/else existing partitions
+         mainHeader.numParts = numEntries;
+         secondHeader.numParts = numEntries;
+         mainHeader.firstUsableLBA = ((numEntries * GPT_SIZE) / blockSize) + 2 ;
+         secondHeader.firstUsableLBA = mainHeader.firstUsableLBA;
+         MoveSecondHeaderToEnd();
+         if (diskSize > 0)
+            CheckGPTSize();
+      } else { // Bad memory allocation
+         fprintf(stderr, "Error allocating memory for partition table!\n");
+         allOK = 0;
+      } // if/else
    } // if/else
    return (allOK);
 } // GPTData::SetGPTSize()
@@ -1832,9 +1847,11 @@ int GPTData::ClearGPTData(void) {
    return (goOn);
 } // GPTData::ClearGPTData()
 
-// Set the location of the second GPT header data to the correct location.
-// Intended to help users of RAID arrays that have been resized.
-void GPTData::FixSecondHeaderLocation() {
+// Set the location of the second GPT header data to the end of the disk.
+// Used internally and called by the 'e' option on the recovery &
+// transformation menu, to help users of RAID arrays who add disk space
+// to their arrays.
+void GPTData::MoveSecondHeaderToEnd() {
    mainHeader.backupLBA = secondHeader.currentLBA = diskSize - UINT64_C(1);
    mainHeader.lastUsableLBA = secondHeader.lastUsableLBA = diskSize - mainHeader.firstUsableLBA;
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);

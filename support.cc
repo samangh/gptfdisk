@@ -480,6 +480,7 @@ uint64_t disksize(int fd, int *err) {
          sectors = bytes / UINT64_C(512);
       } // if
    } // if
-//   printf("In disksize(), sectors is %lld.\n", sectors);
+//   sectors = 25000000;
+//   printf("Returning bogus sector size: %d\n", sectors);
    return sectors;
 }

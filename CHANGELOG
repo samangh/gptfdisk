@@ -13,6 +13,10 @@
 - Added 'e' option (relocate backup GPT data structures) to the experts'
   menu.
 
+- Fixed bug that prevented recovery of partitions in case of partially
+  damaged GPT data (bad main and good backup or bad backup and good
+  main header, for instance).
+
 0.5.0:
 ------
 
