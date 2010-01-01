@@ -67,6 +67,7 @@ protected:
    int secondPartsCrcOk;
    int apmFound; // set to 1 if APM detected
    int bsdFound; // set to 1 if BSD disklabel detected in MBR
+   int sectorAlignment; // Start & end partitions at multiples of sectorAlignment
    PartTypes typeHelper;
 public:
    // Basic necessary functions....
@@ -132,6 +133,8 @@ public:
    void SetDiskGUID(GUIDData newGUID);
    int SetPartitionGUID(uint32_t pn, GUIDData theGUID);
    void MakeProtectiveMBR(void) {protectiveMBR.MakeProtectiveMBR();}
+   int Align(uint64_t* sector);
+   void SetAlignment(int n) {sectorAlignment = n;}
 
    // Return data about the GPT structures....
    int GetPartRange(uint32_t* low, uint32_t* high);
@@ -143,7 +146,7 @@ public:
    uint64_t GetBlocksInPartTable(void) {return (mainHeader.numParts *
                    mainHeader.sizeOfPartitionEntries) / blockSize;}
    uint32_t CountParts(void);
-
+   int GetAlignment(void) {return sectorAlignment;}
 
    // Find information about free space
    uint64_t FindFirstAvailable(uint64_t start = 0);

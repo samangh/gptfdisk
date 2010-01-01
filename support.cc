@@ -34,7 +34,7 @@ int GetNumber(int low, int high, int def, const char prompt[]) {
    if (low != high) { // bother only if low and high differ...
       response = low - 1; // force one loop by setting response outside range
       while ((response < low) || (response > high)) {
-         printf(prompt);
+         printf("%s", prompt);
          fgets(line, 255, stdin);
          num = sscanf(line, "%d", &response);
          if (num == 1) { // user provided a response
@@ -83,7 +83,7 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]) 
 
    response = low - 1; // Ensure one pass by setting a too-low initial value
    while ((response < low) || (response > high)) {
-      printf(prompt);
+      printf("%s", prompt);
       fgets(line, 255, stdin);
 
       // Remove leading spaces, if present

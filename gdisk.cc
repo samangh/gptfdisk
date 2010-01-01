@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version 0.5.1-pre3\n\n");
+   printf("GPT fdisk (gdisk) version 0.5.2\n\n");
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {
@@ -309,6 +309,10 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
                theGPT->SetPartitionGUID(pn, GetGUID());
             } else printf("No partitions\n");
             break;
+         case 'd': case 'D':
+            printf("The number of logical sectors per physical sector is set to %d.\n",
+                   theGPT->GetAlignment());
+            break;
          case 'e': case 'E':
             printf("Relocating backup data structures to the end of the disk\n");
             theGPT->MoveSecondHeaderToEnd();
@@ -319,6 +323,10 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
             break;
          case 'i': case 'I':
             theGPT->ShowDetails();
+            break;
+         case 'l': case 'L':
+            temp1 = GetNumber(1, 128, 8, "Enter the number of logical sectors in a physical sector on the\ndisk (1-128, default = 8): ");
+            theGPT->SetAlignment(temp1);
             break;
          case 'm': case 'M':
             MainMenu(filename, theGPT);
@@ -366,9 +374,11 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
 void ShowExpertCommands(void) {
    printf("a\tset attributes\n");
    printf("c\tchange partition GUID\n");
+   printf("d\tdisplay the number of logical sectors per physical sector\n");
    printf("e\trelocate backup data structures to the end of the disk\n");
    printf("g\tchange disk GUID\n");
    printf("i\tshow detailed information on a partition\n");
+   printf("b\tset the number of logical sectors per physical sector\n");
    printf("m\treturn to main menu\n");
    printf("n\tcreate a new protective MBR\n");
    printf("o\tprint protective MBR data\n");

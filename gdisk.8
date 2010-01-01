@@ -1,6 +1,6 @@
 .\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.5.0" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.5.1" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -417,11 +417,19 @@ same GUID on two partitions because of buggy GUID assignments (hopefully
 not in \fBgdisk\fR) or sheer incredible coincidence.
 
 .TP
+.B d
+Display the number of logical sectors per physical sector. This value
+determines the sector alignment that GPT fdisk enforces. See the
+description of the 'l' option for more details. Note that this value
+is not actually detected on a disk-by-disk basis; it's set to 8 as a
+blanket default.
+
+.TP
 .B e
-Relocate backup GPT data structures. Use this command if you've added
-disks to a RAID array, thus creating a virtual disk with space that follows
-the backup GPT data structures. This command moves the backup GPT data
-structures to the end of the disk, where they belong.
+Move backup GPT data structures to the end of the disk. Use this command if
+you've added disks to a RAID array, thus creating a virtual disk with space
+that follows the backup GPT data structures. This command moves the backup
+GPT data structures to the end of the disk, where they belong.
 
 .TP 
 .B g
@@ -433,6 +441,22 @@ a fresh random GUID or enter one manually with this option.
 .B i
 Show detailed partition information. This option is identical to the 'i'
 option on the main menu.
+
+.TP
+.B l
+Change the number of logical sectors per physical sector. Prior to December
+of 2009, most hard disks used 512-byte physical sectors. Starting in
+December of 2009, disk manufacturers began transitioning to disks with
+larger physical sectors, but their firmware translated to 512-byte logical
+sectors to maintain compatibility with older OSes. If partitions begin
+mid-physical-sector, though, performance can suffer on such drives, since
+important filesystem data structures can span physical sectors on the disk.
+To minimize such problems, GPT fdisk aligns the start of partitions on the
+boundary of presumed physical sectors. You can set the number of logical
+sectors per physical sector with this option. The default is 8, which is
+set blindly; GPT fdisk does not currently read this information from the
+disk. The default value will result in a tiny amount of wasted disk space
+on older disks with true 512-byte sectors but will otherwise be harmless.
 
 .TP 
 .B m
@@ -501,7 +525,7 @@ entering data. When only one option is possible, \fBgdisk\fR
 usually bypasses the prompt entirely.
 
 .SH "BUGS"
-As of September 2009 (version 0.5.0), \fBgdisk\fR
+As of November 2009 (version 0.5.1), \fBgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 

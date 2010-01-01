@@ -1,3 +1,14 @@
+0.5.2 (12/31/2009):
+-------------------
+
+- Modified partition creation function to begin partitions on 8-sector
+  boundaries by default. This improves performance on the new Western
+  Digital Advanced Format drives. The new 'd' and 'l' options on the
+  experts' menu display and change, respectively, the boundary size.
+
+- Tweaked code to produce fewer warnings on the latest versions of
+  GCC.
+
 0.5.1:
 ------
 

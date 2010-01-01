@@ -46,6 +46,7 @@ GPTData::GPTData(void) {
    secondPartsCrcOk = 0;
    apmFound = 0;
    bsdFound = 0;
+   sectorAlignment = 8; // Align partitions on 4096-byte boundaries by default
    srand((unsigned int) time(NULL));
    SetGPTSize(NUM_GPT_ENTRIES);
 } // GPTData default constructor
@@ -63,6 +64,7 @@ GPTData::GPTData(char* filename) {
    secondPartsCrcOk = 0;
    apmFound = 0;
    bsdFound = 0;
+   sectorAlignment = 8; // Align partitions on 4096-byte boundaries by default
    srand((unsigned int) time(NULL));
    LoadPartitions(filename);
 } // GPTData(char* filename) constructor
@@ -83,8 +85,8 @@ GPTData::~GPTData(void) {
 // do *NOT* recover from these problems. Returns the total number of
 // problems identified.
 int GPTData::Verify(void) {
-   int problems = 0, numSegments;
-   uint64_t totalFree, largestSegment;
+   int problems = 0, numSegments, i;
+   uint64_t totalFree, largestSegment, firstSector;
    char tempStr[255], siTotal[255], siLargest[255];
 
    // First, check for CRC errors in the GPT data....
@@ -198,6 +200,16 @@ int GPTData::Verify(void) {
 
    // Verify that partitions don't run into GPT data areas....
    problems += CheckGPTSize();
+
+   // Check that partitions are aligned on proper boundaries (for WD Advanced
+   // Format and similar disks)....
+   for (i = 0; i < mainHeader.numParts; i++) {
+      if ((partitions[i].GetFirstLBA() % sectorAlignment) != 0) {
+         printf("\nCaution: Partition %d doesn't begin on a %d-sector boundary. This may\n"
+                "result in degraded performance on some modern (2010 and later) hard disks.\n",
+                i + 1, sectorAlignment);
+      } // if
+   } // for
 
    // Now compute available space, but only if no problems found, since
    // problems could affect the results
@@ -726,7 +738,7 @@ void GPTData::LoadSecondTableAsMain(void) {
          printf("Error! Couldn't seek to backup partition table!\n");
       } // if/else
    } else {
-      printf("Error! Couldn't open device %s when recovering backup partition table!\n");
+      printf("Error! Couldn't open device %s when recovering backup partition table!\n", device);
    } // if/else
 } // GPTData::LoadSecondTableAsMain()
 
@@ -755,7 +767,7 @@ int GPTData::SaveGPTData(void) {
    if (mainHeader.backupLBA > diskSize) {
       fprintf(stderr, "Error! Disk is too small! The 'e' option on the experts' menu might fix the\n"
               "problem (or it might not). Aborting!\n");
-      printf("(Disk size is %ld sectors, needs to be %ld sectors.)\n", diskSize,
+      printf("(Disk size is %llu sectors, needs to be %llu sectors.)\n", diskSize,
              mainHeader.backupLBA);
       allOK = 0;
    } // if
@@ -1183,6 +1195,7 @@ void GPTData::CreatePartition(void) {
       do {
          sector = GetSectorNum(firstBlock, lastBlock, firstInLargest, prompt);
       } while (IsFree(sector) == 0);
+      Align(&sector); // Align sector to correct multiple
       firstBlock = sector;
 
       // Get last block for new partitions...
@@ -1315,7 +1328,7 @@ int GPTData::DestroyGPT(int prompt) {
          printf("GPT data structures destroyed! You may now partition the disk using fdisk or\n"
                "other utilities. Program will now terminate.\n");
       } else {
-         printf("Problem opening %s for writing! Program will now terminate.\n");
+         printf("Problem opening %s for writing! Program will now terminate.\n", device);
       } // if/else (fd != -1)
    } // if (goOn == 'Y')
    return (goOn == 'Y');
@@ -1885,6 +1898,71 @@ int GPTData::SetPartitionGUID(uint32_t pn, GUIDData theGUID) {
    return retval;
 } // GPTData::SetPartitionGUID()
 
+// Adjust sector number so that it falls on a sector boundary that's a
+// multiple of sectorAlignment. This is done to improve the performance
+// of Western Digital Advanced Format disks and disks with similar
+// technology from other companies, which use 4096-byte sectors
+// internally although they translate to 512-byte sectors for the
+// benefit of the OS. If partitions aren't properly aligned on these
+// disks, some filesystem data structures can span multiple physical
+// sectors, degrading performance. This function should be called
+// only on the FIRST sector of the partition, not the last!
+// This function returns 1 if the alignment was altered, 0 if it
+// was unchanged.
+int GPTData::Align(uint64_t* sector) {
+   int retval = 0, sectorOK = 0;
+   uint64_t earlier, later, testSector, original;
+
+   if ((*sector % sectorAlignment) != 0) {
+      original = *sector;
+      retval = 1;
+      earlier = (*sector / sectorAlignment) * sectorAlignment;
+      later = earlier + (uint64_t) sectorAlignment;
+
+      // Check to see that every sector between the earlier one and the
+      // requested one is clear, and that it's not too early....
+      if (earlier >= mainHeader.firstUsableLBA) {
+//         printf("earlier is %llu, first usable is %llu\n", earlier, mainHeader.firstUsableLBA);
+         sectorOK = 1;
+         testSector = earlier;
+         do {
+            sectorOK = IsFree(testSector++);
+         } while ((sectorOK == 1) && (testSector < *sector));
+         if (sectorOK == 1) {
+            *sector = earlier;
+//            printf("Moved sector earlier.\n");
+         } // if
+      } // if firstUsableLBA check
+
+      // If couldn't move the sector earlier, try to move it later instead....
+      if ((sectorOK != 1) && (later <= mainHeader.lastUsableLBA)) {
+         sectorOK = 1;
+         testSector = later;
+         do {
+            sectorOK = IsFree(testSector--);
+         } while ((sectorOK == 1) && (testSector > *sector));
+         if (sectorOK == 1) {
+            *sector = later;
+//            printf("Moved sector later\n");
+         } // if
+      } // if
+
+      // If sector was changed successfully, inform the user of this fact.
+      // Otherwise, notify the user that it couldn't be done....
+      if (sectorOK == 1) {
+         printf("Information: Moved requested sector from %llu to %llu for\n"
+               "alignment purposes. Use 'l' on the experts' menu to adjust alignment.\n",
+               original, *sector);
+      } else {
+         printf("Information: Sector not aligned on %d-sector boundary and could not be moved.\n"
+                "If you're using a Western Digital Advanced Format or similar disk with\n"
+                "underlying 4096-byte sectors, performance may suffer.\n", sectorAlignment);
+         retval = 0;
+      } // if/else
+   } // if
+   return retval;
+} // GPTData::Align()
+
 /********************************************************
  *                                                      *
  * Functions that return data about GPT data structures *
@@ -2141,35 +2219,35 @@ int SizesOK(void) {
    int allOK = 1;
 
    if (sizeof(uint8_t) != 1) {
-      fprintf(stderr, "uint8_t is %d bytes, should be 1 byte; aborting!\n", sizeof(uint8_t));
+      fprintf(stderr, "uint8_t is %lu bytes, should be 1 byte; aborting!\n", sizeof(uint8_t));
       allOK = 0;
    } // if
    if (sizeof(uint16_t) != 2) {
-      fprintf(stderr, "uint16_t is %d bytes, should be 2 bytes; aborting!\n", sizeof(uint16_t));
+      fprintf(stderr, "uint16_t is %lu bytes, should be 2 bytes; aborting!\n", sizeof(uint16_t));
       allOK = 0;
    } // if
    if (sizeof(uint32_t) != 4) {
-      fprintf(stderr, "uint32_t is %d bytes, should be 4 bytes; aborting!\n", sizeof(uint32_t));
+      fprintf(stderr, "uint32_t is %lu bytes, should be 4 bytes; aborting!\n", sizeof(uint32_t));
       allOK = 0;
    } // if
    if (sizeof(uint64_t) != 8) {
-      fprintf(stderr, "uint64_t is %d bytes, should be 8 bytes; aborting!\n", sizeof(uint64_t));
+      fprintf(stderr, "uint64_t is %lu bytes, should be 8 bytes; aborting!\n", sizeof(uint64_t));
       allOK = 0;
    } // if
    if (sizeof(struct MBRRecord) != 16) {
-      fprintf(stderr, "MBRRecord is %d bytes, should be 16 bytes; aborting!\n", sizeof(MBRRecord));
+      fprintf(stderr, "MBRRecord is %lu bytes, should be 16 bytes; aborting!\n", sizeof(MBRRecord));
       allOK = 0;
    } // if
    if (sizeof(struct TempMBR) != 512) {
-      fprintf(stderr, "TempMBR is %d bytes, should be 512 bytes; aborting!\n", sizeof(TempMBR));
+      fprintf(stderr, "TempMBR is %lu bytes, should be 512 bytes; aborting!\n", sizeof(TempMBR));
       allOK = 0;
    } // if
    if (sizeof(struct GPTHeader) != 512) {
-      fprintf(stderr, "GPTHeader is %d bytes, should be 512 bytes; aborting!\n", sizeof(GPTHeader));
+      fprintf(stderr, "GPTHeader is %lu bytes, should be 512 bytes; aborting!\n", sizeof(GPTHeader));
       allOK = 0;
    } // if
    if (sizeof(GPTPart) != 128) {
-      fprintf(stderr, "GPTPart is %d bytes, should be 128 bytes; aborting!\n", sizeof(GPTPart));
+      fprintf(stderr, "GPTPart is %lu bytes, should be 128 bytes; aborting!\n", sizeof(GPTPart));
       allOK = 0;
    } // if
 // Determine endianness; set allOK = 0 if running on big-endian hardware
