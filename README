@@ -53,23 +53,22 @@ to make it available.
 Caveats
 -------
 
-THIS SOFTWARE IS EARLY BETA SOFTWARE! IF IT WIPES OUT YOUR HARD DISK OR
-EATS YOUR CAT, DON'T BLAME ME! To date, I've tested the software mainly on
-two USB flash drives, 2 GiB and 8 GiB in size. I've also made a few minor
-tweaks to a production system with a 500 GiB hard disk and made more
-extensive changes to a handful of 80-160 GiB hard disks. I believe all
-data-corruption bugs to be squashed, but I know full well that the odds of
-my missing something are high. This is particularly true for large drives;
-I have no way of testing the software with > 2TiB drives, which will test
-the 64-bit sector pointer support. I've received user reports of success
-with >2TiB drives, though.
+THIS SOFTWARE IS BETA SOFTWARE! IF IT WIPES OUT YOUR HARD DISK OR EATS YOUR
+CAT, DON'T BLAME ME! To date, I've tested the software on several USB flash
+drives, a handful of PATA and SATA hard disks, and several virtual disks in
+a QEMU environment. I believe all data-corruption bugs to be squashed, but
+I know full well that the odds of my missing something are high. This is
+particularly true for large drives; my only direct testing with such disks
+is with virtual QEMU disks. I've received user reports of success with
+RAID arrays over 2TiB in size, though.
 
 My main development platform is a system running the 64-bit version of
 Ubuntu 8.04. I've also tested on 64-bit OpenSuSE, 32-bit Fedora 10, 32-bit
-Ubuntu 6.10, 64-bit Gentoo, 32-bit PowerPC Linux, 32-bit Intel-based Mac
-OS X, and 64-bit Fedora 7.1. Problems relating to 64-bit integers on the
-32-bit Linux have been common during development and may crop up in the
-future. The Mac OS X, FreeBSD, and big-endian (PowerPC) support are new.
+Fedora 11, 32-bit Ubuntu 6.10, 64-bit Ubunut 9.10, 64-bit Gentoo, 32-bit
+PowerPC Debian Linux, 32-bit Intel-based Mac OS X 10.5 and 10.6, and 64-bit
+FreeBSD 7.1. Problems relating to 64-bit integers on the 32-bit Linux have
+been common during development and may crop up in the future. The Mac OS X,
+FreeBSD, and big-endian (PowerPC) support are new.
 
 Redistribution
 --------------

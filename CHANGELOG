@@ -1,3 +1,20 @@
+0.5.3 (1/??/2009):
+------------------
+
+- Fixed bug in display of GUIDs when compiled with some versions of GCC.
+
+- Eliminated warnings caused by additional checks in latest versions of
+  GCC. These warnings were harmless, but to eliminate them I've added
+  more error checking on disk I/O.
+
+- Eliminated unnecessary warnings about potential data loss if the program
+  was launched with the -l option or if writes aren't possible.
+
+- Added code to set the partition boundary value based on the physical
+  sector size. (FindAlignment() function.) This function, however, works
+  only on Linux, and then only if the BLKPBSZGET ioctl is defined. This
+  ioctl is new in kernel 2.6.32 or thereabouts.
+
 0.5.2 (12/31/2009):
 -------------------
 

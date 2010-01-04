@@ -1,6 +1,6 @@
 .\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.5.1" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.5.3" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -420,9 +420,9 @@ not in \fBgdisk\fR) or sheer incredible coincidence.
 .B d
 Display the number of logical sectors per physical sector. This value
 determines the sector alignment that GPT fdisk enforces. See the
-description of the 'l' option for more details. Note that this value
-is not actually detected on a disk-by-disk basis; it's set to 8 as a
-blanket default.
+description of the 'l' option for more details. Note that this value is
+only auto-detected on Linux with a 2.6.32 kernel or later; on other
+platforms, it defaults to 8.
 
 .TP
 .B e
@@ -453,10 +453,10 @@ mid-physical-sector, though, performance can suffer on such drives, since
 important filesystem data structures can span physical sectors on the disk.
 To minimize such problems, GPT fdisk aligns the start of partitions on the
 boundary of presumed physical sectors. You can set the number of logical
-sectors per physical sector with this option. The default is 8, which is
-set blindly; GPT fdisk does not currently read this information from the
-disk. The default value will result in a tiny amount of wasted disk space
-on older disks with true 512-byte sectors but will otherwise be harmless.
+sectors per physical sector with this option. The default is 8, except on
+Linux 2.6.32 and later, in which case it's read from the disk. A value of 8
+will result in a tiny amount of wasted disk space on older disks with true
+512-byte sectors but will otherwise be harmless.
 
 .TP 
 .B m
@@ -525,7 +525,7 @@ entering data. When only one option is possible, \fBgdisk\fR
 usually bypasses the prompt entirely.
 
 .SH "BUGS"
-As of November 2009 (version 0.5.1), \fBgdisk\fR
+As of January 2010 (version 0.5.3), \fBgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 

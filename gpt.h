@@ -61,6 +61,7 @@ protected:
    uint32_t blockSize; // device block size
    uint64_t diskSize; // size of device, in blocks
    GPTValidity state; // is GPT valid?
+   int justLooking; // Set to 1 if program launched with "-l" or if read-only
    int mainCrcOk;
    int secondCrcOk;
    int mainPartsCrcOk;
@@ -135,6 +136,7 @@ public:
    void MakeProtectiveMBR(void) {protectiveMBR.MakeProtectiveMBR();}
    int Align(uint64_t* sector);
    void SetAlignment(int n) {sectorAlignment = n;}
+   void JustLooking(int i = 1) {justLooking = i;}
 
    // Return data about the GPT structures....
    int GetPartRange(uint32_t* low, uint32_t* high);

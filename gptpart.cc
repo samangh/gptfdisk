@@ -187,6 +187,7 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
 // Change the type code on the partition.
 void GPTPart::ChangeType(void) {
    char typeName[255], line[255];
+   char* junk;
    int typeNum = 0xFFFF;
 //   uint16_t typeNum = 0xFFFF;
    GUIDData newType;
@@ -195,7 +196,7 @@ void GPTPart::ChangeType(void) {
 //   printf("Current type is '%s'\n", typeHelper.GUIDToName(partitionType, typeName));
    while ((!typeHelper.Valid(typeNum)) && (typeNum != 0)) {
       printf("Hex code (L to show codes, 0 to enter raw code): ");
-      fgets(line, 255, stdin);
+      junk = fgets(line, 255, stdin);
       sscanf(line, "%X", &typeNum);
       if ((line[0] == 'L') || (line[0] == 'l'))
          typeHelper.ShowTypes();
@@ -215,6 +216,7 @@ void GPTPart::ChangeType(void) {
 // string. This function creates a simple-minded copy for this.
 void GPTPart::SetName(unsigned char* theName) {
    char newName[NAME_SIZE]; // New name
+   char* junk;
    int i;
 
    // Blank out new name string, just to be on the safe side....
@@ -223,7 +225,7 @@ void GPTPart::SetName(unsigned char* theName) {
 
    if (theName == NULL) { // No name specified, so get one from the user
       printf("Enter name: ");
-      fgets(newName, NAME_SIZE / 2, stdin);
+      junk = fgets(newName, NAME_SIZE / 2, stdin);
 
       // Input is likely to include a newline, so remove it....
       i = strlen(newName);

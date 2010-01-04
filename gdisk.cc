@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version 0.5.2\n\n");
+   printf("GPT fdisk (gdisk) version 0.5.3\n\n");
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {
@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "Usage: %s [-l] device_file\n", argv[0]);
          } // if/elseif/else
          if (device != NULL) {
+            theGPT.JustLooking();
             doMore = theGPT.LoadPartitions(device);
             if (doMore) theGPT.DisplayGPTData();
          } // if
@@ -61,19 +62,20 @@ int main(int argc, char* argv[]) {
 // wants to exit (such as after a 'w' or 'q' command).
 void MainMenu(char* filename, struct GPTData* theGPT) {
    char command, line[255], buFile[255];
+   char* junk;
    int goOn = 1;
    PartTypes typeHelper;
    uint32_t temp1, temp2;
 
    do {
       printf("\nCommand (? for help): ");
-      fgets(line, 255, stdin);
+      junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &command);
       switch (command) {
          case 'b': case 'B':
             printf("Enter backup filename to save: ");
-            fgets(line, 255, stdin);
-            sscanf(line, "%s", &buFile);
+            junk = fgets(line, 255, stdin);
+            sscanf(line, "%s", (char*) &buFile);
             theGPT->SaveGPTBackup(buFile);
             break;
          case 'c': case 'C':
@@ -163,13 +165,14 @@ void ShowCommands(void) {
 // issues an exit command, such as 'w' or 'q'.
 void RecoveryMenu(char* filename, struct GPTData* theGPT) {
    char command, line[255], buFile[255];
+   char* junk;
    PartTypes typeHelper;
    uint32_t temp1;
    int goOn = 1;
 
    do {
       printf("\nrecovery/transformation command (? for help): ");
-      fgets(line, 255, stdin);
+      junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &command);
       switch (command) {
          case 'b': case 'B':
@@ -222,8 +225,8 @@ void RecoveryMenu(char* filename, struct GPTData* theGPT) {
             break;
          case 'l': case 'L':
             printf("Enter backup filename to load: ");
-            fgets(line, 255, stdin);
-            sscanf(line, "%s", &buFile);
+            junk = fgets(line, 255, stdin);
+            sscanf(line, "%s", (char*) &buFile);
             theGPT->LoadGPTBackup(buFile);
             break;
          case 'm': case 'M':
@@ -286,6 +289,7 @@ void ShowRecoveryCommands(void) {
 // selects an exit command, such as 'w' or 'q'.
 void ExpertsMenu(char* filename, struct GPTData* theGPT) {
    char command, line[255];
+   char* junk;
    PartTypes typeHelper;
    uint32_t pn;
    uint32_t temp1, temp2;
@@ -293,7 +297,7 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
 
    do {
       printf("\nExpert command (? for help): ");
-      fgets(line, 255, stdin);
+      junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &command);
       switch (command) {
          case 'a': case 'A':
@@ -310,7 +314,7 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
             } else printf("No partitions\n");
             break;
          case 'd': case 'D':
-            printf("The number of logical sectors per physical sector is set to %d.\n",
+            printf("The number of logical sectors per physical sector is %d.\n",
                    theGPT->GetAlignment());
             break;
          case 'e': case 'E':

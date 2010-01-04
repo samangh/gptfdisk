@@ -20,6 +20,13 @@
 
 #include <sys/types.h>
 
+// As of 1/2010, BLKPBSZGET is very new, so I'm explicitly defining it if
+// it's not already defined. This should become unnecessary in the future.
+// Note that this is a Linux-only ioctl....
+#ifndef BLKPBSZGET
+#define BLKPBSZGET _IO(0x12,123)
+#endif
+
 using namespace std;
 
 // Get a numeric value from the user, between low and high (inclusive).
@@ -30,12 +37,13 @@ using namespace std;
 int GetNumber(int low, int high, int def, const char prompt[]) {
    int response, num;
    char line[255];
+   char* junk;
 
    if (low != high) { // bother only if low and high differ...
       response = low - 1; // force one loop by setting response outside range
       while ((response < low) || (response > high)) {
          printf("%s", prompt);
-         fgets(line, 255, stdin);
+         junk = fgets(line, 255, stdin);
          num = sscanf(line, "%d", &response);
          if (num == 1) { // user provided a response
             if ((response < low) || (response > high))
@@ -55,10 +63,11 @@ int GetNumber(int low, int high, int def, const char prompt[]) {
 char GetYN(void) {
    char line[255];
    char response = '\0';
+   char* junk;
 
    while ((response != 'Y') && (response != 'N')) {
       printf("(Y/N): ");
-      fgets(line, 255, stdin);
+      junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &response);
       if (response == 'y') response = 'Y';
       if (response == 'n') response = 'N';
@@ -80,11 +89,12 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]) 
    uint64_t mult = 1;
    char suffix;
    char line[255];
+   char* junk;
 
    response = low - 1; // Ensure one pass by setting a too-low initial value
    while ((response < low) || (response > high)) {
       printf("%s", prompt);
-      fgets(line, 255, stdin);
+      junk = fgets(line, 255, stdin);
 
       // Remove leading spaces, if present
       while (line[0] == ' ')
@@ -189,16 +199,16 @@ char* BytesToSI(uint64_t size, char theValue[]) {
 // returns an error condition, print a warning but return a value of SECTOR_SIZE
 // (512)..
 int GetBlockSize(int fd) {
-   int err, result;
+   int err = -1, result;
 
 #ifdef __APPLE__
    err = ioctl(fd, DKIOCGETBLOCKSIZE, &result);
-#else
+#endif
 #ifdef __FreeBSD__
    err = ioctl(fd, DIOCGSECTORSIZE, &result);
-#else
-   err = ioctl(fd, BLKSSZGET, &result);
 #endif
+#ifdef __linux__
+   err = ioctl(fd, BLKSSZGET, &result);
 #endif
 
    if (err == -1) {
@@ -221,51 +231,78 @@ int GetBlockSize(int fd) {
    return (result);
 } // GetBlockSize()
 
+// Return the partition alignment value in sectors. Right now this works
+// only for Linux 2.6.32 and later, since I can't find equivalent ioctl()s
+// for OS X or FreeBSD, and the Linux ioctl is new
+int FindAlignment(int fd) {
+   int err = -2, result = 8, physicalSectorSize = 4096;
+
+#if defined (__linux__) && defined (BLKPBSZGET)
+   err = ioctl(fd, BLKPBSZGET, &physicalSectorSize);
+//   printf("Tried to get hardware alignment; err is %d, sector size is %d\n", err, physicalSectorSize);
+#else
+   err = -1;
+#endif
+
+   if (err < 0) {
+      result = 8;
+   } else {
+      result = physicalSectorSize / GetBlockSize(fd);
+   } // if/else
+   return result;
+} // FindAlignment(int)
+
+// The same as FindAlignment(int), but opens and closes a device by filename
+int FindAlignment(char deviceFilename[]) {
+   int fd;
+   int retval = 1;
+
+   if ((fd = open(deviceFilename, O_RDONLY)) != -1) {
+      retval = FindAlignment(fd);
+      close(fd);
+   } // if
+   return retval;
+} // FindAlignment(char)
+
 // Return a plain-text name for a partition type.
 // Convert a GUID to a string representation, suitable for display
 // to humans....
 char* GUIDToStr(struct GUIDData theGUID, char* theString) {
-   uint64_t block;
+   unsigned long long blocks[11], block;
 
-   if (theString != NULL) {
-      block = (theGUID.data1 & UINT64_C(0x00000000FFFFFFFF));
-      sprintf(theString, "%08llX-", (unsigned long long) block);
-      block = (theGUID.data1 & UINT64_C(0x0000FFFF00000000)) >> 32;
-      sprintf(theString, "%s%04llX-", theString, (unsigned long long) block);
-      block = (theGUID.data1 & UINT64_C(0xFFFF000000000000)) >> 48;
-      sprintf(theString, "%s%04llX-", theString, (unsigned long long) block);
-      block = (theGUID.data2 & UINT64_C(0x00000000000000FF));
-      sprintf(theString, "%s%02llX", theString, (unsigned long long) block);
-      block = (theGUID.data2 & UINT64_C(0x000000000000FF00)) >> 8;
-      sprintf(theString, "%s%02llX-", theString, (unsigned long long) block);
-      block = (theGUID.data2 & UINT64_C(0x0000000000FF0000)) >> 16;
-      sprintf(theString, "%s%02llX", theString, (unsigned long long) block);
-      block = (theGUID.data2 & UINT64_C(0x00000000FF000000)) >> 24;
-      sprintf(theString, "%s%02llX", theString, (unsigned long long) block);
-      block = (theGUID.data2 & UINT64_C(0x000000FF00000000)) >> 32;
-      sprintf(theString, "%s%02llX", theString, (unsigned long long) block);
-      block = (theGUID.data2 & UINT64_C(0x0000FF0000000000)) >> 40;
-      sprintf(theString, "%s%02llX", theString, (unsigned long long) block);
-      block = (theGUID.data2 & UINT64_C(0x00FF000000000000)) >> 48;
-      sprintf(theString, "%s%02llX", theString, (unsigned long long) block);
-      block = (theGUID.data2 & UINT64_C(0xFF00000000000000)) >> 56;
-      sprintf(theString, "%s%02llX", theString, (unsigned long long) block);
-   } // if
+     if (theString != NULL) {
+      blocks[0] = (theGUID.data1 & UINT64_C(0x00000000FFFFFFFF));
+      blocks[1] = (theGUID.data1 & UINT64_C(0x0000FFFF00000000)) >> 32;
+      blocks[2] = (theGUID.data1 & UINT64_C(0xFFFF000000000000)) >> 48;
+      blocks[3] = (theGUID.data2 & UINT64_C(0x00000000000000FF));
+      blocks[4] = (theGUID.data2 & UINT64_C(0x000000000000FF00)) >> 8;
+      blocks[5] = (theGUID.data2 & UINT64_C(0x0000000000FF0000)) >> 16;
+      blocks[6] = (theGUID.data2 & UINT64_C(0x00000000FF000000)) >> 24;
+      blocks[7] = (theGUID.data2 & UINT64_C(0x000000FF00000000)) >> 32;
+      blocks[8] = (theGUID.data2 & UINT64_C(0x0000FF0000000000)) >> 40;
+      blocks[9] = (theGUID.data2 & UINT64_C(0x00FF000000000000)) >> 48;
+      blocks[10] = (theGUID.data2 & UINT64_C(0xFF00000000000000)) >> 56;
+      sprintf(theString,
+              "%08llX-%04llX-%04llX-%02llX%02llX-%02llX%02llX%02llX%02llX%02llX%02llX",
+              blocks[0], blocks[1], blocks[2], blocks[3], blocks[4], blocks[5],
+              blocks[6], blocks[7], blocks[8], blocks[9], blocks[10]);
+     } // if
    return theString;
 } // GUIDToStr()
 
 // Get a GUID from the user
 GUIDData GetGUID(void) {
-   uint64_t part1, part2, part3, part4, part5;
+   unsigned long long part1, part2, part3, part4, part5;
    int entered = 0;
    char temp[255], temp2[255];
+   char* junk;
    GUIDData theGUID;
 
    printf("\nA GUID is entered in five segments of from two to six bytes, with\n"
           "dashes between segments.\n");
    printf("Enter the entire GUID, a four-byte hexadecimal number for the first segment, or\n"
           "'R' to generate the entire GUID randomly: ");
-   fgets(temp, 255, stdin);
+   junk = fgets(temp, 255, stdin);
 
    // If user entered 'r' or 'R', generate GUID randomly....
    if ((temp[0] == 'r') || (temp[0] == 'R')) {
@@ -308,17 +345,17 @@ GUIDData GetGUID(void) {
    if (entered == 0) {
       sscanf(temp, "%llx", &part1);
       printf("Enter a two-byte hexadecimal number for the second segment: ");
-      fgets(temp, 255, stdin);
+      junk = fgets(temp, 255, stdin);
       sscanf(temp, "%llx", &part2);
       printf("Enter a two-byte hexadecimal number for the third segment: ");
-      fgets(temp, 255, stdin);
+      junk = fgets(temp, 255, stdin);
       sscanf(temp, "%llx", &part3);
       theGUID.data1 = (part3 << 48) + (part2 << 32) + part1;
       printf("Enter a two-byte hexadecimal number for the fourth segment: ");
-      fgets(temp, 255, stdin);
+      junk = fgets(temp, 255, stdin);
       sscanf(temp, "%llx", &part4);
       printf("Enter a six-byte hexadecimal number for the fifth segment: ");
-      fgets(temp, 255, stdin);
+      junk = fgets(temp, 255, stdin);
       sscanf(temp, "%llx", &part5);
       theGUID.data2 = ((part4 & UINT64_C(0x000000000000FF00)) >> 8) +
                       ((part4 & UINT64_C(0x00000000000000FF)) << 8) +

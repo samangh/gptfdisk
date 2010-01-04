@@ -60,6 +60,8 @@ char GetYN(void);
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]);
 char* BytesToSI(uint64_t size, char theValue[]);
 int GetBlockSize(int fd);
+int FindAlignment(int fd);
+int FindAlignment(char device[]);
 char* GUIDToStr(struct GUIDData theGUID, char* theString);
 GUIDData GetGUID(void);
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian

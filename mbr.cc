@@ -289,7 +289,9 @@ void MBRData::WriteMBRData(int fd) {
 
    // Now write that data structure...
    lseek64(fd, 0, SEEK_SET);
-   write(fd, &tempMBR, 512);
+   if (write(fd, &tempMBR, 512) != 512) {
+      fprintf(stderr, "Warning! Error %d when saving MBR!\n", errno);
+   } // if
 
    // Reverse the byte order back, if necessary
    if (IsLittleEndian() == 0) {
