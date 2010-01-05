@@ -1,5 +1,12 @@
-0.5.3 (1/??/2009):
+0.6.0 (1/??/2009):
 ------------------
+
+- Added support for disks with other than 512-byte sectors.
+
+- Created embryonic sgdisk program.
+
+0.5.3 (1/4/2009):
+-----------------
 
 - Fixed bug in display of GUIDs when compiled with some versions of GCC.
 

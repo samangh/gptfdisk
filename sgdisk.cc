@@ -1,6 +1,7 @@
-// gdisk.cc
-// Program modelled after Linux fdisk, but it manipulates GPT partitions
-// rather than MBR partitions.
+// sgdisk.cc
+// Program modelled after Linux sfdisk, but it manipulates GPT partitions
+// rather than MBR partitions. This is effectively a new user interface
+// to my gdisk program.
 //
 // by Rod Smith, project began February 2009
 
@@ -15,49 +16,115 @@
 #include "gpt.h"
 #include "support.h"
 
+#define MAX_OPTIONS 50
+
 // Function prototypes....
-void MainMenu(char* filename, struct GPTData* theGPT);
+/* void MainMenu(char* filename, struct GPTData* theGPT);
 void ShowCommands(void);
 void ExpertsMenu(char* filename, struct GPTData* theGPT);
 void ShowExpertCommands(void);
 void RecoveryMenu(char* filename, struct GPTData* theGPT);
-void ShowRecoveryCommands(void);
+void ShowRecoveryCommands(void); */
+
+enum Commands { NONE, LIST, VERIFY };
+
+struct Options {
+   Commands theCommand;
+   char* theArgument;
+}; // struct Options
+
+int verbose_flag;
+
+static struct option long_options[] =
+{
+   {"verify",  no_argument, NULL, 'v'},
+   {"list",    no_argument, NULL, 'l'},
+   {0, 0, NULL, 0}
+};
+
+int ParseOptions(int argc, char* argv[], Options* theOptions, char** device);
 
 int main(int argc, char* argv[]) {
    GPTData theGPT;
-   int doMore = 1;
+   int doMore = 1, opt, i, numOptions = 0;
    char* device = NULL;
+   Options theOptions[MAX_OPTIONS];
 
-   printf("GPT fdisk (gdisk) version 0.5.4-pre1\n\n");
+   printf("GPT fdisk (sgdisk) version 0.5.4-pre1\n\n");
+   numOptions = ParseOptions(argc, argv, theOptions, &device);
 
-    if (argc == 2) { // basic usage
-      if (SizesOK()) {
-         doMore = theGPT.LoadPartitions(argv[1]);
-         if (doMore) {
-            MainMenu(argv[1], &theGPT);
-         } // if (doMore)
-      } // if (SizesOK())
-   } else if (argc == 3) { // usage with "-l" option
-      if (SizesOK()) {
-         if (strcmp(argv[1], "-l") == 0) {
-            device = argv[2];
-         } else if (strcmp(argv[2], "-l") == 0) {
-            device = argv[1];
-         } else { // 3 arguments, but none is "-l"
-            fprintf(stderr, "Usage: %s [-l] device_file\n", argv[0]);
-         } // if/elseif/else
-         if (device != NULL) {
-            theGPT.JustLooking();
-            doMore = theGPT.LoadPartitions(device);
-            if (doMore) theGPT.DisplayGPTData();
-         } // if
-      } // if
-   } else {
-      fprintf(stderr, "Usage: %s [-l] device_file\n", argv[0]);
-   } // if/else
+   if (device != NULL) {
+      if (theGPT.LoadPartitions(device)) {
+         for (i = 0; i < numOptions; i++) {
+            switch (theOptions[i].theCommand) {
+               case LIST:
+                  theGPT.JustLooking();
+                  theGPT.DisplayGPTData();
+                  break;
+               case VERIFY:
+                  theGPT.JustLooking();
+                  theGPT.Verify();
+                  break;
+               case NONE:
+                  printf("Usage: %s {-lv} device\n", argv[0]);
+                  break;
+            } // switch
+         } // for
+      } // if loaded OK
+   } // if (device != NULL)
+
+   return 0;
 } // main
 
-// Accept a command and execute it. Returns only when the user
+// Parse command-line options. Returns the number of arguments retrieved
+int ParseOptions(int argc, char* argv[], Options* theOptions, char** device) {
+   int opt, i, numOptions = 0;
+   int verbose_flag;
+
+   // Use getopt() to extract commands and their arguments
+   /* getopt_long stores the option index here. */
+   int option_index = 0;
+
+//   c = getopt_long (argc, argv, "abc:d:f:",
+//                    long_options, &option_index);
+
+   while (((opt = getopt_long(argc, argv, "vl", long_options, &option_index)) != -1)
+          && (numOptions < MAX_OPTIONS)) {
+      printf("opt is %c, option_index is %d\n", opt, option_index);
+      switch (opt) {
+         case 'l':
+            printf("Entering list option, numOptions = %d!\n", numOptions);
+            theOptions[numOptions].theCommand = LIST;
+            theOptions[numOptions++].theArgument = NULL;
+            break;
+         case 'v':
+            theOptions[numOptions].theCommand = VERIFY;
+            theOptions[numOptions++].theArgument = NULL;
+            break;
+         default:
+            printf("Default switch; opt is %c\n", opt);
+            break;
+//            abort();
+      } // switch
+   } // while
+
+   // Find non-option arguments. If the user types a legal command, there
+   // will be only one of these: The device filename....
+   opt = 0;
+   printf("Searching for device filename; optind is %d\n", optind);
+   for (i = optind; i < argc; i++) {
+      *device = argv[i];
+      printf("Setting device to %s\n", argv[i]);
+      opt++;
+   } // for
+   if (opt > 1) {
+      fprintf(stderr, "Warning! Found stray unrecognized arguments! Program may misbehave!\n");
+   } // if
+
+   return numOptions;
+} // ParseOptions()
+
+/* // Accept a command and execute it. Returns only when the user
 // wants to exit (such as after a 'w' or 'q' command).
 void MainMenu(char* filename, struct GPTData* theGPT) {
    char command, line[255], buFile[255];
@@ -394,3 +461,4 @@ void ShowExpertCommands(void) {
    printf("z\tzap (destroy) GPT data structures and exit\n");
    printf("?\tprint this menu\n");
 } // ShowExpertCommands()
+*/

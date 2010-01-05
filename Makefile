@@ -15,6 +15,9 @@ DEPEND= makedepend $(CFLAGS)
 gdisk:	$(LIB_OBJS) gdisk.o
 	$(CXX) $(LIB_OBJS) gdisk.o -o gdisk
 
+sgdisk: $(LIB_OBJS) sgdisk.o
+	$(CXX) $(LIB_OBJS) sgdisk.o -o sgdisk
+
 wipegpt:	$(LIB_OBJS) wipegpt.o
 	$(CXX) $(LIB_OBJS) wipegpt.o -o wipegpt
 

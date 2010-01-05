@@ -63,7 +63,7 @@ int BSDData::ReadBSDData(char* device, uint64_t startSector, uint64_t endSector)
 // Load the BSD disklabel data from an already-opened disk
 // file, starting with the specified sector number.
 void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
-   uint8_t buffer[2048]; // I/O buffer
+   uint8_t buffer[4096]; // I/O buffer
    int i, err, foundSig = 0, bigEnd = 0;
    int relative = 0; // assume absolute partition sector numbering
    uint32_t realSig;
@@ -74,10 +74,10 @@ void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
    labelFirstLBA = startSector;
    labelLastLBA = endSector;
 
-   // Read two sectors into memory; we'll extract data from
+   // Read eight sectors into memory; we'll extract data from
    // this buffer. (Done to work around FreeBSD limitation)
-   lseek64(fd, startSector * 512, SEEK_SET);
-   err = read(fd, buffer, 2048);
+   lseek64(fd, startSector * GetBlockSize(fd), SEEK_SET);
+   err = read(fd, buffer, 4096);
 
    // Do some strangeness to support big-endian architectures...
    bigEnd = (IsLittleEndian() == 0);

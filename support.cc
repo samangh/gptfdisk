@@ -223,10 +223,10 @@ int GetBlockSize(int fd) {
       } // if
    } // if
 
-   if (result != 512) {
+/*   if (result != 512) {
       printf("\aWARNING! Sector size is not 512 bytes! This program is likely to ");
       printf("misbehave!\nProceed at your own risk!\n\n");
-   } // if
+   } // if */
 
    return (result);
 } // GetBlockSize()
@@ -244,9 +244,12 @@ int FindAlignment(int fd) {
    err = -1;
 #endif
 
-   if (err < 0) {
-      result = 8;
-   } else {
+   if (err < 0) { // ioctl didn't work; have to guess....
+		if (GetBlockSize(fd) == 512)
+         result = 8; // play it safe; align for 4096-byte sectors
+		else
+			result = 1; // unusual sector size; assume it's the real physical size
+   } else { // ioctl worked; compute alignment
       result = physicalSectorSize / GetBlockSize(fd);
    } // if/else
    return result;
@@ -501,7 +504,9 @@ uint64_t disksize(int fd, int *err) {
       else
          sectors = (b >> 9);
    } // if
-
+   // Unintuitively, the above returns values in 512-byte blocks, no
+   // matter what the underlying device's block size. Correct for this....
+   sectors /= (GetBlockSize(fd) / 512);
 #endif
 #endif
 
@@ -517,7 +522,72 @@ uint64_t disksize(int fd, int *err) {
          sectors = bytes / UINT64_C(512);
       } // if
    } // if
-//   sectors = 25000000;
-//   printf("Returning bogus sector size: %d\n", sectors);
    return sectors;
-}
+} // disksize()
+
+// A variant on the standard read() function. Done to work around
+// limitations in FreeBSD concerning the matching of the sector
+// size with the number of bytes read
+int myRead(int fd, char* buffer, int numBytes) {
+   int blockSize = 512, i, numBlocks, retval;
+   char* tempSpace;
+
+   // Compute required space and allocate memory
+   blockSize = GetBlockSize(fd);
+   if (numBytes <= blockSize) {
+      numBlocks = 1;
+      tempSpace = (char*) malloc(blockSize);
+   } else {
+      numBlocks = numBytes / blockSize;
+      if ((numBytes % blockSize) != 0) numBlocks++;
+      tempSpace = (char*) malloc(numBlocks * blockSize);
+   } // if/else
+
+   // Read the data into temporary space, then copy it to buffer
+   retval = read(fd, tempSpace, numBlocks * blockSize);
+   for (i = 0; i < numBytes; i++) {
+      buffer[i] = tempSpace[i];
+   } // for
+
+   // Adjust the return value, if necessary....
+   if (((numBlocks * blockSize) != numBytes) && (retval > 0))
+      retval = numBytes;
+
+   free(tempSpace);
+   return retval;
+} // myRead()
+
+// A variant on the standard write() function. Done to work around
+// limitations in FreeBSD concerning the matching of the sector
+// size with the number of bytes read
+int myWrite(int fd, char* buffer, int numBytes) {
+   int blockSize = 512, i, numBlocks, retval;
+   char* tempSpace;
+
+   // Compute required space and allocate memory
+   blockSize = GetBlockSize(fd);
+   if (numBytes <= blockSize) {
+      numBlocks = 1;
+      tempSpace = (char*) malloc(blockSize);
+   } else {
+      numBlocks = numBytes / blockSize;
+      if ((numBytes % blockSize) != 0) numBlocks++;
+      tempSpace = (char*) malloc(numBlocks * blockSize);
+   } // if/else
+
+   // Copy the data to my own buffer, then write it
+   for (i = 0; i < numBytes; i++) {
+      tempSpace[i] = buffer[i];
+   } // for
+   for (i = numBytes; i < numBlocks * blockSize; i++) {
+      tempSpace[i] = 0;
+   } // for
+   retval = write(fd, tempSpace, numBlocks * blockSize);
+
+   // Adjust the return value, if necessary....
+   if (((numBlocks * blockSize) != numBytes) && (retval > 0))
+      retval = numBytes;
+
+   free(tempSpace);
+   return retval;
+} // myRead()

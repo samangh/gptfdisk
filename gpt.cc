@@ -49,6 +49,7 @@ GPTData::GPTData(void) {
    bsdFound = 0;
    sectorAlignment = 8; // Align partitions on 4096-byte boundaries by default
    srand((unsigned int) time(NULL));
+   mainHeader.numParts = 0;
    SetGPTSize(NUM_GPT_ENTRIES);
 } // GPTData default constructor
 
@@ -68,6 +69,7 @@ GPTData::GPTData(char* filename) {
    bsdFound = 0;
    sectorAlignment = 8; // Align partitions on 4096-byte boundaries by default
    srand((unsigned int) time(NULL));
+   mainHeader.numParts = 0;
    LoadPartitions(filename);
 } // GPTData(char* filename) constructor
 
@@ -601,9 +603,9 @@ int GPTData::ForceLoadGPTData(int fd) {
    uint32_t newCRC, sizeOfParts;
 
    // Seek to and read the main GPT header
-   lseek64(fd, 512, SEEK_SET);
-   if (read(fd, &mainHeader, 512) != 512) { // read main GPT header
-      fprintf(stderr, "Warning! Error %d reading secondary GPT header!", errno);
+   lseek64(fd, blockSize, SEEK_SET);
+   if (myRead(fd, (char*) &mainHeader, 512) != 512) { // read main GPT header
+      fprintf(stderr, "Warning! Error %d reading main GPT header!\n", errno);
    } // if
    mainCrcOk = CheckHeaderCRC(&mainHeader);
    if (IsLittleEndian() == 0) // big-endian system; adjust header byte order....
@@ -618,19 +620,19 @@ int GPTData::ForceLoadGPTData(int fd) {
       if (mainHeader.backupLBA < diskSize) {
          seekTo = mainHeader.backupLBA * blockSize;
       } else {
-         seekTo = (diskSize * blockSize) - UINT64_C(512);
+         seekTo = (diskSize * blockSize) - blockSize;
          printf("Warning! Disk size is smaller than the main header indicates! Loading\n"
                 "secondary header from the last sector of the disk! You should use 'v' to\n"
                 "verify disk integrity, and perhaps options on the experts' menu to repair\n"
                 "the disk.\n");
       } // else
    } else {
-      seekTo = (diskSize * blockSize) - UINT64_C(512);
+      seekTo = (diskSize * blockSize) - blockSize;
    } // if/else (mainCrcOk)
 
    if (lseek64(fd, seekTo, SEEK_SET) != (off_t) -1) {
-      if (read(fd, &secondHeader, 512) != 512) { // read secondary GPT header
-         fprintf(stderr, "Warning! Error %d reading secondary GPT header!", errno);
+      if (myRead(fd, (char*) &secondHeader, 512) != 512) { // read secondary GPT header
+         fprintf(stderr, "Warning! Error %d reading secondary GPT header!\n", errno);
       } // if
       secondCrcOk = CheckHeaderCRC(&secondHeader);
       if (IsLittleEndian() == 0) // big-endian system; adjust header byte order....
@@ -681,7 +683,7 @@ int GPTData::ForceLoadGPTData(int fd) {
       if ((lseek64(fd, seekTo, SEEK_SET) != (off_t) -1) && (secondCrcOk)) {
          sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
          storage = (char*) malloc(sizeOfParts);
-         if (read(fd, storage, sizeOfParts) != sizeOfParts) {
+         if (myRead(fd, storage, sizeOfParts) != sizeOfParts) {
             fprintf(stderr, "Warning! Error %d reading backup partition table!\n", errno);
          } // if
          newCRC = chksum_crc32((unsigned char*) storage,  sizeOfParts);
@@ -716,7 +718,7 @@ int GPTData::LoadMainTable(void) {
       // matches the stored value
       lseek64(fd, mainHeader.partitionEntriesLBA * blockSize, SEEK_SET);
       sizeOfParts = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
-      if (read(fd, partitions, sizeOfParts) != sizeOfParts) {
+      if (myRead(fd, (char*) partitions, sizeOfParts) != sizeOfParts) {
          fprintf(stderr, "Warning! Error %d when loading the main partition table!\n", errno);
       } // if
       newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
@@ -740,7 +742,7 @@ void GPTData::LoadSecondTableAsMain(void) {
       if (lseek64(fd, seekTo, SEEK_SET) != (off_t) -1) {
          SetGPTSize(secondHeader.numParts);
          sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
-         if (read(fd, partitions, sizeOfParts) != sizeOfParts) {
+         if (myRead(fd, (char*) partitions, sizeOfParts) != sizeOfParts) {
             fprintf(stderr, "Warning! Read error %d! Misbehavior now likely!\n", errno);
          } // if
          newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
@@ -852,15 +854,21 @@ int GPTData::SaveGPTData(void) {
          protectiveMBR.WriteMBRData(fd);
 
          // Now write the main GPT header...
-         if (allOK)
-            if (write(fd, &mainHeader, 512) == -1)
-               allOK = 0;
+         if (allOK) {
+            if (lseek64(fd, blockSize, SEEK_SET) != (off_t) -1) {
+               if (myWrite(fd, (char*) &mainHeader, 512) == -1)
+                  allOK = 0;
+	       } else allOK = 0; // if (lseek64()...)
+	 } // if (allOK)
 
          // Now write the main partition tables...
          if (allOK) {
-            if (write(fd, partitions, GPT_SIZE * numParts) == -1)
+	    offset = mainHeader.partitionEntriesLBA * blockSize;
+	    if (lseek64(fd, offset, SEEK_SET) != (off_t) - 1) {
+            if (myWrite(fd, (char*) partitions, GPT_SIZE * numParts) == -1)
                allOK = 0;
-         } // if
+            } else allOK = 0; // if (lseek64()...)
+         } // if (allOK)
 
          // Now seek to near the end to write the secondary GPT....
          if (allOK) {
@@ -872,14 +880,19 @@ int GPTData::SaveGPTData(void) {
          } // if
 
          // Now write the secondary partition tables....
-         if (allOK)
-            if (write(fd, partitions, GPT_SIZE * numParts) == -1)
+         if (allOK) {
+            if (myWrite(fd, (char*) partitions, GPT_SIZE * numParts) == -1)
                allOK = 0;
+	 } // if (allOK)
 
          // Now write the secondary GPT header...
-         if (allOK)
-            if (write(fd, &secondHeader, 512) == -1)
-               allOK = 0;
+         if (allOK) {
+	    offset = mainHeader.backupLBA * blockSize;
+	    if (lseek64(fd, offset, SEEK_SET) != (off_t) - 1) {
+               if (myWrite(fd, (char*) &secondHeader, 512) == -1)
+                  allOK = 0;
+	       } else allOK = 0; // if (lseek64()...)
+	 } // if (allOK)
 
          // re-read the partition table
          if (allOK) {
@@ -944,17 +957,17 @@ int GPTData::SaveGPTBackup(char* filename) {
 
       // Now write the main GPT header...
       if (allOK)
-         if (write(fd, &mainHeader, 512) == -1)
+         if (myWrite(fd, (char*) &mainHeader, 512) == -1)
             allOK = 0;
 
       // Now write the secondary GPT header...
       if (allOK)
-         if (write(fd, &secondHeader, 512) == -1)
+         if (myWrite(fd, (char*) &secondHeader, 512) == -1)
             allOK = 0;
 
       // Now write the main partition tables...
       if (allOK) {
-         if (write(fd, partitions, GPT_SIZE * numParts) == -1)
+         if (myWrite(fd, (char*) partitions, GPT_SIZE * numParts) == -1)
             allOK = 0;
       } // if
 
@@ -997,7 +1010,7 @@ int GPTData::LoadGPTBackup(char* filename) {
 
       // Load the main GPT header, check its vaility, and set the GPT
       // size based on the data
-      if (read(fd, &mainHeader, 512)) {
+      if (myRead(fd, (char*) &mainHeader, 512)) {
          fprintf(stderr, "Warning! Read error %d; strange behavior now likely!\n", errno);
       } // if
       mainCrcOk = CheckHeaderCRC(&mainHeader);
@@ -1009,7 +1022,7 @@ int GPTData::LoadGPTBackup(char* filename) {
 
       // Load the backup GPT header in much the same way as the main
       // GPT header....
-      if (read(fd, &secondHeader, 512) != 512) {
+      if (myRead(fd, (char*) &secondHeader, 512) != 512) {
          fprintf(stderr, "Warning! Read error %d; strange behavior now likely!\n", errno);
       } // if
       secondCrcOk = CheckHeaderCRC(&secondHeader);
@@ -1045,7 +1058,7 @@ int GPTData::LoadGPTBackup(char* filename) {
          // Load main partition table, and record whether its CRC
          // matches the stored value
          sizeOfParts = numParts * sizeOfEntries;
-         if (read(fd, partitions, sizeOfParts) != sizeOfParts) {
+         if (myRead(fd, (char*) partitions, sizeOfParts) != sizeOfParts) {
             fprintf(stderr, "Warning! Read error %d; strange behavior now likely!\n", errno);
          } // if
 
@@ -1109,6 +1122,7 @@ void GPTData::DisplayGPTData(void) {
    BytesToSI(diskSize * blockSize, sizeInSI);
    printf("Disk %s: %llu sectors, %s\n", device,
           (unsigned long long) diskSize, sizeInSI);
+   printf("Logical sector size: %d bytes\n", blockSize);
    printf("Disk identifier (GUID): %s\n", GUIDToStr(mainHeader.diskGUID, tempStr));
    printf("Partition table holds up to %lu entries\n", (unsigned long) mainHeader.numParts);
    printf("First usable sector is %llu, last usable sector is %llu\n",
@@ -1302,8 +1316,9 @@ void GPTData::SetAttributes(uint32_t partNum) {
 // If prompt == 0, don't ask user about proceeding and do NOT wipe out
 // MBR. (Set prompt == 0 when doing a GPT-to-MBR conversion.)
 int GPTData::DestroyGPT(int prompt) {
-   int fd, i, sum;
+   int fd, i, sum, tableSize;
    char blankSector[512], goOn = 'Y', blank = 'N';
+   char* emptyTable;
 
    for (i = 0; i < 512; i++) {
       blankSector[i] = '\0';
@@ -1326,24 +1341,24 @@ int GPTData::DestroyGPT(int prompt) {
       } // if
 #endif
       if (fd != -1) {
-         lseek64(fd, mainHeader.currentLBA * 512, SEEK_SET); // seek to GPT header
-         if (write(fd, blankSector, 512) != 512) { // blank it out
+         lseek64(fd, mainHeader.currentLBA * blockSize, SEEK_SET); // seek to GPT header
+         if (myWrite(fd, blankSector, 512) != 512) { // blank it out
             fprintf(stderr, "Warning! GPT main header not overwritten! Error is %d\n", errno);
          } // if
-         lseek64(fd, mainHeader.partitionEntriesLBA * 512, SEEK_SET); // seek to partition table
-         sum = 0;
-         for (i = 0; i < GetBlocksInPartTable(); i++)
-            sum += write(fd, blankSector, 512);
-         if (sum != 512 * GetBlocksInPartTable())
+         lseek64(fd, mainHeader.partitionEntriesLBA * blockSize, SEEK_SET); // seek to partition table
+         tableSize = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
+         emptyTable = (char*) malloc(tableSize);
+         for (i = 0; i < tableSize; i++)
+            emptyTable[i] = (char) 0;
+         sum = myWrite(fd, emptyTable, tableSize);
+         if (sum != tableSize)
             fprintf(stderr, "Warning! GPT main partition table not overwritten! Error is %d\n", errno);
-         lseek64(fd, secondHeader.partitionEntriesLBA * 512, SEEK_SET); // seek to partition table
-         sum = 0;
-         for (i = 0; i < GetBlocksInPartTable(); i++)
-            sum += write(fd, blankSector, 512);
-         if (sum != 512 * GetBlocksInPartTable())
+         lseek64(fd, secondHeader.partitionEntriesLBA * blockSize, SEEK_SET); // seek to partition table
+         sum = myWrite(fd, emptyTable, tableSize);
+         if (sum != tableSize)
             fprintf(stderr, "Warning! GPT backup partition table not overwritten! Error is %d\n", errno);
-         lseek64(fd, secondHeader.currentLBA * 512, SEEK_SET); // seek to GPT header
-         if (write(fd, blankSector, 512) != 512) { // blank it out
+         lseek64(fd, secondHeader.currentLBA * blockSize, SEEK_SET); // seek to GPT header
+         if (myWrite(fd, blankSector, 512) != 512) { // blank it out
             fprintf(stderr, "Warning! GPT backup header not overwritten! Error is %d\n", errno);
          } // if
          if (prompt) {
@@ -1357,7 +1372,7 @@ int GPTData::DestroyGPT(int prompt) {
          // structures).
          if (blank == 'Y') {
             lseek64(fd, 0, SEEK_SET);
-            if (write(fd, blankSector, 512) != 512) { // blank it out
+            if (myWrite(fd, blankSector, 512) != 512) { // blank it out
                fprintf(stderr, "Warning! MBR not overwritten! Error is %d!\n", errno);
             } // if
          } else {

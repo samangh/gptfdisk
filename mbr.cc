@@ -98,7 +98,7 @@ void MBRData::ReadMBRData(int fd, int checkBlockSize) {
    EmptyMBR(0);
 
    err = lseek64(fd, 0, SEEK_SET);
-   err = read(fd, &tempMBR, 512);
+   err = myRead(fd, (char*) &tempMBR, 512);
    for (i = 0; i < 440; i++)
       code[i] = tempMBR.code[i];
    diskSignature = tempMBR.diskSignature;
@@ -202,7 +202,7 @@ int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
          fprintf(stderr, "Unable to seek to %lu! Aborting!\n", (unsigned long) offset);
          partNum = -1;
       }
-      if (read(fd, &ebr, 512) != 512) { // Load the data....
+      if (myRead(fd, (char*) &ebr, 512) != 512) { // Load the data....
          fprintf(stderr, "Error seeking to or reading logical partition data from %lu!\nAborting!\n",
                  (unsigned long) offset);
          partNum = -1;
@@ -289,7 +289,7 @@ void MBRData::WriteMBRData(int fd) {
 
    // Now write that data structure...
    lseek64(fd, 0, SEEK_SET);
-   if (write(fd, &tempMBR, 512) != 512) {
+   if (myWrite(fd, (char*) &tempMBR, 512) != 512) {
       fprintf(stderr, "Warning! Error %d when saving MBR!\n", errno);
    } // if
 

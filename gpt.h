@@ -145,8 +145,6 @@ public:
    uint64_t GetSecondHeaderLBA(void) {return secondHeader.currentLBA;}
    uint64_t GetMainPartsLBA(void) {return mainHeader.partitionEntriesLBA;}
    uint64_t GetSecondPartsLBA(void) {return secondHeader.partitionEntriesLBA;}
-   uint64_t GetBlocksInPartTable(void) {return (mainHeader.numParts *
-                   mainHeader.sizeOfPartitionEntries) / blockSize;}
    uint32_t CountParts(void);
    int GetAlignment(void) {return sectorAlignment;}
 

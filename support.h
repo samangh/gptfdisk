@@ -68,6 +68,8 @@ int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-en
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
 uint64_t PowerOf2(int value);
 int OpenForWrite(char* deviceFilename);
+int myRead(int fd, char* buffer, int numBytes);
+int myWrite(int fd, char* buffer, int numBytes);
 void DiskSync(int fd); // resync disk caches to use new partitions
 
 uint64_t disksize(int fd, int* err);
