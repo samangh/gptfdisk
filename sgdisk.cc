@@ -1,464 +1,290 @@
 // sgdisk.cc
-// Program modelled after Linux sfdisk, but it manipulates GPT partitions
-// rather than MBR partitions. This is effectively a new user interface
-// to my gdisk program.
+// Command-line-based version of gdisk. This program is named after sfdisk,
+// and it can serve a similar role (easily scripted, etc.), but it's used
+// strictly via command-line arguments, and it doesn't bear much resemblance
+// to sfdisk in actual use.
 //
-// by Rod Smith, project began February 2009
+// by Rod Smith, project began February 2009; sgdisk begun January 2010.
 
 /* This program is copyright (c) 2009, 2010 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
-//#include <iostream>
 #include <stdio.h>
-#include <string.h>
-#include <getopt.h>
+#include <string>
+#include <popt.h>
+#include <errno.h>
 #include "mbr.h"
 #include "gpt.h"
 #include "support.h"
+#include "parttypes.h"
+
+using namespace std;
 
 #define MAX_OPTIONS 50
 
-// Function prototypes....
-/* void MainMenu(char* filename, struct GPTData* theGPT);
-void ShowCommands(void);
-void ExpertsMenu(char* filename, struct GPTData* theGPT);
-void ShowExpertCommands(void);
-void RecoveryMenu(char* filename, struct GPTData* theGPT);
-void ShowRecoveryCommands(void); */
+uint64_t GetInt(char* Info, int itemNum);
+string GetString(char* Info, int itemNum);
 
-enum Commands { NONE, LIST, VERIFY };
-
-struct Options {
-   Commands theCommand;
-   char* theArgument;
-}; // struct Options
-
-int verbose_flag;
-
-static struct option long_options[] =
-{
-   {"verify",  no_argument, NULL, 'v'},
-   {"list",    no_argument, NULL, 'l'},
-   {0, 0, NULL, 0}
-};
-
-int ParseOptions(int argc, char* argv[], Options* theOptions, char** device);
-
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
    GPTData theGPT;
-   int doMore = 1, opt, i, numOptions = 0;
+   int opt, i, numOptions = 0, saveData = 0, neverSaveData = 0;
+   int partNum = 0, deletePartNum = 0, infoPartNum = 0, bsdPartNum = 0, saveNonGPT = 1;
+   int alignment = 8, retval = 0, pretend = 0;
+   uint16_t hexCode;
+   uint32_t tableSize = 128;
+   uint64_t startSector, endSector;
    char* device = NULL;
-   Options theOptions[MAX_OPTIONS];
-
-   printf("GPT fdisk (sgdisk) version 0.5.4-pre1\n\n");
-   numOptions = ParseOptions(argc, argv, theOptions, &device);
-
-   if (device != NULL) {
-      if (theGPT.LoadPartitions(device)) {
-         for (i = 0; i < numOptions; i++) {
-            switch (theOptions[i].theCommand) {
-               case LIST:
-                  theGPT.JustLooking();
-                  theGPT.DisplayGPTData();
-                  break;
-               case VERIFY:
-                  theGPT.JustLooking();
-                  theGPT.Verify();
-                  break;
-               case NONE:
-                  printf("Usage: %s {-lv} device\n", argv[0]);
-                  break;
-            } // switch
-         } // for
-      } // if loaded OK
-   } // if (device != NULL)
-
-   return 0;
-} // main
-
-// Parse command-line options. Returns the number of arguments retrieved
-int ParseOptions(int argc, char* argv[], Options* theOptions, char** device) {
-   int opt, i, numOptions = 0;
-   int verbose_flag;
-
-   // Use getopt() to extract commands and their arguments
-   /* getopt_long stores the option index here. */
-   int option_index = 0;
-
-//   c = getopt_long (argc, argv, "abc:d:f:",
-//                    long_options, &option_index);
-
-   while (((opt = getopt_long(argc, argv, "vl", long_options, &option_index)) != -1)
-          && (numOptions < MAX_OPTIONS)) {
-      printf("opt is %c, option_index is %d\n", opt, option_index);
-      switch (opt) {
-         case 'l':
-            printf("Entering list option, numOptions = %d!\n", numOptions);
-            theOptions[numOptions].theCommand = LIST;
-            theOptions[numOptions++].theArgument = NULL;
-            break;
-         case 'v':
-            theOptions[numOptions].theCommand = VERIFY;
-            theOptions[numOptions++].theArgument = NULL;
-            break;
-         default:
-            printf("Default switch; opt is %c\n", opt);
-            break;
-//            abort();
-      } // switch
-   } // while
-
-   // Find non-option arguments. If the user types a legal command, there
-   // will be only one of these: The device filename....
-   opt = 0;
-   printf("Searching for device filename; optind is %d\n", optind);
-   for (i = optind; i < argc; i++) {
-      *device = argv[i];
-      printf("Setting device to %s\n", argv[i]);
-      opt++;
-   } // for
-   if (opt > 1) {
-      fprintf(stderr, "Warning! Found stray unrecognized arguments! Program may misbehave!\n");
-   } // if
-
-   return numOptions;
-} // ParseOptions()
-
-/* // Accept a command and execute it. Returns only when the user
-// wants to exit (such as after a 'w' or 'q' command).
-void MainMenu(char* filename, struct GPTData* theGPT) {
-   char command, line[255], buFile[255];
-   char* junk;
-   int goOn = 1;
+   char *argument = NULL, *newPartInfo = NULL, *typeCode = NULL, *partName;
+   char *backupFile = NULL;
    PartTypes typeHelper;
-   uint32_t temp1, temp2;
 
-   do {
-      printf("\nCommand (? for help): ");
-      junk = fgets(line, 255, stdin);
-      sscanf(line, "%c", &command);
-      switch (command) {
-         case 'b': case 'B':
-            printf("Enter backup filename to save: ");
-            junk = fgets(line, 255, stdin);
-            sscanf(line, "%s", (char*) &buFile);
-            theGPT->SaveGPTBackup(buFile);
-            break;
-         case 'c': case 'C':
-            if (theGPT->GetPartRange(&temp1, &temp2) > 0)
-               theGPT->SetName(theGPT->GetPartNum());
-            else
-               printf("No partitions\n");
-            break;
-         case 'd': case 'D':
-            theGPT->DeletePartition();
-            break;
-         case 'i': case 'I':
-            theGPT->ShowDetails();
-            break;
-         case 'l': case 'L':
+   poptContext poptCon;
+   struct poptOption theOptions[] =
+   {
+      {"set-alignment", 'a', POPT_ARG_INT, &alignment, 'a', "set sector alignment", "value"},
+      {"backup", 'b', POPT_ARG_STRING, &backupFile, 'b', "backup GPT to file", "file"},
+      {"change-name", 'c', POPT_ARG_STRING, &partName, 'c', "change partition's name", "partnum:name"},
+      {"delete", 'd', POPT_ARG_INT, &deletePartNum, 'd', "delete a partition", "partnum"},
+      {"move-second-header", 'e', POPT_ARG_NONE, NULL, 'e', "move second header to end of disk", ""},
+      {"end-of-largest", 'E', POPT_ARG_NONE, NULL, 'E', "show end of largest free block", ""},
+      {"first-in-largest", 'f', POPT_ARG_NONE, NULL, 'f', "show start of the largest free block", ""},
+      {"mbrtogpt", 'g', POPT_ARG_NONE, NULL, 'g', "convert MBR to GPT", ""},
+      {"info", 'i', POPT_ARG_INT, &infoPartNum, 'i', "show detailed information on partition", "partnum"},
+      {"load-backup", 'l', POPT_ARG_STRING, &backupFile, 'l', "load GPT backup from file", "file"},
+      {"list-types", 'L', POPT_ARG_NONE, NULL, 'L', "list known partition types", ""},
+      {"new", 'n', POPT_ARG_STRING, &newPartInfo, 'n', "create new partition", "partnum:start:end"},
+      {"clear", 'o', POPT_ARG_NONE, NULL, 'o', "clear partition table", ""},
+      {"print", 'p', POPT_ARG_NONE, NULL, 'p', "print partition table", ""},
+      {"pretend", 'P', POPT_ARG_NONE, NULL, 'P', "make changes in memory, but don't write them", ""},
+      {"sort", 's', POPT_ARG_NONE, NULL, 's', "sort partition table entries", ""},
+      {"resize-table", 'S', POPT_ARG_INT, &tableSize, 'S', "resize partition table", "numparts"},
+      {"typecode", 't', POPT_ARG_STRING, &typeCode, 't', "change partition type code", "partnum:hexcode"},
+      {"transform-bsd", 'T', POPT_ARG_INT, &bsdPartNum, 'T', "transform BSD disklabel partition to GPT", "partnum"},
+      {"verify", 'v', POPT_ARG_NONE, NULL, 'v', "check partition table integrity", ""},
+      {"version", 'V', POPT_ARG_NONE, NULL, 'V', "display version information", ""},
+      {"zap", 'z', POPT_ARG_NONE, NULL, 'z', "zap (destroy) GPT data structures", ""},
+      POPT_AUTOHELP { NULL, 0, 0, NULL, 0 }
+   };
+
+   // Create popt context...
+   poptCon = poptGetContext(NULL, argc, (const char**) argv, theOptions, 0);
+
+   poptSetOtherOptionHelp(poptCon, " [OPTION...] <device>");
+
+   if (argc < 2) {
+      poptPrintUsage(poptCon, stderr, 0);
+      exit(1);
+   }
+
+   // Do one loop through the options to find the device filename and deal
+   // with options that don't require a device filename....
+   while ((opt = poptGetNextOpt(poptCon)) > 0) {
+      switch (opt) {
+         case 'L':
             typeHelper.ShowTypes();
             break;
-         case 'n': case 'N':
-            theGPT->CreatePartition();
+         case 'P':
+            pretend = 1;
             break;
-         case 'o': case 'O':
-            printf("This option deletes all partitions and creates a new "
-                  "protective MBR.\nProceed? ");
-            if (GetYN() == 'Y') {
-               theGPT->ClearGPTData();
-               theGPT->MakeProtectiveMBR();
-            } // if
-            break;
-         case 'p': case 'P':
-            theGPT->DisplayGPTData();
-            break;
-         case 'q': case 'Q':
-            goOn = 0;
-            break;
-         case 'r': case 'R':
-            RecoveryMenu(filename, theGPT);
-            goOn = 0;
-            break;
-         case 's': case 'S':
-            theGPT->SortGPT();
-            printf("You may need to edit /etc/fstab and/or your boot loader configuration!\n");
-            break;
-         case 't': case 'T':
-            theGPT->ChangePartType();
-            break;
-         case 'v': case 'V':
-            if (theGPT->Verify() > 0) { // problems found
-               printf("You may be able to correct the problems by using options on the experts\n"
-                     "menu (press 'x' at the command prompt). Good luck!\n");
-            } // if
-            break;
-         case 'w': case 'W':
-            if (theGPT->SaveGPTData() == 1)
-               goOn = 0;
-            break;
-         case 'x': case 'X':
-            ExpertsMenu(filename, theGPT);
-            goOn = 0;
+         case 'V':
+            printf("GPT fdisk (sgdisk) version 0.5.4-pre1\n\n");
             break;
          default:
-            ShowCommands();
             break;
       } // switch
-   } while (goOn);
-} // MainMenu()
+      numOptions++;
+   } // while
 
-void ShowCommands(void) {
-   printf("b\tback up GPT data to a file\n");
-   printf("c\tchange a partition's name\n");
-   printf("d\tdelete a partition\n");
-   printf("i\tshow detailed information on a partition\n");
-   printf("l\tlist known partition types\n");
-   printf("n\tadd a new partition\n");
-   printf("o\tcreate a new empty GUID partition table (GPT)\n");
-   printf("p\tprint the partition table\n");
-   printf("q\tquit without saving changes\n");
-   printf("r\trecovery and transformation options (experts only)\n");
-   printf("s\tsort partitions\n");
-   printf("t\tchange a partition's type code\n");
-   printf("v\tverify disk\n");
-   printf("w\twrite table to disk and exit\n");
-   printf("x\textra functionality (experts only)\n");
-   printf("?\tprint this menu\n");
-} // ShowCommands()
+   // Assume first non-option argument is the device filename....
+   device = (char*) poptGetArg(poptCon);
+   poptResetContext(poptCon);
 
-// Accept a recovery & transformation menu command. Returns only when the user
-// issues an exit command, such as 'w' or 'q'.
-void RecoveryMenu(char* filename, struct GPTData* theGPT) {
-   char command, line[255], buFile[255];
-   char* junk;
-   PartTypes typeHelper;
-   uint32_t temp1;
-   int goOn = 1;
+   if (device != NULL) {
+      theGPT.JustLooking(); // reset as necessary
+      theGPT.BeQuiet(); // Tell called functions to be less verbose & interactive
+      if (theGPT.LoadPartitions(device)) {
+         if ((theGPT.WhichWasUsed() == use_mbr) || (theGPT.WhichWasUsed() == use_bsd))
+            saveNonGPT = 0; // flag so we don't overwrite unless directed to do so
+         while ((opt = poptGetNextOpt(poptCon)) > 0) {
+            switch (opt) {
+               case 'a':
+                  theGPT.SetAlignment(alignment);
+                  break;
+               case 'b':
+                  theGPT.SaveGPTBackup(backupFile);
+                  free(backupFile);
+                  break;
+               case 'c':
+                  theGPT.JustLooking(0);
+                  partNum = (int) GetInt(partName, 1) - 1;
+                  if (theGPT.SetName(partNum, (char*) GetString(partName, 2).c_str())) {
+                     saveData = 1;
+                  } else {
+                     fprintf(stderr, "Unable set set partition %d's name to '%s'!\n",
+                             partNum + 1, GetString(partName, 2).c_str());
+                     neverSaveData = 1;
+                  } // if/else
+                  free(partName);
+                  break;
+               case 'd':
+                  theGPT.JustLooking(0);
+                  if (theGPT.DeletePartition(deletePartNum - 1) == 0) {
+                     fprintf(stderr, "Error %d deleting partition!\n", errno);
+                     neverSaveData = 1;
+                  } else saveData = 1;
+                  break;
+               case 'e':
+                  theGPT.JustLooking(0);
+                  theGPT.MoveSecondHeaderToEnd();
+                  saveData = 1;
+                  break;
+               case 'E':
+                  printf("%llu\n", (unsigned long long) theGPT.FindLastAvailable(theGPT.FindFirstInLargest()));
+                  break;
+               case 'f':
+                  printf("%llu\n", (unsigned long long) theGPT.FindFirstInLargest());
+                  break;
+               case 'g':
+                  theGPT.JustLooking(0);
+                  saveData = 1;
+                  saveNonGPT = 1;
+                  break;
+               case 'i':
+                  theGPT.ShowPartDetails(infoPartNum - 1);
+                  break;
+               case 'l':
+                  if (theGPT.LoadGPTBackup(backupFile) == 1)
+                     saveData = 1;
+                  else {
+                     saveData = 0;
+                     neverSaveData = 1;
+                     fprintf(stderr, "Error loading backup file!\n");
+                  } // else
+                  free(backupFile);
+                  break;
+               case 'L':
+                  break;
+               case 'n':
+                  theGPT.JustLooking(0);
+                  partNum = (int) GetInt(newPartInfo, 1) - 1;
+                  startSector = GetInt(newPartInfo, 2);
+                  endSector = GetInt(newPartInfo, 3);
+                  if (theGPT.CreatePartition(partNum, startSector, endSector)) {
+                     saveData = 1;
+                  } else {
+                     fprintf(stderr, "Could not create partition %d from %llu to %llu!\n",
+                             partNum, startSector, endSector);
+                     neverSaveData = 1;
+                  } // if/else
+                  free(newPartInfo);
+                  break;
+               case 'o':
+                  theGPT.JustLooking(0);
+                  theGPT.ClearGPTData();
+                  saveData = 1;
+                  break;
+               case 'p':
+                  theGPT.DisplayGPTData();
+                  break;
+               case 'P':
+                  pretend = 1;
+                  break;
+               case 's':
+                  theGPT.JustLooking(0);
+                  theGPT.SortGPT();
+                  saveData = 1;
+                  break;
+               case 'S':
+                  theGPT.JustLooking(0);
+                  if (theGPT.SetGPTSize(tableSize) == 0)
+                     neverSaveData = 1;
+                  else
+                     saveData = 1;
+                  break;
+               case 't':
+                  theGPT.JustLooking(0);
+                  partNum = (int) GetInt(typeCode, 1) - 1;
+                  sscanf(GetString(typeCode, 2).c_str(), "%x", &hexCode);
+                  if (theGPT.ChangePartType(partNum, hexCode)) {
+                     saveData = 1;
+                  } else {
+                     fprintf(stderr, "Could not change partition %d's type code to %x!\n",
+                             partNum + 1, hexCode);
+                     neverSaveData = 1;
+                  } // if/else
+                  free(typeCode);
+                  break;
+               case 'T':
+                  theGPT.JustLooking(0);
+                  theGPT.XFormDisklabel(bsdPartNum);
+                  saveData = 1;
+                  break;
+               case 'v':
+                  theGPT.Verify();
+                  break;
+               case 'z':
+                  if (!pretend)
+                     theGPT.DestroyGPT(-1);
+                  saveNonGPT = 0;
+                  break;
+               default:
+                  printf("Unknown option (-%c)!\n", opt);
+                  break;
+            } // switch
+         } // while
+         if ((saveData) && (!neverSaveData) && (saveNonGPT) && (!pretend))
+            theGPT.SaveGPTData(1);
+         if (saveData && (!saveNonGPT)) {
+            printf("Non-GPT disk; not saving changes. Use -g to override.\n");
+            retval = 3;
+         } // if
+         if (neverSaveData) {
+            printf("Error encountered; not saving changes.\n");
+            retval = 4;
+         } // if
+      } else { // if loaded OK
+         retval = 2;
+      } // if/else loaded OK
+   } // if (device != NULL)
+   poptFreeContext(poptCon);
 
-   do {
-      printf("\nrecovery/transformation command (? for help): ");
-      junk = fgets(line, 255, stdin);
-      sscanf(line, "%c", &command);
-      switch (command) {
-         case 'b': case 'B':
-            theGPT->RebuildMainHeader();
-            break;
-         case 'c': case 'C':
-            printf("Warning! This will probably do weird things if you've converted an MBR to\n"
-                  "GPT form and haven't yet saved the GPT! Proceed? ");
-            if (GetYN() == 'Y')
-               theGPT->LoadSecondTableAsMain();
-            break;
-         case 'd': case 'D':
-            theGPT->RebuildSecondHeader();
-            break;
-         case 'e': case 'E':
-            printf("Warning! This will probably do weird things if you've converted an MBR to\n"
-                  "GPT form and haven't yet saved the GPT! Proceed? ");
-            if (GetYN() == 'Y')
-               theGPT->LoadMainTable();
-            break;
-         case 'f': case 'F':
-            printf("Warning! This will destroy the currently defined partitions! Proceed? ");
-            if (GetYN() == 'Y') {
-               if (theGPT->LoadMBR(filename) == 1) { // successful load
-                  theGPT->XFormPartitions();
-               } else {
-                  printf("Problem loading MBR! GPT is untouched; regenerating protective MBR!\n");
-                  theGPT->MakeProtectiveMBR();
-               } // if/else
-            } // if
-            break;
-         case 'g': case 'G':
-            temp1 = theGPT->XFormToMBR();
-            if (temp1 > 0) {
-               printf("Converted %d partitions. Finalize and exit? ", temp1);
-               if (GetYN() == 'Y') {
-                  if (theGPT->DestroyGPT(0) > 0)
-                     goOn = 0;
-               } else {
-                  theGPT->MakeProtectiveMBR();
-                  printf("Note: New protective MBR created.\n");
-               } // if/else
-            } // if
-            break;
-         case 'h': case 'H':
-            theGPT->MakeHybrid();
-            break;
-         case 'i': case 'I':
-            theGPT->ShowDetails();
-            break;
-         case 'l': case 'L':
-            printf("Enter backup filename to load: ");
-            junk = fgets(line, 255, stdin);
-            sscanf(line, "%s", (char*) &buFile);
-            theGPT->LoadGPTBackup(buFile);
-            break;
-         case 'm': case 'M':
-            MainMenu(filename, theGPT);
-            goOn = 0;
-            break;
-         case 'o': case 'O':
-            theGPT->DisplayMBRData();
-            break;
-         case 'p': case 'P':
-            theGPT->DisplayGPTData();
-            break;
-         case 'q': case 'Q':
-            goOn = 0;
-            break;
-         case 't': case 'T':
-            theGPT->XFormDisklabel();
-            break;
-         case 'v': case 'V':
-            theGPT->Verify();
-            break;
-         case 'w': case 'W':
-            if (theGPT->SaveGPTData() == 1) {
-               goOn = 0;
-            } // if
-            break;
-         case 'x': case 'X':
-            ExpertsMenu(filename, theGPT);
-            goOn = 0;
-            break;
-         default:
-            ShowRecoveryCommands();
-            break;
-      } // switch
-   } while (goOn);
-} // RecoveryMenu()
+   return retval;
+} // main
 
-void ShowRecoveryCommands(void) {
-   printf("b\tuse backup GPT header (rebuilding main)\n");
-   printf("c\tload backup partition table from disk (rebuilding main)\n");
-   printf("d\tuse main GPT header (rebuilding backup)\n");
-   printf("e\tload main partition table from disk (rebuilding backup)\n");
-   printf("f\tload MBR and build fresh GPT from it\n");
-   printf("g\tconvert GPT into MBR and exit\n");
-   printf("h\tmake hybrid MBR\n");
-   printf("i\tshow detailed information on a partition\n");
-   printf("l\tload partition data from a backup file\n");
-   printf("m\treturn to main menu\n");
-   printf("o\tprint protective MBR data\n");
-   printf("p\tprint the partition table\n");
-   printf("q\tquit without saving changes\n");
-   printf("t\ttransform BSD disklabel partition\n");
-   printf("v\tverify disk\n");
-   printf("w\twrite table to disk and exit\n");
-   printf("x\textra functionality (experts only)\n");
-   printf("?\tprint this menu\n");
-} // ShowRecoveryCommands()
+// Extract integer data from argument string, which should be colon-delimited
+uint64_t GetInt(char* argument, int itemNum) {
+   int startPos = -1, endPos = -1;
+   uint64_t retval = 0;
+   string Info;
 
-// Accept an experts' menu command. Returns only after the user
-// selects an exit command, such as 'w' or 'q'.
-void ExpertsMenu(char* filename, struct GPTData* theGPT) {
-   char command, line[255];
-   char* junk;
-   PartTypes typeHelper;
-   uint32_t pn;
-   uint32_t temp1, temp2;
-   int goOn = 1;
+   Info = argument;
+   while (itemNum-- > 0) {
+      startPos = endPos + 1;
+      endPos = Info.find(':', startPos);
+   }
+   if (endPos == string::npos)
+      endPos = Info.length();
+   endPos--;
 
-   do {
-      printf("\nExpert command (? for help): ");
-      junk = fgets(line, 255, stdin);
-      sscanf(line, "%c", &command);
-      switch (command) {
-         case 'a': case 'A':
-            if (theGPT->GetPartRange(&temp1, &temp2) > 0)
-               theGPT->SetAttributes(theGPT->GetPartNum());
-           else
-               printf("No partitions\n");
-            break;
-         case 'c': case 'C':
-            if (theGPT->GetPartRange(&temp1, &temp2) > 0) {
-               pn = theGPT->GetPartNum();
-               printf("Enter the partition's new unique GUID:\n");
-               theGPT->SetPartitionGUID(pn, GetGUID());
-            } else printf("No partitions\n");
-            break;
-         case 'd': case 'D':
-            printf("The number of logical sectors per physical sector is %d.\n",
-                   theGPT->GetAlignment());
-            break;
-         case 'e': case 'E':
-            printf("Relocating backup data structures to the end of the disk\n");
-            theGPT->MoveSecondHeaderToEnd();
-            break;
-         case 'g': case 'G':
-            printf("Enter the disk's unique GUID:\n");
-            theGPT->SetDiskGUID(GetGUID());
-            break;
-         case 'i': case 'I':
-            theGPT->ShowDetails();
-            break;
-         case 'l': case 'L':
-            temp1 = GetNumber(1, 128, 8, "Enter the number of logical sectors in a physical sector on the\ndisk (1-128, default = 8): ");
-            theGPT->SetAlignment(temp1);
-            break;
-         case 'm': case 'M':
-            MainMenu(filename, theGPT);
-            goOn = 0;
-            break;
-         case 'n': case 'N':
-            theGPT->MakeProtectiveMBR();
-            break;
-         case 'o': case 'O':
-            theGPT->DisplayMBRData();
-            break;
-         case 'p': case 'P':
-            theGPT->DisplayGPTData();
-	    break;
-         case 'q': case 'Q':
-	    goOn = 0;
-	    break;
-         case 'r': case 'R':
-            RecoveryMenu(filename, theGPT);
-            goOn = 0;
-            break;
-         case 's': case 'S':
-            theGPT->ResizePartitionTable();
-            break;
-         case 'v': case 'V':
-            theGPT->Verify();
-            break;
-         case 'w': case 'W':
-            if (theGPT->SaveGPTData() == 1) {
-               goOn = 0;
-            } // if
-            break;
-         case 'z': case 'Z':
-            if (theGPT->DestroyGPT() == 1) {
-               goOn = 0;
-            }
-            break;
-         default:
-            ShowExpertCommands();
-            break;
-      } // switch
-   } while (goOn);
-} // ExpertsMenu()
+   sscanf(Info.substr(startPos, endPos - startPos + 1).c_str(), "%llu", &retval);
+/*   printf("In GetInt(), startPos = %d, endPos = %d, retval = %llu\n", startPos,
+          endPos, (unsigned long long) retval); */
+   return retval;
+} // GetInt()
 
-void ShowExpertCommands(void) {
-   printf("a\tset attributes\n");
-   printf("c\tchange partition GUID\n");
-   printf("d\tdisplay the number of logical sectors per physical sector\n");
-   printf("e\trelocate backup data structures to the end of the disk\n");
-   printf("g\tchange disk GUID\n");
-   printf("i\tshow detailed information on a partition\n");
-   printf("b\tset the number of logical sectors per physical sector\n");
-   printf("m\treturn to main menu\n");
-   printf("n\tcreate a new protective MBR\n");
-   printf("o\tprint protective MBR data\n");
-   printf("p\tprint the partition table\n");
-   printf("q\tquit without saving changes\n");
-   printf("r\trecovery and transformation options (experts only)\n");
-   printf("s\tresize partition table\n");
-   printf("v\tverify disk\n");
-   printf("w\twrite table to disk and exit\n");
-   printf("z\tzap (destroy) GPT data structures and exit\n");
-   printf("?\tprint this menu\n");
-} // ShowExpertCommands()
-*/
+// Extract string data from argument string, which should be colon-delimited
+string GetString(char* argument, int itemNum) {
+   int startPos = -1, endPos = -1;
+   string Info;
+
+   Info = argument;
+   while (itemNum-- > 0) {
+      startPos = endPos + 1;
+      endPos = Info.find(':', startPos);
+   }
+   if (endPos == string::npos)
+      endPos = Info.length();
+   endPos--;
+
+   return Info.substr(startPos, endPos - startPos + 1);
+} // GetString()
