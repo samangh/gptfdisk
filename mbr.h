@@ -30,6 +30,7 @@ using namespace std;
 // Data for a single MBR partition record
 // Note that firstSector and lastSector are in CHS addressing, which
 // splits the bits up in a weird way.
+#pragma pack(1)
 struct MBRRecord {
    uint8_t status;
    uint8_t firstSector[3];
@@ -43,6 +44,7 @@ struct MBRRecord {
 // go, for the benefit of FreeBSD which seems to flake out when loading
 // from block devices in multiples other than the block size.
 // Also used when loading logical partitions.
+#pragma pack(1)
 struct TempMBR {
    uint8_t code[440];
    uint32_t diskSignature;
@@ -81,12 +83,13 @@ public:
    // File I/O functions...
    int ReadMBRData(char* deviceFilename);
    void ReadMBRData(int fd, int checkBlockSize = 1);
+   // ReadLogicalPart() returns last partition # read to logicals[] array,
+   // or -1 if there was a problem....
    int ReadLogicalPart(int fd, uint32_t extendedStart, uint32_t diskOffset,
                        int partNum);
    int WriteMBRData(void);
    void WriteMBRData(int fd);
-   // ReadLogicalPart() returns last partition # read to logicals[] array,
-   // or -1 if there was a problem....
+   int WriteMBRData(char* deviceFilename);
 
    // Display data for user...
    void DisplayMBRData(void);

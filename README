@@ -44,11 +44,22 @@ Installing
 
 To compile gdisk, you must have appropriate development tools installed,
 most notably the GNU Compiler Collection (GCC) and its g++ compiler for
-C++. Uncompress the package and type "make" at the command prompt in the
-resulting directory. The result should be a program file called gdisk. You
-can use this in place or copy the file to a suitable directory, such as
-/usr/local/sbin. You can copy the man page (gdisk.8) to /usr/local/man/man8
-to make it available.
+C++. The sgdisk program also requires the popt library and its development
+files (headers). Most Linux distributions install popt by default, but you
+may need to install a package called popt-dev, popt-devel, or something
+similar to obtain the development libraries. Mac OS users can find a version
+of popt for Mac OS from http://popt.darwinports.com; however, you'll first
+need to install DarwinPorts (instructions exist on the preceding page).
+Alternatively, you can compile gdisk alone, without sgdisk; gdisk doesn't
+require popt.
+
+When all the necessary development tools and libraries are installed, you
+can uncompress the package and type "make" at the command prompt in the
+resulting directory. The result should be program files called gdisk and
+sgdisk. Typing "make gdisk" or "make sgdisk" will compile only the requested
+programs. You can use these programs in place or copy the files to a
+suitable directory, such as /usr/local/sbin. You can copy the man pages
+(gdisk.8 and sgdisk.8) to /usr/local/man/man8 to make them available.
 
 Caveats
 -------

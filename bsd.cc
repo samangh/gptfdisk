@@ -70,12 +70,15 @@ void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
    uint32_t* temp32;
    uint16_t* temp16;
    BSDRecord* tempRecords;
+   int offset[3] = { LABEL_OFFSET1, LABEL_OFFSET2, LABEL_OFFSET3 };
 
    labelFirstLBA = startSector;
    labelLastLBA = endSector;
 
-   // Read eight sectors into memory; we'll extract data from
-   // this buffer. (Done to work around FreeBSD limitation)
+   // Read 4096 bytes (eight 512-byte sectors or equivalent)
+   // into memory; we'll extract data from this buffer.
+   // (Done to work around FreeBSD limitation on size of reads
+   // from block devices.)
    lseek64(fd, startSector * GetBlockSize(fd), SEEK_SET);
    err = read(fd, buffer, 4096);
 
@@ -85,27 +88,23 @@ void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
    if (bigEnd)
       ReverseBytes(&realSig, 4);
 
-   // Look for the signature at one of two locations
-   labelStart = LABEL_OFFSET1;
-   temp32 = (uint32_t*) &buffer[labelStart];
-   signature = *temp32;
-   if (signature == realSig) {
-      temp32 = (uint32_t*) &buffer[labelStart + 132];
-      signature2 = *temp32;
-      if (signature2 == realSig)
-         foundSig = 1;
-   } // if/else
-   if (!foundSig) { // look in second location
-      labelStart = LABEL_OFFSET2;
-      temp32 = (uint32_t*) &buffer[labelStart];
+   // Look for the signature at any of three locations.
+   // Note that the signature is repeated at both the original
+   // offset and 132 bytes later, so we need two checks....
+   i = 0;
+   do {
+      temp32 = (uint32_t*) &buffer[offset[i]];
       signature = *temp32;
-      if (signature == realSig) {
-         temp32 = (uint32_t*) &buffer[labelStart + 132];
+      if (signature == realSig) { // found first, look for second
+         temp32 = (uint32_t*) &buffer[offset[i] + 132];
          signature2 = *temp32;
-         if (signature2 == realSig)
+         if (signature2 == realSig) {
             foundSig = 1;
+            labelStart = offset[i];
+         } // if found signature
       } // if/else
-   } // if
+      i++;
+   } while ((!foundSig) && (i < 3));
 
    // Load partition metadata from the buffer....
    temp32 = (uint32_t*) &buffer[labelStart + 40];

@@ -48,6 +48,8 @@ GPTData::GPTData(void) {
    apmFound = 0;
    bsdFound = 0;
    sectorAlignment = 8; // Align partitions on 4096-byte boundaries by default
+   beQuiet = 0;
+   whichWasUsed = use_new;
    srand((unsigned int) time(NULL));
    mainHeader.numParts = 0;
    SetGPTSize(NUM_GPT_ENTRIES);
@@ -68,6 +70,8 @@ GPTData::GPTData(char* filename) {
    apmFound = 0;
    bsdFound = 0;
    sectorAlignment = 8; // Align partitions on 4096-byte boundaries by default
+   beQuiet = 0;
+   whichWasUsed = use_new;
    srand((unsigned int) time(NULL));
    mainHeader.numParts = 0;
    LoadPartitions(filename);
@@ -499,22 +503,22 @@ int GPTData::FindOverlaps(void) {
 // the results.
 void GPTData::PartitionScan(int fd) {
    BSDData bsdDisklabel;
-//   int bsdFound;
-
-   printf("Partition table scan:\n");
 
    // Read the MBR & check for BSD disklabel
    protectiveMBR.ReadMBRData(fd);
-   protectiveMBR.ShowState();
    bsdDisklabel.ReadBSDData(fd, 0, diskSize - 1);
-   bsdFound = bsdDisklabel.ShowState();
-//   bsdDisklabel.DisplayBSDData();
 
    // Load the GPT data, whether or not it's valid
    ForceLoadGPTData(fd);
-   ShowAPMState(); // Show whether there's an Apple Partition Map present
-   ShowGPTState(); // Show GPT status
-   printf("\n");
+
+   if (!beQuiet) {
+      printf("Partition table scan:\n");
+      protectiveMBR.ShowState();
+      bsdDisklabel.ShowState();
+      ShowAPMState(); // Show whether there's an Apple Partition Map present
+      ShowGPTState(); // Show GPT status
+      printf("\n");
+   } // if
 
    if (apmFound) {
       printf("\n*******************************************************************\n");
@@ -549,9 +553,10 @@ int GPTData::LoadPartitions(char* deviceFilename) {
       blockSize = (uint32_t) GetBlockSize(fd);
       sectorAlignment = FindAlignment(fd);
       strcpy(device, deviceFilename);
-      PartitionScan(fd); // Check for partition types & print summary
+      PartitionScan(fd); // Check for partition types, load GPT, & print summary
 
-      switch (UseWhichPartitions()) {
+      whichWasUsed = UseWhichPartitions();
+      switch (whichWasUsed) {
          case use_mbr:
             XFormPartitions();
             break;
@@ -696,7 +701,7 @@ int GPTData::ForceLoadGPTData(int fd) {
            (secondPartsCrcOk == 0)) {
          printf("Warning! One or more CRCs don't match. You should repair the disk!\n");
          state = gpt_corrupt;
-           } // if
+      } // if
    } else {
       state = gpt_invalid;
    } // if/else
@@ -763,7 +768,7 @@ void GPTData::LoadSecondTableAsMain(void) {
 
 // Writes GPT (and protective MBR) to disk. Returns 1 on successful
 // write, 0 if there was a problem.
-int GPTData::SaveGPTData(void) {
+int GPTData::SaveGPTData(int quiet) {
    int allOK = 1;
    char answer, line[256];
    int fd;
@@ -799,7 +804,7 @@ int GPTData::SaveGPTData(void) {
    } // if
    // Check that second header is properly placed. Warn and ask if this should
    // be corrected if the test fails....
-   if (mainHeader.backupLBA < (diskSize - UINT64_C(1))) {
+   if ((mainHeader.backupLBA < (diskSize - UINT64_C(1))) && (quiet == 0)) {
       printf("Warning! Secondary header is placed too early on the disk! Do you want to\n"
              "correct this problem? ");
       if (GetYN() == 'Y') {
@@ -833,7 +838,7 @@ int GPTData::SaveGPTData(void) {
    } // if
    RecomputeCRCs();
 
-   if (allOK) {
+   if ((allOK) && (!quiet)) {
       printf("\nFinal checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING\n");
       printf("MBR PARTITIONS!! THIS PROGRAM IS BETA QUALITY AT BEST. IF YOU LOSE ALL YOUR\n");
       printf("DATA, YOU HAVE ONLY YOURSELF TO BLAME IF YOU ANSWER 'Y' BELOW!\n\n");
@@ -1251,36 +1256,24 @@ void GPTData::CreatePartition(void) {
       } while (IsFree(sector) == 0);
       lastBlock = sector;
 
-      partitions[partNum].SetFirstLBA(firstBlock);
-      partitions[partNum].SetLastLBA(lastBlock);
-
-      partitions[partNum].SetUniqueGUID(1);
+      firstFreePart = CreatePartition(partNum, firstBlock, lastBlock);
       partitions[partNum].ChangeType();
       partitions[partNum].SetName((unsigned char*) partitions[partNum].GetNameType(prompt));
-         } else {
-            printf("No free sectors available\n");
-         } // if/else
+   } else {
+      printf("No free sectors available\n");
+   } // if/else
 } // GPTData::CreatePartition()
 
 // Interactively delete a partition (duh!)
 void GPTData::DeletePartition(void) {
    int partNum;
    uint32_t low, high;
-   uint64_t startSector, length;
    char prompt[255];
 
    if (GetPartRange(&low, &high) > 0) {
       sprintf(prompt, "Partition number (%d-%d): ", low + 1, high + 1);
       partNum = GetNumber(low + 1, high + 1, low, prompt);
-
-      // In case there's a protective MBR, look for & delete matching
-      // MBR partition....
-      startSector = partitions[partNum - 1].GetFirstLBA();
-      length = partitions[partNum - 1].GetLengthLBA();
-      protectiveMBR.DeleteByLocation(startSector, length);
-
-      // Now delete the GPT partition
-      partitions[partNum - 1].BlankPartition();
+      DeletePartition(partNum - 1);
    } else {
       printf("No partitions\n");
    } // if/else
@@ -1315,6 +1308,8 @@ void GPTData::SetAttributes(uint32_t partNum) {
 // user confirms destruction, 0 if the user aborts.
 // If prompt == 0, don't ask user about proceeding and do NOT wipe out
 // MBR. (Set prompt == 0 when doing a GPT-to-MBR conversion.)
+// If prompt == -1, don't ask user about proceeding and DO wipe out
+// MBR.
 int GPTData::DestroyGPT(int prompt) {
    int fd, i, sum, tableSize;
    char blankSector[512], goOn = 'Y', blank = 'N';
@@ -1324,11 +1319,11 @@ int GPTData::DestroyGPT(int prompt) {
       blankSector[i] = '\0';
    } // for
 
-   if (((apmFound) || (bsdFound)) && prompt) {
+   if (((apmFound) || (bsdFound)) && (prompt > 0)) {
       printf("WARNING: APM or BSD disklabel structures detected! This operation could\n"
              "damage any APM or BSD partitions on this disk!\n");
    } // if APM or BSD
-   if (prompt) {
+   if (prompt > 0) {
       printf("\a\aAbout to wipe out GPT on %s. Proceed? ", device);
       goOn = GetYN();
    } // if
@@ -1361,16 +1356,16 @@ int GPTData::DestroyGPT(int prompt) {
          if (myWrite(fd, blankSector, 512) != 512) { // blank it out
             fprintf(stderr, "Warning! GPT backup header not overwritten! Error is %d\n", errno);
          } // if
-         if (prompt) {
+         if (prompt > 0) {
             printf("Blank out MBR? ");
             blank = GetYN();
-         }// if
+         } // if
          // Note on below: Touch the MBR only if the user wants it completely
          // blanked out. Version 0.4.2 deleted the 0xEE partition and re-wrote
          // the MBR, but this could wipe out a valid MBR that the program
          // had subsequently discarded (say, if it conflicted with older GPT
          // structures).
-         if (blank == 'Y') {
+         if ((blank == 'Y') || (prompt < 0)) {
             lseek64(fd, 0, SEEK_SET);
             if (myWrite(fd, blankSector, 512) != 512) { // blank it out
                fprintf(stderr, "Warning! MBR not overwritten! Error is %d!\n", errno);
@@ -1681,6 +1676,7 @@ int GPTData::XFormToMBR(void) {
       printf("\nCreating entry for partition #%d\n", j + 1);
       numConverted += OnePartToMBR(j, i);
    } // for
+   printf("MBR writing returned %d\n", protectiveMBR.WriteMBRData(device));
    return numConverted;
 } // GPTData::XFormToMBR()
 
@@ -1774,7 +1770,8 @@ void GPTData::MakeHybrid(void) {
  **********************************************************************/
 
 // Resizes GPT to specified number of entries. Creates a new table if
-// necessary, copies data if it already exists.
+// necessary, copies data if it already exists. Returns 1 if all goes
+// well, 0 if an error is encountered.
 int GPTData::SetGPTSize(uint32_t numEntries) {
    struct GPTPart* newParts;
    struct GPTPart* trash;
@@ -1843,6 +1840,51 @@ void GPTData::BlankPartitions(void) {
       partitions[i].BlankPartition();
    } // for
 } // GPTData::BlankPartitions()
+
+// Delete a partition by number. Returns 1 if successful,
+// 0 if there was a problem. Returns 1 if partition was in
+// range, 0 if it was out of range.
+int GPTData::DeletePartition(uint32_t partNum) {
+   uint64_t startSector, length;
+   uint32_t low, high, numParts, retval = 1;;
+
+   numParts = GetPartRange(&low, &high);
+   if ((numParts > 0) && (partNum >= low) && (partNum <= high)) {
+      // In case there's a protective MBR, look for & delete matching
+      // MBR partition....
+      startSector = partitions[partNum].GetFirstLBA();
+      length = partitions[partNum].GetLengthLBA();
+      protectiveMBR.DeleteByLocation(startSector, length);
+
+      // Now delete the GPT partition
+      partitions[partNum].BlankPartition();
+   } else {
+      fprintf(stderr, "Partition number %d out of range!\n", partNum + 1);
+      retval = 0;
+   } // if/else
+   return retval;
+} // GPTData::DeletePartition(uint32_t partNum)
+
+// Non-interactively create a partition. Note that this function is overloaded
+// with another of the same name but different parameters; that one prompts
+// the user for data. This one returns 1 if the operation was successful, 0
+// if a problem was discovered.
+int GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector) {
+   int retval = 1; // assume there'll be no problems
+
+   if (IsFreePartNum(partNum)) {
+      Align(&startSector); // Align sector to correct multiple
+      if (IsFree(startSector) && (startSector <= endSector)) {
+         if (FindLastInFree(startSector) >= endSector) {
+            partitions[partNum].SetFirstLBA(startSector);
+            partitions[partNum].SetLastLBA(endSector);
+            partitions[partNum].SetType(0x0700);
+            partitions[partNum].SetUniqueGUID(1);
+         } else retval = 0; // if free space until endSector
+      } else retval = 0; // if startSector is free
+   } else retval = 0; // if legal partition number
+   return retval;
+} // GPTData::CreatePartition(partNum, startSector, endSector)
 
 // Sort the GPT entries, eliminating gaps and making for a logical
 // ordering. Relies on QuickSortGPT() for the bulk of the work
@@ -1934,10 +1976,13 @@ void GPTData::MoveSecondHeaderToEnd() {
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
 } // GPTData::FixSecondHeaderLocation()
 
-void GPTData::SetName(uint32_t partNum, char* theName) {
-   if ((partNum >= 0) && (partNum < mainHeader.numParts))
-      if (partitions[partNum].GetFirstLBA() > 0)
-         partitions[partNum].SetName((unsigned char*) theName);
+int GPTData::SetName(uint32_t partNum, char* theName) {
+   int retval = 1;
+   if (!IsFreePartNum(partNum))
+      partitions[partNum].SetName((unsigned char*) theName);
+   else retval = 0;
+
+   return retval;
 } // GPTData::SetName
 
 // Set the disk GUID to the specified value. Note that the header CRCs must
@@ -1961,6 +2006,17 @@ int GPTData::SetPartitionGUID(uint32_t pn, GUIDData theGUID) {
    } // if
    return retval;
 } // GPTData::SetPartitionGUID()
+
+// Change partition type code non-interactively. Returns 1 if
+// successful, 0 if not....
+int GPTData::ChangePartType(uint32_t partNum, uint16_t hexCode) {
+   int retval = 1;
+
+   if (!IsFreePartNum(partNum)) {
+      partitions[partNum].SetType(hexCode);
+   } else retval = 0;
+   return retval;
+} // GPTData::ChangePartType()
 
 // Adjust sector number so that it falls on a sector boundary that's a
 // multiple of sectorAlignment. This is done to improve the performance
@@ -2015,8 +2071,10 @@ int GPTData::Align(uint64_t* sector) {
       // Otherwise, notify the user that it couldn't be done....
       if (sectorOK == 1) {
          printf("Information: Moved requested sector from %llu to %llu for\n"
-                "alignment purposes. Use 'l' on the experts' menu to adjust alignment.\n",
+                "alignment purposes.\n",
                 (unsigned long long) original, (unsigned long long) *sector);
+         if (!beQuiet)
+            printf("Use 'l' on the experts' menu to adjust alignment\n");
       } else {
          printf("Information: Sector not aligned on %d-sector boundary and could not be moved.\n"
                 "If you're using a Western Digital Advanced Format or similar disk with\n"
@@ -2226,6 +2284,20 @@ int GPTData::IsFree(uint64_t sector) {
         } // if
         return (isFree);
 } // GPTData::IsFree()
+
+// Returns 1 if partNum is unused.
+int GPTData::IsFreePartNum(uint32_t partNum) {
+   int retval = 1;
+
+   if ((partNum >= 0) && (partNum < mainHeader.numParts)) {
+      if ((partitions[partNum].GetFirstLBA() != UINT64_C(0)) ||
+          (partitions[partNum].GetLastLBA() != UINT64_C(0))) {
+         retval = 0;
+      } // if partition is in use
+   } else retval = 0;
+
+   return retval;
+} // GPTData::IsFreePartNum()
 
 /********************************
  *                              *

@@ -32,6 +32,7 @@ enum GPTValidity {gpt_valid, gpt_corrupt, gpt_invalid};
 enum WhichToUse {use_gpt, use_mbr, use_bsd, use_new};
 
 // Header (first 512 bytes) of GPT table
+#pragma pack(1)
 struct GPTHeader {
    uint64_t signature;
    uint32_t revision;
@@ -54,7 +55,7 @@ struct GPTHeader {
 class GPTData {
 protected:
    struct GPTHeader mainHeader;
-   struct GPTPart *partitions;
+   GPTPart *partitions;
    struct GPTHeader secondHeader;
    MBRData protectiveMBR;
    char device[256]; // device filename
@@ -70,6 +71,8 @@ protected:
    int bsdFound; // set to 1 if BSD disklabel detected in MBR
    int sectorAlignment; // Start & end partitions at multiples of sectorAlignment
    PartTypes typeHelper;
+   int beQuiet;
+   WhichToUse whichWasUsed;
 public:
    // Basic necessary functions....
    GPTData(void);
@@ -94,7 +97,7 @@ public:
    int ForceLoadGPTData(int fd);
    int LoadMainTable(void);
    void LoadSecondTableAsMain(void);
-   int SaveGPTData(void);
+   int SaveGPTData(int quiet = 0);
    int SaveGPTBackup(char* filename);
    int LoadGPTBackup(char* filename);
 
@@ -127,16 +130,17 @@ public:
    // Adjust GPT structures WITHOUT user interaction...
    int SetGPTSize(uint32_t numEntries);
    void BlankPartitions(void);
+   int DeletePartition(uint32_t partNum);
+   int CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector);
    void SortGPT(void);
    int ClearGPTData(void);
    void MoveSecondHeaderToEnd();
-   void SetName(uint32_t partNum, char* theName = NULL);
+   int SetName(uint32_t partNum, char* theName = NULL);
    void SetDiskGUID(GUIDData newGUID);
    int SetPartitionGUID(uint32_t pn, GUIDData theGUID);
+   int ChangePartType(uint32_t pn, uint16_t hexCode);
    void MakeProtectiveMBR(void) {protectiveMBR.MakeProtectiveMBR();}
    int Align(uint64_t* sector);
-   void SetAlignment(int n) {sectorAlignment = n;}
-   void JustLooking(int i = 1) {justLooking = i;}
 
    // Return data about the GPT structures....
    int GetPartRange(uint32_t* low, uint32_t* high);
@@ -146,7 +150,6 @@ public:
    uint64_t GetMainPartsLBA(void) {return mainHeader.partitionEntriesLBA;}
    uint64_t GetSecondPartsLBA(void) {return secondHeader.partitionEntriesLBA;}
    uint32_t CountParts(void);
-   int GetAlignment(void) {return sectorAlignment;}
 
    // Find information about free space
    uint64_t FindFirstAvailable(uint64_t start = 0);
@@ -155,6 +158,14 @@ public:
    uint64_t FindLastInFree(uint64_t start);
    uint64_t FindFreeBlocks(int *numSegments, uint64_t *largestSegment);
    int IsFree(uint64_t sector);
+   int IsFreePartNum(uint32_t partNum);
+
+   // Change how functions work, or return information on same
+   void SetAlignment(int n) {sectorAlignment = n;}
+   int GetAlignment(void) {return sectorAlignment;}
+   void JustLooking(int i = 1) {justLooking = i;}
+   void BeQuiet(int i = 1) {beQuiet = i;}
+   WhichToUse WhichWasUsed(void) {return whichWasUsed;}
 
    // Endianness functions
    void ReverseHeaderBytes(struct GPTHeader* header); // for endianness

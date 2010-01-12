@@ -305,6 +305,11 @@ void MBRData::WriteMBRData(int fd) {
    }// if
 } // MBRData::WriteMBRData(int fd)
 
+int MBRData::WriteMBRData(char* deviceFilename) {
+   strcpy(device, deviceFilename);
+   return WriteMBRData();
+} // MBRData::WriteMBRData(char* deviceFilename)
+
 /********************************************
  *                                          *
  * Functions that display data for the user *

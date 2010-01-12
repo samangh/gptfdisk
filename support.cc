@@ -27,6 +27,10 @@
 #define BLKPBSZGET _IO(0x12,123)
 #endif
 
+// Below constant corresponds to an 800GB disk -- a somewhat arbitrary
+// cutoff
+#define SMALLEST_ADVANCED_FORMAT UINT64_C(1677721600)
+
 using namespace std;
 
 // Get a numeric value from the user, between low and high (inclusive).
@@ -84,8 +88,7 @@ char GetYN(void) {
  //value as the default if the user just hits Enter
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]) {
    unsigned long long response;
-   int num;
-   int plusFlag = 0;
+   int num, plusFlag = 0;
    uint64_t mult = 1;
    char suffix;
    char line[255];
@@ -147,7 +150,14 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]) 
       // Adjust response based on multiplier and plus flag, if present
       response *= (unsigned long long) mult;
       if (plusFlag == 1) {
-         response = response + (unsigned long long) low - UINT64_C(1);
+         // Recompute response based on low part of range (if default = high
+         // value, which should be the case when prompting for the end of a
+         // range) or the defaut value (if default != high, which should be
+         // the case for the first sector of a partition).
+         if (def == high)
+            response = response + (unsigned long long) low - UINT64_C(1);
+         else
+            response = response + (unsigned long long) def - UINT64_C(1);
       } // if
       if (plusFlag == -1) {
          response = (unsigned long long) high - response;
@@ -231,29 +241,65 @@ int GetBlockSize(int fd) {
    return (result);
 } // GetBlockSize()
 
+// My original FindAlignment() function (after this one) isn't working, since
+// the BLKPBSZGET ioctl() isn't doing what I expected (it returns 512 even on
+// a WD Advanced Format drive). Therefore, I'm using a simpler function that
+// returns 1-sector alignment for unusual sector sizes and drives smaller than
+// a size defined by SMALLEST_ADVANCED_FORMAT, and 8-sector alignment for
+// larger drives with 512-byte sectors.
+int FindAlignment(int fd) {
+   int err, result;
+
+   if ((GetBlockSize(fd) == 512) && (disksize(fd, &err) >= SMALLEST_ADVANCED_FORMAT)) {
+      result = 8; // play it safe; align for 4096-byte sectors
+   } else {
+      result = 1; // unusual sector size; assume it's the real physical size
+   } // if/else
+   return result;
+} // FindAlignment
+
 // Return the partition alignment value in sectors. Right now this works
 // only for Linux 2.6.32 and later, since I can't find equivalent ioctl()s
 // for OS X or FreeBSD, and the Linux ioctl is new
-int FindAlignment(int fd) {
-   int err = -2, result = 8, physicalSectorSize = 4096;
+/* int FindAlignment(int fd) {
+   int err = -2, errnum = 0, result = 8, physicalSectorSize = 4096;
+   uint64_t diskSize;
 
+   printf("Entering FindAlignment()\n");
 #if defined (__linux__) && defined (BLKPBSZGET)
    err = ioctl(fd, BLKPBSZGET, &physicalSectorSize);
+   printf("In FindAlignment(), physicalSectorSize = %d, err = %d\n", physicalSectorSize, err);
 //   printf("Tried to get hardware alignment; err is %d, sector size is %d\n", err, physicalSectorSize);
 #else
    err = -1;
 #endif
 
    if (err < 0) { // ioctl didn't work; have to guess....
-		if (GetBlockSize(fd) == 512)
+      if (GetBlockSize(fd) == 512) {
          result = 8; // play it safe; align for 4096-byte sectors
-		else
-			result = 1; // unusual sector size; assume it's the real physical size
+      } else {
+         result = 1; // unusual sector size; assume it's the real physical size
+      } // if/else
    } else { // ioctl worked; compute alignment
       result = physicalSectorSize / GetBlockSize(fd);
+      // Disks with larger physical than logical sectors must theoretically
+      // have a total disk size that's a multiple of the physical sector
+      // size; however, some such disks have compatibility jumper settings
+      // meant for one-partition MBR setups, and these reduce the total
+      // number of sectors by 1. If such a setting is used, it'll result
+      // in improper alignment, so look for this condition and warn the
+      // user if it's found....
+      diskSize = disksize(fd, &errnum);
+      if ((diskSize % (uint64_t) result) != 0) {
+         fprintf(stderr, "\aWarning! Disk size (%llu) is not a multiple of alignment\n"
+                         "size (%d), but it should be! Check disk manual and jumper settings!\n",
+                         (unsigned long long) diskSize, result);
+      } // if
    } // if/else
+   if (result <= 0) // can happen if physical sector size < logical sector size
+      result = 1;
    return result;
-} // FindAlignment(int)
+} // FindAlignment(int) */
 
 // The same as FindAlignment(int), but opens and closes a device by filename
 int FindAlignment(char deviceFilename[]) {

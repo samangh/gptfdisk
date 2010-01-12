@@ -2,7 +2,7 @@
 .\" May be distributed under the GNU General Public License
 .TH "GDISK" "8" "0.5.3" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
-gdisk \- GUID partition table (GPT) manipulator for Linux and Unix
+gdisk \- Interactive GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
 .BI "gdisk "
 [ \-l ]
@@ -198,12 +198,12 @@ can be specified in absolute terms as sector numbers or as positions
 measured in kilobytes (K), megabytes (M), gigabytes (G), or terabytes (T);
 for instance, \fI\fB40M\fR\fR specifies a position 40MiB from the start of
 the disk. You can specify locations relative to the start or end of the
-specified range by preceding the number by a '+' or '\-' symbol, as in
-\fI\fB+2G\fR\fR to specify a point 2GiB after the first available sector,
+specified default range by preceding the number by a '+' or '\-' symbol, as
+in \fI\fB+2G\fR\fR to specify a point 2GiB after the default start sector,
 or \fI\fB\-200M\fR\fR to specify a point 200MiB before the last available
 sector. Pressing the Enter key with no input specifies the default value,
 which is the start of the largest available block for the start sector and
-the last available block for the end sector.
+the end of the same block for the end sector.
 
 .TP 
 .B o
@@ -532,10 +532,7 @@ should be considered beta software. Known bugs and limitations include:
 .B *
 The program compiles correctly only on Linux, FreeBSD, and Mac OS X. Linux
 versions for x86\-64 (64\-bit), x86 (32\-bit), and PowerPC (32\-bit) have been
-tested, with the x86\-64 version having seen the most testing. The Mac OS X
-support was added with version 0.3.1 and has not been as thoroughly tested.
-FreeBSD support was added with version 0.4.0 and has seen even less
-testing.
+tested, with the x86\-64 version having seen the most testing.
 
 .TP 
 .B *

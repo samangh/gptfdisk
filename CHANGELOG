@@ -1,9 +1,15 @@
 0.6.0 (1/??/2009):
 ------------------
 
+- Fixed bug that caused the convert to MBR function to fail.
+
 - Added support for disks with other than 512-byte sectors.
 
 - Created embryonic sgdisk program.
+
+- Fixed bug that caused relative sector numbers entered by users (e.g,
+  "+128M") to be misinterpreted as from the start of the range rather than
+  from the default value.
 
 0.5.3 (1/4/2009):
 -----------------

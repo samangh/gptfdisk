@@ -170,7 +170,7 @@ void RecoveryMenu(char* filename, struct GPTData* theGPT) {
    int goOn = 1;
 
    do {
-      printf("\nrecovery/transformation command (? for help): ");
+      printf("\nRecovery/transformation command (? for help): ");
       junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &command);
       switch (command) {
@@ -313,7 +313,7 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
             } else printf("No partitions\n");
             break;
          case 'd': case 'D':
-            printf("The number of logical sectors per physical sector is %d.\n",
+            printf("Partitions will begin on %d-sector boundaries.\n",
                    theGPT->GetAlignment());
             break;
          case 'e': case 'E':
@@ -328,7 +328,7 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
             theGPT->ShowDetails();
             break;
          case 'l': case 'L':
-            temp1 = GetNumber(1, 128, 8, "Enter the number of logical sectors in a physical sector on the\ndisk (1-128, default = 8): ");
+            temp1 = GetNumber(1, 128, 8, "Enter the sector alignment value (1-128, default = 8): ");
             theGPT->SetAlignment(temp1);
             break;
          case 'm': case 'M':
@@ -377,11 +377,11 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
 void ShowExpertCommands(void) {
    printf("a\tset attributes\n");
    printf("c\tchange partition GUID\n");
-   printf("d\tdisplay the number of logical sectors per physical sector\n");
+   printf("d\tdisplay the sector alignment value\n");
    printf("e\trelocate backup data structures to the end of the disk\n");
    printf("g\tchange disk GUID\n");
    printf("i\tshow detailed information on a partition\n");
-   printf("b\tset the number of logical sectors per physical sector\n");
+   printf("l\tset the sector alignment value\n");
    printf("m\treturn to main menu\n");
    printf("n\tcreate a new protective MBR\n");
    printf("o\tprint protective MBR data\n");

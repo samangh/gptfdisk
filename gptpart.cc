@@ -206,7 +206,7 @@ void GPTPart::ChangeType(void) {
    else // user wants to enter the GUID directly, so do that
       newType = GetGUID();
    partitionType = newType;
-   printf("Changed system type of partition to '%s'\n",
+   printf("Changed type of partition to '%s'\n",
           typeHelper.GUIDToName(partitionType, typeName));
 } // GPTPart::ChangeType()
 
@@ -278,4 +278,3 @@ void QuickSortGPT(GPTPart* partitions, int start, int finish) {
    if (start < right) QuickSortGPT(partitions, start, right);
    if (finish > left) QuickSortGPT(partitions, left, finish);
 } // QuickSortGPT()
-

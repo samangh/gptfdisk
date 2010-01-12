@@ -31,13 +31,13 @@ using namespace std;
 
 class GPTPart {
    protected:
-      // Caution: The non-static data in GUIDPart is precisely the right size
+      // Caution: The non-static data in GPTPart is precisely the right size
       // to enable easy loading of the data directly from disk. If any
       // non-static variables are added to the below, the data size will
       // change and the program will stop working. This can be corrected by
       // adjusting the data-load operation in GPTData::LoadMainTable() and
-      // GPTData::LoadSecondTableAsMain() and then removing the GUIDPart
-      // size check in SizesOK().
+      // GPTData::LoadSecondTableAsMain() and then removing the GPTPart
+      // size check in SizesOK() (in gpt.cc file).
       struct GUIDData partitionType;
       struct GUIDData uniqueGUID;
       uint64_t firstLBA;

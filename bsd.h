@@ -13,14 +13,16 @@
 
 #define BSD_SIGNATURE UINT32_C(0x82564557)  /* BSD disklabel signature ("magic") */
 
-#define LABEL_OFFSET1 64   /* BSD disklabels can start at one of these two */
-#define LABEL_OFFSET2 512  /* values; check both for valid signatures */
+#define LABEL_OFFSET1 64    /* BSD disklabels can start at any of these three */
+#define LABEL_OFFSET2 512   /* values; check all for valid signatures */
+#define LABEL_OFFSET3 2048
 
 // FreeBSD documents a maximum # of partitions of 8, but I saw 16 on a NetBSD
 // disk. I'm quadrupling that for further safety. Note that BSDReadData()
-// uses a 2048-byte I/O buffer. In combination with LABEL_OFFSET2 and the
+// uses a 4096-byte I/O buffer. In combination with LABEL_OFFSET3 and the
 // additional 148-byte offset to the actual partition data, that gives a
-// theoretical maximum of 86.75 partitions that the program can handle.
+// theoretical maximum of 118.75 partitions that the program can handle before
+// memory errors will occur.
 #define MAX_BSD_PARTS 64
 
 
@@ -47,7 +49,7 @@ struct  BSDRecord {      // the partition table
    uint16_t pcpg;        // filesystem cylinders per group
 };
 
-// Full data in tweaked MBR format
+// Full data in tweaked BSD format
 class BSDData {
    protected:
       // We only need a few items from the main BSD disklabel data structure....
