@@ -74,7 +74,8 @@ GPTData::GPTData(char* filename) {
    whichWasUsed = use_new;
    srand((unsigned int) time(NULL));
    mainHeader.numParts = 0;
-   LoadPartitions(filename);
+   if (!LoadPartitions(filename))
+      exit(2);
 } // GPTData(char* filename) constructor
 
 // Destructor
@@ -573,6 +574,10 @@ int GPTData::LoadPartitions(char* deviceFilename) {
             ClearGPTData();
             protectiveMBR.MakeProtectiveMBR();
             break;
+         case use_abort:
+            allOK = 0;
+            printf("Aborting because of invalid partition data!\n");
+            break;
       } // switch
 
       // Now find the first and last sectors used by partitions...
@@ -586,8 +591,8 @@ int GPTData::LoadPartitions(char* deviceFilename) {
             if (partitions[i].GetLastLBA() > lastBlock)
                lastBlock = partitions[i].GetLastLBA();
          } // for
+         CheckGPTSize();
       } // if
-      CheckGPTSize();
    } else {
       allOK = 0;
       fprintf(stderr, "Problem opening %s for reading! Error is %d\n",
@@ -1427,12 +1432,14 @@ WhichToUse GPTData::UseWhichPartitions(void) {
    } // if
 
    if ((state == gpt_valid) && (mbrState == gpt)) {
-      printf("Found valid GPT with protective MBR; using GPT.\n");
       which = use_gpt;
+      if (!beQuiet)
+         printf("Found valid GPT with protective MBR; using GPT.\n");
    } // if
    if ((state == gpt_valid) && (mbrState == hybrid)) {
-      printf("Found valid GPT with hybrid MBR; using GPT.\n");
       which = use_gpt;
+      if (!beQuiet)
+         printf("Found valid GPT with hybrid MBR; using GPT.\n");
    } // if
    if ((state == gpt_valid) && (mbrState == invalid)) {
       printf("\aFound valid GPT with corrupt MBR; using GPT and will create new\nprotective MBR on save.\n");
@@ -1440,44 +1447,50 @@ WhichToUse GPTData::UseWhichPartitions(void) {
       protectiveMBR.MakeProtectiveMBR();
    } // if
    if ((state == gpt_valid) && (mbrState == mbr)) {
-      printf("Found valid MBR and GPT. Which do you want to use?\n");
-      answer = GetNumber(1, 3, 2, (char*) " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
-      if (answer == 1) {
-         which = use_mbr;
-      } else if (answer == 2) {
-         which = use_gpt;
-         protectiveMBR.MakeProtectiveMBR();
-         printf("Using GPT and creating fresh protective MBR.\n");
-      } else which = use_new;
+      if (!beQuiet) {
+         printf("Found valid MBR and GPT. Which do you want to use?\n");
+         answer = GetNumber(1, 3, 2, (char*) " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
+         if (answer == 1) {
+            which = use_mbr;
+         } else if (answer == 2) {
+            which = use_gpt;
+            protectiveMBR.MakeProtectiveMBR();
+            printf("Using GPT and creating fresh protective MBR.\n");
+         } else which = use_new;
+      } else which = use_abort;
    } // if
 
    // Nasty decisions here -- GPT is present, but corrupt (bad CRCs or other
    // problems)
    if (state == gpt_corrupt) {
-      if ((mbrState == mbr) || (mbrState == hybrid)) {
-         printf("Found valid MBR and corrupt GPT. Which do you want to use? (Using the\n"
-               "GPT MAY permit recovery of GPT data.)\n");
-         answer = GetNumber(1, 3, 2, (char*) " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
-         if (answer == 1) {
-            which = use_mbr;
-//            protectiveMBR.MakeProtectiveMBR();
-         } else if (answer == 2) {
+      if (beQuiet) {
+         which = use_abort;
+      } else {
+         if ((mbrState == mbr) || (mbrState == hybrid)) {
+            printf("Found valid MBR and corrupt GPT. Which do you want to use? (Using the\n"
+                  "GPT MAY permit recovery of GPT data.)\n");
+            answer = GetNumber(1, 3, 2, (char*) " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
+            if (answer == 1) {
+               which = use_mbr;
+   //            protectiveMBR.MakeProtectiveMBR();
+            } else if (answer == 2) {
+               which = use_gpt;
+            } else which = use_new;
+         } else if (mbrState == invalid) {
+            printf("Found invalid MBR and corrupt GPT. What do you want to do? (Using the\n"
+                  "GPT MAY permit recovery of GPT data.)\n");
+            answer = GetNumber(1, 2, 1, (char*) " 1 - GPT\n 2 - Create blank GPT\n\nYour answer: ");
+            if (answer == 1) {
+               which = use_gpt;
+            } else which = use_new;
+         } else { // corrupt GPT, MBR indicates it's a GPT disk....
+            printf("\a\a****************************************************************************\n"
+                  "Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk\n"
+                  "verification and recovery are STRONGLY recommended.\n"
+                  "****************************************************************************\n");
             which = use_gpt;
-         } else which = use_new;
-      } else if (mbrState == invalid) {
-         printf("Found invalid MBR and corrupt GPT. What do you want to do? (Using the\n"
-               "GPT MAY permit recovery of GPT data.)\n");
-         answer = GetNumber(1, 2, 1, (char*) " 1 - GPT\n 2 - Create blank GPT\n\nYour answer: ");
-         if (answer == 1) {
-            which = use_gpt;
-         } else which = use_new;
-      } else { // corrupt GPT, MBR indicates it's a GPT disk....
-         printf("\a\a****************************************************************************\n"
-               "Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk\n"
-               "verification and recovery are STRONGLY recommended.\n"
-               "****************************************************************************\n");
-         which = use_gpt;
-      } // if/else/else
+         } // if/else/else
+      } // else (beQuiet)
    } // if (corrupt GPT)
 
    if (which == use_new)

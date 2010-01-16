@@ -7,8 +7,8 @@ Introduction
 This software is intended as a (somewhat) fdisk-workalike program for
 GPT-partitioned disks. Although libparted and programs that use it (GNU
 Parted, gparted, etc.) provide the ability to handle GPT disks, they have
-certain limitations that gdisk overcomes. Specific advantages of gdisk
-include:
+certain limitations that gdisk overcomes. Specific advantages of gdisk and
+sgdisk include:
 
 * The ability to convert MBR-partitioned disks in-place to GPT format,
   without losing data
@@ -25,7 +25,7 @@ include:
   disk
 
 * A user interface that's familiar to long-time users of Linux
-  fdisk
+  fdisk (gdisk only)
 
 * The MBR boot loader code is left alone (GNU Parted tends to
   wipe it out with every change)
@@ -33,25 +33,31 @@ include:
 * The ability to create a hybrid MBR, which permits GPT-unaware
   OSes to access up to three GPT partitions on the disk
 
-Of course, gdisk isn't without its limitations. Most notably, it lacks the
-filesystem awareness and filesystem-related features of GNU Parted. You
+Of course, GPT fdisk isn't without its limitations. Most notably, it lacks
+the filesystem awareness and filesystem-related features of GNU Parted. You
 can't resize a partition's filesystem or create a partition with a
 filesystem already in place with gdisk, for instance. There's no GUI
 version of gdisk.
 
+The GPT fdisk package provides two program files: the interactive text-mode
+gdisk and the command-line-driven sgdisk. The former is intended for use in
+manually partitioning disks or changing partitioning details; the latter is
+intended for use in scripts to help automate tasks such as disk cloning or
+preparing multiple disks for Linux installation.
+
 Installing
 ----------
 
-To compile gdisk, you must have appropriate development tools installed,
-most notably the GNU Compiler Collection (GCC) and its g++ compiler for
-C++. The sgdisk program also requires the popt library and its development
-files (headers). Most Linux distributions install popt by default, but you
-may need to install a package called popt-dev, popt-devel, or something
-similar to obtain the development libraries. Mac OS users can find a version
-of popt for Mac OS from http://popt.darwinports.com; however, you'll first
-need to install DarwinPorts (instructions exist on the preceding page).
-Alternatively, you can compile gdisk alone, without sgdisk; gdisk doesn't
-require popt.
+To compile GPT fdisk, you must have appropriate development tools
+installed, most notably the GNU Compiler Collection (GCC) and its g++
+compiler for C++. The sgdisk program also requires the popt library and its
+development files (headers). Most Linux distributions install popt by
+default, but you may need to install a package called popt-dev, popt-devel,
+or something similar to obtain the header files. Mac OS users can find a
+version of popt for Mac OS from http://popt.darwinports.com; however,
+you'll first need to install DarwinPorts (instructions exist on the
+preceding page). Alternatively, you can compile gdisk alone, without
+sgdisk; gdisk doesn't require popt.
 
 When all the necessary development tools and libraries are installed, you
 can uncompress the package and type "make" at the command prompt in the

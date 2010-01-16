@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
             pretend = 1;
             break;
          case 'V':
-            printf("GPT fdisk (sgdisk) version 0.5.4-pre1\n\n");
+            printf("GPT fdisk (sgdisk) version %s\n\n", GPTFDISK_VERSION);
             break;
          default:
             break;
