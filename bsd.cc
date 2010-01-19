@@ -201,6 +201,12 @@ int BSDData::ShowState(void) {
    return retval;
 } // BSDData::ShowState()
 
+// Weirdly, this function has stopped working when defined inline,
+// but it's OK here....
+int BSDData::IsDisklabel(void) {
+   return (state == bsd);
+} // BSDData::IsDiskLabel()
+
 // Returns the BSD table's partition type code
 uint8_t BSDData::GetType(int i) {
    uint8_t retval = 0; // 0 = "unused"

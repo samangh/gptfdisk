@@ -72,7 +72,7 @@ class BSDData {
       void ReverseMetaBytes(void);
       void DisplayBSDData(void);
       int ShowState(void); // returns 1 if BSD disklabel detected
-      int IsDisklabel(void) {return (state == bsd);}
+      int IsDisklabel(void);
 
       // Functions to extract data on specific partitions....
       uint8_t GetType(int i);

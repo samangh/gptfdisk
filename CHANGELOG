@@ -1,4 +1,9 @@
-0.6.0 (1/??/2009):
+0.6.1 (1/??/2009):
+------------------
+
+- Fixed bug that caused BSD disklabel conversion to not work.
+
+0.6.0 (1/15/2009):
 ------------------
 
 - Fixed bug that caused the convert to MBR function to fail.
