@@ -539,7 +539,8 @@ tested, with the x86\-64 version having seen the most testing.
 The FreeBSD version of the program can't write changes to the partition
 table to a disk when existing partitions on that disk are mounted. (The
 same problem exists with many other FreeBSD utilities, such as
-\fBgpt\fR, \fBfdisk\fR, and \fBdd\fR.)
+\fBgpt\fR, \fBfdisk\fR, and \fBdd\fR.) This limitation can be overcome
+by typing \fBsysctl kern.geom.debugflags=16\fR at a shell prompt.
 
 .TP 
 .B *

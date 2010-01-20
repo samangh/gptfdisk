@@ -542,8 +542,14 @@ int GPTData::LoadPartitions(char* deviceFilename) {
    fd = OpenForWrite(deviceFilename);
    if ((fd == -1) && (!justLooking)) {
       printf("\aNOTE: Write test failed with error number %d. It will be "
-             "impossible to save\nchanges to this disk's partition table!\n\n",
+             "impossible to save\nchanges to this disk's partition table!\n",
              errno);
+#ifdef __FreeBSD__
+      printf("You may be able to enable writes by exiting this program, typing\n"
+             "'sysctl kern.geom.debugflags=16' at a shell prompt, and re-running this\n"
+             "program.\n");
+#endif
+      printf("\n");
       justLooking = 1;
    } // if
    close(fd);

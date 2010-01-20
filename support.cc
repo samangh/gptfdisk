@@ -585,10 +585,10 @@ int myWrite(int fd, char* buffer, int numBytes) {
  **************************************************************************************/
 
 // The disksize function is taken from the Linux fdisk code and modified
-// to work around a problem returning a uint64_t value on Mac OS.
+// greatly since then to enable FreeBSD and MacOS support, as well as to
+// return correct values for disk image files.
 uint64_t disksize(int fd, int *err) {
    long sz; // Do not delete; needed for Linux
-   off_t size = 0; // Do not delete; needed for FreeBSD
    long long b; // Do not delete; needed for Linux
    uint64_t sectors = 0; // size in sectors
    off_t bytes = 0; // size in bytes
@@ -603,9 +603,9 @@ uint64_t disksize(int fd, int *err) {
    *err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
 #else
 #ifdef __FreeBSD__
-   *err = ioctl(fd, DIOCGMEDIASIZE, &size);
+   *err = ioctl(fd, DIOCGMEDIASIZE, &bytes);
    b = GetBlockSize(fd);
-   sectors = size / b;
+   sectors = bytes / b;
 #else
    *err = ioctl(fd, BLKGETSIZE, &sz);
    if (*err) {
@@ -629,7 +629,7 @@ uint64_t disksize(int fd, int *err) {
    // what have you) and see what stat() gives us....
    if ((sectors == 0) || (*err == -1)) {
       if (fstat64(fd, &st) == 0) {
-         bytes = (uint64_t) st.st_size;
+         bytes = (off_t) st.st_size;
          if ((bytes % UINT64_C(512)) != 0)
             fprintf(stderr, "Warning: File size is not a multiple of 512 bytes!"
                             " Misbehavior is likely!\n\a");
