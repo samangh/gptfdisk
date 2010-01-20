@@ -510,67 +510,6 @@ void DiskSync(int fd) {
 #endif
 } // DiskSync()
 
-/**************************************************************************************
- *                                                                                    *
- * Below functions are lifted from various sources, as documented in comments before  *
- * each one.                                                                          *
- *                                                                                    *
- **************************************************************************************/
-
-// The disksize function is taken from the Linux fdisk code and modified
-// to work around a problem returning a uint64_t value on Mac OS.
-uint64_t disksize(int fd, int *err) {
-   long sz; // Do not delete; needed for Linux
-   long long b; // Do not delete; needed for Linux
-   uint64_t sectors = 0; // size in sectors
-   off_t bytes = 0; // size in bytes
-   struct stat64 st;
-
-   // Note to self: I recall testing a simplified version of
-   // this code, similar to what's in the __APPLE__ block,
-   // on Linux, but I had some problems. IIRC, it ran OK on 32-bit
-   // systems but not on 64-bit. Keep this in mind in case of
-   // 32/64-bit issues on MacOS....
-#ifdef __APPLE__
-   *err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
-#else
-#ifdef __FreeBSD__
-   *err = ioctl(fd, DIOCGMEDIASIZE, &sz);
-   b = GetBlockSize(fd);
-   sectors = sz / b;
-#else
-   *err = ioctl(fd, BLKGETSIZE, &sz);
-   if (*err) {
-      sectors = sz = 0;
-   } // if
-   if ((errno == EFBIG) || (!*err)) {
-      *err = ioctl(fd, BLKGETSIZE64, &b);
-      if (*err || b == 0 || b == sz)
-         sectors = sz;
-      else
-         sectors = (b >> 9);
-   } // if
-   // Unintuitively, the above returns values in 512-byte blocks, no
-   // matter what the underlying device's block size. Correct for this....
-   sectors /= (GetBlockSize(fd) / 512);
-#endif
-#endif
-
-   // The above methods have failed (or it's a bum filename reference),
-   // so let's assume it's a regular file (a QEMU image, dd backup, or
-   // what have you) and see what stat() gives us....
-   if (sectors == 0) {
-      if (fstat64(fd, &st) == 0) {
-         bytes = (uint64_t) st.st_size;
-         if ((bytes % UINT64_C(512)) != 0)
-            fprintf(stderr, "Warning: File size is not a multiple of 512 bytes!"
-                            " Misbehavior is likely!\n\a");
-         sectors = bytes / UINT64_C(512);
-      } // if
-   } // if
-   return sectors;
-} // disksize()
-
 // A variant on the standard read() function. Done to work around
 // limitations in FreeBSD concerning the matching of the sector
 // size with the number of bytes read
@@ -637,3 +576,64 @@ int myWrite(int fd, char* buffer, int numBytes) {
    free(tempSpace);
    return retval;
 } // myRead()
+
+/**************************************************************************************
+ *                                                                                    *
+ * Below functions are lifted from various sources, as documented in comments before  *
+ * each one.                                                                          *
+ *                                                                                    *
+ **************************************************************************************/
+
+// The disksize function is taken from the Linux fdisk code and modified
+// to work around a problem returning a uint64_t value on Mac OS.
+uint64_t disksize(int fd, int *err) {
+   long sz; // Do not delete; needed for Linux
+   long long b; // Do not delete; needed for Linux
+   uint64_t sectors = 0; // size in sectors
+   off_t bytes = 0; // size in bytes
+   struct stat64 st;
+
+   // Note to self: I recall testing a simplified version of
+   // this code, similar to what's in the __APPLE__ block,
+   // on Linux, but I had some problems. IIRC, it ran OK on 32-bit
+   // systems but not on 64-bit. Keep this in mind in case of
+   // 32/64-bit issues on MacOS....
+#ifdef __APPLE__
+   *err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
+#else
+#ifdef __FreeBSD__
+   *err = ioctl(fd, DIOCGMEDIASIZE, &sz);
+   b = GetBlockSize(fd);
+   sectors = sz / b;
+#else
+   *err = ioctl(fd, BLKGETSIZE, &sz);
+   if (*err) {
+      sectors = sz = 0;
+   } // if
+   if ((errno == EFBIG) || (!*err)) {
+      *err = ioctl(fd, BLKGETSIZE64, &b);
+      if (*err || b == 0 || b == sz)
+         sectors = sz;
+      else
+         sectors = (b >> 9);
+   } // if
+   // Unintuitively, the above returns values in 512-byte blocks, no
+   // matter what the underlying device's block size. Correct for this....
+   sectors /= (GetBlockSize(fd) / 512);
+#endif
+#endif
+
+   // The above methods have failed (or it's a bum filename reference),
+   // so let's assume it's a regular file (a QEMU image, dd backup, or
+   // what have you) and see what stat() gives us....
+   if ((sectors == 0) || (*err == -1)) {
+      if (fstat64(fd, &st) == 0) {
+         bytes = (uint64_t) st.st_size;
+         if ((bytes % UINT64_C(512)) != 0)
+            fprintf(stderr, "Warning: File size is not a multiple of 512 bytes!"
+                            " Misbehavior is likely!\n\a");
+         sectors = bytes / UINT64_C(512);
+      } // if
+   } // if
+   return sectors;
+} // disksize()
