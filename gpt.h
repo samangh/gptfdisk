@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.1-pre2"
+#define GPTFDISK_VERSION "0.6.1-pre3"
 
 using namespace std;
 

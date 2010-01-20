@@ -588,6 +588,7 @@ int myWrite(int fd, char* buffer, int numBytes) {
 // to work around a problem returning a uint64_t value on Mac OS.
 uint64_t disksize(int fd, int *err) {
    long sz; // Do not delete; needed for Linux
+   uint64_t size = 0; // Do not delete; needed for FreeBSD
    long long b; // Do not delete; needed for Linux
    uint64_t sectors = 0; // size in sectors
    off_t bytes = 0; // size in bytes
@@ -602,9 +603,9 @@ uint64_t disksize(int fd, int *err) {
    *err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
 #else
 #ifdef __FreeBSD__
-   *err = ioctl(fd, DIOCGMEDIASIZE, &sz);
+   *err = ioctl(fd, DIOCGMEDIASIZE, &size);
    b = GetBlockSize(fd);
-   sectors = sz / b;
+   sectors = size / b;
 #else
    *err = ioctl(fd, BLKGETSIZE, &sz);
    if (*err) {
