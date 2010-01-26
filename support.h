@@ -16,16 +16,17 @@
 // Darwin, this may need to be changed back (and in various .cc files).
 #include <sys/disk.h>
 #define lseek64 lseek
-#else
+#endif
 
 // Linux only....
+#ifdef __linux__
 #include <linux/fs.h>
 #endif
 
-#ifdef __FreeBSD__
+/* #ifdef __FreeBSD__
 #define fstat64 fstat
 #define stat64 stat
-#endif
+#endif */
 
 // Set this as a default
 #define SECTOR_SIZE UINT32_C(512)
@@ -55,23 +56,16 @@ struct GUIDData {
    uint64_t data2;
 }; // struct GUIDData
 
+static char theFile[255];
+
 int GetNumber(int low, int high, int def, const char prompt[]);
 char GetYN(void);
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]);
 char* BytesToSI(uint64_t size, char theValue[]);
-int GetBlockSize(int fd);
-int FindAlignment(int fd);
-int FindAlignment(char device[]);
 char* GUIDToStr(struct GUIDData theGUID, char* theString);
 GUIDData GetGUID(void);
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
 uint64_t PowerOf2(int value);
-int OpenForWrite(char* deviceFilename);
-int myRead(int fd, char* buffer, int numBytes);
-int myWrite(int fd, char* buffer, int numBytes);
-void DiskSync(int fd); // resync disk caches to use new partitions
-
-uint64_t disksize(int fd, int* err);
 
 #endif

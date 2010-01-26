@@ -5,17 +5,22 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <sys/ioctl.h>
 #include "gptpart.h"
+#include "diskio.h"
 
 #ifndef __BSD_STRUCTS
 #define __BSD_STRUCTS
 
 #define BSD_SIGNATURE UINT32_C(0x82564557)  /* BSD disklabel signature ("magic") */
 
-#define LABEL_OFFSET1 64    /* BSD disklabels can start at any of these three */
-#define LABEL_OFFSET2 512   /* values; check all for valid signatures */
-#define LABEL_OFFSET3 2048
+// BSD disklabels can start at offsets of 64 or the sector size -- at least,
+// I *THINK* that's what's going on. I've seen them at 64 or 512 on disks
+// with 512-byte blocks and at 2048 on disks with 2048-byte blocks. The
+// LABEL_OFFSET2 value will be replaced by the block size in the
+// ReadBSDData() function....
+#define LABEL_OFFSET1 64
+#define LABEL_OFFSET2 512
+#define NUM_OFFSETS 2
 
 // FreeBSD documents a maximum # of partitions of 8, but I saw 16 on a NetBSD
 // disk. I'm quadrupling that for further safety. Note that BSDReadData()
@@ -64,11 +69,12 @@ class BSDData {
       uint64_t labelLastLBA;     // final sector of BSD disklabel
       uint64_t labelStart;       // BSD disklabel start point in bytes from labelFirstLBA
       BSDValidity state;
+      DiskIO *myDisk;
    public:
       BSDData(void);
       ~BSDData(void);
       int ReadBSDData(char* deviceFilename, uint64_t startSector, uint64_t endSector);
-      void ReadBSDData(int fd, uint64_t startSector, uint64_t endSector);
+      void ReadBSDData(DiskIO *myDisk, uint64_t startSector, uint64_t endSector);
       void ReverseMetaBytes(void);
       void DisplayBSDData(void);
       int ShowState(void); // returns 1 if BSD disklabel detected

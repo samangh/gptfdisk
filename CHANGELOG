@@ -1,4 +1,33 @@
-0.6.1 (1/20/2009):
+0.6.2 (?/??/2010):
+------------------
+
+- Enabled default partition type code of 0700 when creating partitions
+  or changing their type codes. (Type 0700, Linux/Windows data, is set if
+  the user hits the Enter key alone.)
+
+- Fixed bug in sort ('s' on main menu) option that caused partition
+  numbers to begin at more than 1 if the original partition list had
+  too many empty partitions before the last one defined.
+
+- Improved code to determine which partition table to load in case of
+  CRC mismatches between the partition tables and the stored CRC values
+  in the headers.
+
+- Compiles using MinGW (http://www.mingw.org) to create a Windows binary.
+  The resulting Windows program is flaky and can't write to the disk,
+  though, so I'm not creating an official Windows release just yet (and
+  maybe never will).
+
+- Moved all disk I/O functions to the new DiskIO class. This helps with the
+  Windows port; it uses diskio-windows.cc for Windows-specific code,
+  diskio-unix.cc for the Linux, FreeBSD, and OS X code, and diskio.cc for
+  cross-platform disk I/O code.
+
+- Changed BSD disklabel detection code to be more correct (I think).
+  This change has no effect on my test disks, but I hope it'll work
+  better on disks with sector sizes other than 512 or 2048.
+
+0.6.1 (1/20/2010):
 ------------------
 
 - Fixed bug that returned incorrect disk size on 32-bit versions of
@@ -9,7 +38,7 @@
 
 - Fixed bug that caused BSD disklabel conversion to fail.
 
-0.6.0 (1/15/2009):
+0.6.0 (1/15/2010):
 ------------------
 
 - Fixed bug that caused the convert to MBR function to fail.
@@ -22,7 +51,7 @@
   "+128M") to be misinterpreted as from the start of the range rather than
   from the default value.
 
-0.5.3 (1/4/2009):
+0.5.3 (1/4/2010):
 -----------------
 
 - Fixed bug in display of GUIDs when compiled with some versions of GCC.

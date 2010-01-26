@@ -35,11 +35,14 @@ GPTPart::~GPTPart(void) {
 } // destructor
 
 // Return partition's name field
-unsigned char* GPTPart::GetName(unsigned char* ref) {
-   if (ref == NULL)
+string GPTPart::GetName(void) {
+   string theName;
+
+/*   if (ref == NULL)
       ref = (unsigned char*) malloc(NAME_SIZE * sizeof (unsigned char));
-   strcpy((char*) ref, (char*) name);
-   return ref;
+   strcpy((char*) ref, (char*) name); */
+   theName = (const char*) name;
+   return theName;
 } // GPTPart::GetName()
 
 // Return the gdisk-specific two-byte hex code for the partition
@@ -49,8 +52,13 @@ uint16_t GPTPart::GetHexType(void) {
 
 // Return a plain-text description of the partition type (e.g., "Linux/Windows
 // data" or "Linux swap").
-char* GPTPart::GetNameType(char* theName) {
-   return typeHelper.GUIDToName(partitionType, theName);
+string GPTPart::GetNameType(void) {
+   string temp;
+   char theName[255];
+
+   temp = typeHelper.GUIDToName(partitionType, theName);
+
+   return temp;
 } // GPTPart::GetNameType()
 
 // Compute and return the partition's length (or 0 if the end is incorrectly
@@ -162,13 +170,13 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
       printf("(%s)\n", typeHelper.GUIDToName(partitionType, temp));
       printf("Partition unique GUID: %s\n", GUIDToStr(uniqueGUID, temp));
 
-      printf("First sector: %llu (at %s)\n", (unsigned long long) firstLBA,
-             BytesToSI(firstLBA * blockSize, temp));
-      printf("Last sector: %llu (at %s)\n", (unsigned long long) lastLBA,
-             BytesToSI(lastLBA * blockSize, temp));
+      printf("First sector: %llu ", firstLBA);
+      printf("(at %s)\n", BytesToSI(firstLBA * blockSize, temp));
+      printf("Last sector: %llu ", (unsigned long long) lastLBA);
+      printf("(at %s)\n", BytesToSI(lastLBA * blockSize, temp));
       size = (lastLBA - firstLBA + 1);
-      printf("Partition size: %llu sectors (%s)\n", (unsigned long long)
-             size, BytesToSI(size * ((uint64_t) blockSize), temp));
+      printf("Partition size: %llu sectors ", (unsigned long long) size);
+      printf("(%s)\n", BytesToSI(size * ((uint64_t) blockSize), temp));
       printf("Attribute flags: %016llx\n", (unsigned long long) attributes);
       printf("Partition name: ");
       i = 0;
@@ -189,17 +197,18 @@ void GPTPart::ChangeType(void) {
    char typeName[255], line[255];
    char* junk;
    int typeNum = 0xFFFF;
-//   uint16_t typeNum = 0xFFFF;
    GUIDData newType;
 
-   printf("Current type is '%s'\n", GetNameType(line));
-//   printf("Current type is '%s'\n", typeHelper.GUIDToName(partitionType, typeName));
+   printf("Current type is '%s'\n", GetNameType().c_str());
    while ((!typeHelper.Valid(typeNum)) && (typeNum != 0)) {
-      printf("Hex code (L to show codes, 0 to enter raw code): ");
+      printf("Hex code (L to show codes, 0 to enter raw code, Enter = 0700): ");
       junk = fgets(line, 255, stdin);
       sscanf(line, "%X", &typeNum);
       if ((line[0] == 'L') || (line[0] == 'l'))
          typeHelper.ShowTypes();
+      if (line[0] == '\n') {
+         typeNum = 0x0700;
+      } // if
    } // while
    if (typeNum != 0) // user entered a code, so convert it
       newType = typeHelper.IDToGUID((uint16_t) typeNum);

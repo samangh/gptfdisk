@@ -121,10 +121,7 @@ void MainMenu(char* filename, struct GPTData* theGPT) {
             theGPT->ChangePartType();
             break;
          case 'v': case 'V':
-            if (theGPT->Verify() > 0) { // problems found
-               printf("You may be able to correct the problems by using options on the experts\n"
-                     "menu (press 'x' at the command prompt). Good luck!\n");
-            } // if
+            theGPT->Verify();
             break;
          case 'w': case 'W':
             if (theGPT->SaveGPTData() == 1)

@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <sys/ioctl.h>
 #include "gptpart.h"
+#include "diskio.h"
 
 #ifndef __MBRSTRUCTS
 #define __MBRSTRUCTS
@@ -41,9 +41,7 @@ struct MBRRecord {
 }; // struct MBRRecord
 
 // A 512-byte data structure into which the MBR can be loaded in one
-// go, for the benefit of FreeBSD which seems to flake out when loading
-// from block devices in multiples other than the block size.
-// Also used when loading logical partitions.
+// go. Also used when loading logical partitions.
 #pragma pack(1)
 struct TempMBR {
    uint8_t code[440];
@@ -72,6 +70,7 @@ protected:
    uint64_t diskSize; // size in blocks
    uint64_t numHeads; // number of heads, in CHS scheme
    uint64_t numSecspTrack; // number of sectors per track, in CHS scheme
+   DiskIO* myDisk;
    char device[256];
    MBRValidity state;
    struct MBRRecord* GetPartition(int i); // Return primary or logical partition
@@ -82,13 +81,13 @@ public:
 
    // File I/O functions...
    int ReadMBRData(char* deviceFilename);
-   void ReadMBRData(int fd, int checkBlockSize = 1);
+   void ReadMBRData(DiskIO * theDisk, int checkBlockSize = 1);
    // ReadLogicalPart() returns last partition # read to logicals[] array,
    // or -1 if there was a problem....
-   int ReadLogicalPart(int fd, uint32_t extendedStart, uint32_t diskOffset,
+   int ReadLogicalPart(uint32_t extendedStart, uint32_t diskOffset,
                        int partNum);
    int WriteMBRData(void);
-   void WriteMBRData(int fd);
+   int WriteMBRData(DiskIO *theDisk);
    int WriteMBRData(char* deviceFilename);
 
    // Display data for user...

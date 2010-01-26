@@ -43,26 +43,35 @@ BSDData::~BSDData(void) {
 // just opens the device file and then calls an overloaded function to do
 // the bulk of the work.
 int BSDData::ReadBSDData(char* device, uint64_t startSector, uint64_t endSector) {
-   int fd, allOK = 1;
+   int allOK = 1, tempMyDisk = 0;
 
    if (device != NULL) {
-      if ((fd = open(device, O_RDONLY)) != -1) {
-         ReadBSDData(fd, startSector, endSector);
+      if (myDisk == NULL) {
+         myDisk = new DiskIO;
+         tempMyDisk = 1;
+      } // if
+      if (myDisk->OpenForRead(device)) {
+         ReadBSDData(myDisk, startSector, endSector);
       } else {
          allOK = 0;
       } // if/else
 
-      close(fd);
+      myDisk->Close();
    } else {
       allOK = 0;
    } // if/else
+
+   if (tempMyDisk) {
+      delete myDisk;
+      myDisk = NULL;
+   } // if
 
    return allOK;
 } // BSDData::ReadBSDData() (device filename version)
 
 // Load the BSD disklabel data from an already-opened disk
 // file, starting with the specified sector number.
-void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
+void BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSector) {
    uint8_t buffer[4096]; // I/O buffer
    int i, err, foundSig = 0, bigEnd = 0;
    int relative = 0; // assume absolute partition sector numbering
@@ -70,17 +79,19 @@ void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
    uint32_t* temp32;
    uint16_t* temp16;
    BSDRecord* tempRecords;
-   int offset[3] = { LABEL_OFFSET1, LABEL_OFFSET2, LABEL_OFFSET3 };
+   int offset[NUM_OFFSETS] = { LABEL_OFFSET1, LABEL_OFFSET2 };
 
+   myDisk = theDisk;
    labelFirstLBA = startSector;
    labelLastLBA = endSector;
+   offset[1] = myDisk->GetBlockSize();
 
    // Read 4096 bytes (eight 512-byte sectors or equivalent)
    // into memory; we'll extract data from this buffer.
    // (Done to work around FreeBSD limitation on size of reads
    // from block devices.)
-   lseek64(fd, startSector * GetBlockSize(fd), SEEK_SET);
-   err = read(fd, buffer, 4096);
+   myDisk->Seek(startSector /* * myDisk->GetBlockSize() */);
+   myDisk->Read(buffer, 4096);
 
    // Do some strangeness to support big-endian architectures...
    bigEnd = (IsLittleEndian() == 0);
@@ -88,7 +99,7 @@ void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
    if (bigEnd)
       ReverseBytes(&realSig, 4);
 
-   // Look for the signature at any of three locations.
+   // Look for the signature at any of two locations.
    // Note that the signature is repeated at both the original
    // offset and 132 bytes later, so we need two checks....
    i = 0;
@@ -104,7 +115,7 @@ void BSDData::ReadBSDData(int fd, uint64_t startSector, uint64_t endSector) {
          } // if found signature
       } // if/else
       i++;
-   } while ((!foundSig) && (i < 3));
+   } while ((!foundSig) && (i < NUM_OFFSETS));
 
    // Load partition metadata from the buffer....
    temp32 = (uint32_t*) &buffer[labelStart + 40];
@@ -307,7 +318,7 @@ GPTPart BSDData::AsGPT(int i) {
             guid.SetType(0x0700); break;
       } // switch
       // Set the partition name to the name of the type code....
-      guid.SetName((unsigned char*) guid.GetNameType(tempStr));
+      guid.SetName((unsigned char*) guid.GetNameType().c_str());
    } // if
    return guid;
 } // BSDData::AsGPT()

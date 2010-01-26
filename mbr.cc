@@ -70,13 +70,11 @@ MBRData::~MBRData(void) {
 int MBRData::ReadMBRData(char* deviceFilename) {
    int fd, allOK = 1;
 
-   if ((fd = open(deviceFilename, O_RDONLY)) != -1) {
-      ReadMBRData(fd);
+   if (myDisk->OpenForRead(deviceFilename)) {
+      ReadMBRData(myDisk);
    } else {
       allOK = 0;
    } // if
-
-   close(fd);
 
    if (allOK)
       strcpy(device, deviceFilename);
@@ -89,94 +87,101 @@ int MBRData::ReadMBRData(char* deviceFilename) {
 // Note that any extended partition(s) present will be explicitly stored
 // in the partitions[] array, along with their contained partitions; the
 // extended container partition(s) should be ignored by other functions.
-void MBRData::ReadMBRData(int fd, int checkBlockSize) {
+void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
    int allOK = 1, i, j, logicalNum;
-   int err;
+   int err = 1;
    TempMBR tempMBR;
+
+   myDisk = theDisk;
 
    // Empty existing MBR data, including the logical partitions...
    EmptyMBR(0);
 
-   err = lseek64(fd, 0, SEEK_SET);
-   err = myRead(fd, (char*) &tempMBR, 512);
-   for (i = 0; i < 440; i++)
-      code[i] = tempMBR.code[i];
-   diskSignature = tempMBR.diskSignature;
-   nulls = tempMBR.nulls;
-   for (i = 0; i < 4; i++) {
-      partitions[i].status = tempMBR.partitions[i].status;
-      partitions[i].partitionType = tempMBR.partitions[i].partitionType;
-      partitions[i].firstLBA = tempMBR.partitions[i].firstLBA;
-      partitions[i].lengthLBA = tempMBR.partitions[i].lengthLBA;
-      for (j = 0; j < 3; j++) {
-         partitions[i].firstSector[j] = tempMBR.partitions[i].firstSector[j];
-         partitions[i].lastSector[j] = tempMBR.partitions[i].lastSector[j];
-      } // for j... (reading parts of CHS geometry)
-   } // for i... (reading all four partitions)
-   MBRSignature = tempMBR.MBRSignature;
-
-   // Reverse the byte order, if necessary
-   if (IsLittleEndian() == 0) {
-      ReverseBytes(&diskSignature, 4);
-      ReverseBytes(&nulls, 2);
-      ReverseBytes(&MBRSignature, 2);
+   if (myDisk->Seek(0))
+     if (myDisk->Read(&tempMBR, 512))
+        err = 0;
+   if (err) {
+      fprintf(stderr, "Problem reading disk in MBRData::ReadMBRData!\n");
+   } else {
+      for (i = 0; i < 440; i++)
+         code[i] = tempMBR.code[i];
+      diskSignature = tempMBR.diskSignature;
+      nulls = tempMBR.nulls;
       for (i = 0; i < 4; i++) {
-         ReverseBytes(&partitions[i].firstLBA, 4);
-         ReverseBytes(&partitions[i].lengthLBA, 4);
-      } // for
-   } // if
+         partitions[i].status = tempMBR.partitions[i].status;
+         partitions[i].partitionType = tempMBR.partitions[i].partitionType;
+         partitions[i].firstLBA = tempMBR.partitions[i].firstLBA;
+         partitions[i].lengthLBA = tempMBR.partitions[i].lengthLBA;
+         for (j = 0; j < 3; j++) {
+            partitions[i].firstSector[j] = tempMBR.partitions[i].firstSector[j];
+            partitions[i].lastSector[j] = tempMBR.partitions[i].lastSector[j];
+         } // for j... (reading parts of CHS geometry)
+      } // for i... (reading all four partitions)
+      MBRSignature = tempMBR.MBRSignature;
 
-   if (MBRSignature != MBR_SIGNATURE) {
-      allOK = 0;
-      state = invalid;
-   } // if
+      // Reverse the byte order, if necessary
+      if (IsLittleEndian() == 0) {
+         ReverseBytes(&diskSignature, 4);
+         ReverseBytes(&nulls, 2);
+         ReverseBytes(&MBRSignature, 2);
+         for (i = 0; i < 4; i++) {
+            ReverseBytes(&partitions[i].firstLBA, 4);
+            ReverseBytes(&partitions[i].lengthLBA, 4);
+         } // for
+      } // if
 
-   // Find disk size
-   diskSize = disksize(fd, &err);
-
-   // Find block size
-   if (checkBlockSize) {
-      blockSize = GetBlockSize(fd);
-   } // if (checkBlockSize)
-
-   // Load logical partition data, if any is found....
-   if (allOK) {
-      for (i = 0; i < 4; i++) {
-         if ((partitions[i].partitionType == 0x05) || (partitions[i].partitionType == 0x0f)
-              || (partitions[i].partitionType == 0x85)) {
-            // Found it, so call a recursive algorithm to load everything from them....
-            logicalNum = ReadLogicalPart(fd, partitions[i].firstLBA, UINT32_C(0), 4);
-            if ((logicalNum < 0) || (logicalNum >= MAX_MBR_PARTS)) {
-               allOK = 0;
-               fprintf(stderr, "Error reading logical partitions! List may be truncated!\n");
-            } // if maxLogicals valid
-         } // if primary partition is extended
-      } // for primary partition loop
-      if (allOK) { // Loaded logicals OK
-         state = mbr;
-      } else {
+      if (MBRSignature != MBR_SIGNATURE) {
+         allOK = 0;
          state = invalid;
       } // if
-   } // if
 
-   /* Check to see if it's in GPT format.... */
-   if (allOK) {
-      for (i = 0; i < 4; i++) {
-         if (partitions[i].partitionType == UINT8_C(0xEE)) {
-            state = gpt;
+      // Find disk size
+      diskSize = myDisk->DiskSize(&err);
+
+      // Find block size
+      if (checkBlockSize) {
+         blockSize = myDisk->GetBlockSize();
+      } // if (checkBlockSize)
+
+      // Load logical partition data, if any is found....
+      if (allOK) {
+         for (i = 0; i < 4; i++) {
+            if ((partitions[i].partitionType == 0x05) || (partitions[i].partitionType == 0x0f)
+               || (partitions[i].partitionType == 0x85)) {
+               // Found it, so call a recursive algorithm to load everything from them....
+               logicalNum = ReadLogicalPart(partitions[i].firstLBA, UINT32_C(0), 4);
+               if ((logicalNum < 0) || (logicalNum >= MAX_MBR_PARTS)) {
+                  allOK = 0;
+                  fprintf(stderr, "Error reading logical partitions! List may be truncated!\n");
+               } // if maxLogicals valid
+            } // if primary partition is extended
+         } // for primary partition loop
+         if (allOK) { // Loaded logicals OK
+            state = mbr;
+         } else {
+            state = invalid;
          } // if
-      } // for
-   } // if
+      } // if
 
-   // If there's an EFI GPT partition, look for other partition types,
-   // to flag as hybrid
-   if (state == gpt) {
-      for (i = 0 ; i < 4; i++) {
-         if ((partitions[i].partitionType != UINT8_C(0xEE)) &&
-             (partitions[i].partitionType != UINT8_C(0x00)))
-            state = hybrid;
-      } // for
-   } // if (hybrid detection code)
+      /* Check to see if it's in GPT format.... */
+      if (allOK) {
+         for (i = 0; i < 4; i++) {
+            if (partitions[i].partitionType == UINT8_C(0xEE)) {
+               state = gpt;
+            } // if
+         } // for
+      } // if
+
+      // If there's an EFI GPT partition, look for other partition types,
+      // to flag as hybrid
+      if (state == gpt) {
+         for (i = 0 ; i < 4; i++) {
+            if ((partitions[i].partitionType != UINT8_C(0xEE)) &&
+               (partitions[i].partitionType != UINT8_C(0x00)))
+               state = hybrid;
+         } // for
+      } // if (hybrid detection code)
+   } // no initial error
 } // MBRData::ReadMBRData(int fd)
 
 // This is a recursive function to read all the logical partitions, following the
@@ -184,25 +189,25 @@ void MBRData::ReadMBRData(int fd, int checkBlockSize) {
 // partitions[] array. Returns last index to partitions[] used, or -1 if there was
 // a problem.
 // Parameters:
-// fd = file descriptor
 // extendedStart = LBA of the start of the extended partition
 // diskOffset = LBA offset WITHIN the extended partition of the one to be read
 // partNum = location in partitions[] array to store retrieved data
-int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
+int MBRData::ReadLogicalPart(uint32_t extendedStart,
                              uint32_t diskOffset, int partNum) {
    struct TempMBR ebr;
-   off_t offset;
+   uint64_t offset;
 
    // Check for a valid partition number. Note that partitions MAY be read into
    // the area normally used by primary partitions, although the only calling
    // function as of GPT fdisk version 0.5.0 doesn't do so.
    if ((partNum < MAX_MBR_PARTS) && (partNum >= 0)) {
-      offset = (off_t) (extendedStart + diskOffset) * blockSize;
-      if (lseek64(fd, offset, SEEK_SET) == (off_t) -1) { // seek to EBR record
+      offset = (uint64_t) (extendedStart + diskOffset);
+//      if (lseek64(fd, offset, SEEK_SET) == (off_t) -1) { // seek to EBR record
+      if (myDisk->Seek(offset) == 0) { // seek to EBR record
          fprintf(stderr, "Unable to seek to %lu! Aborting!\n", (unsigned long) offset);
          partNum = -1;
       }
-      if (myRead(fd, (char*) &ebr, 512) != 512) { // Load the data....
+      if (myDisk->Read(&ebr, 512) != 512) { // Load the data....
          fprintf(stderr, "Error seeking to or reading logical partition data from %lu!\nAborting!\n",
                  (unsigned long) offset);
          partNum = -1;
@@ -229,7 +234,7 @@ int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
       // Find the next partition (if there is one) and recurse....
       if ((ebr.partitions[1].firstLBA != UINT32_C(0)) && (partNum >= 4) &&
           (partNum < (MAX_MBR_PARTS - 1))) {
-         partNum = ReadLogicalPart(fd, extendedStart, ebr.partitions[1].firstLBA,
+         partNum = ReadLogicalPart(extendedStart, ebr.partitions[1].firstLBA,
                                    partNum + 1);
       } else {
          partNum++;
@@ -243,19 +248,19 @@ int MBRData::ReadLogicalPart(int fd, uint32_t extendedStart,
 int MBRData::WriteMBRData(void) {
    int allOK = 1, fd;
 
-   if ((fd = open(device, O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH)) != -1) {
-      WriteMBRData(fd);
+   if (myDisk->OpenForWrite(device) != 0) {
+      allOK = WriteMBRData(myDisk);
    } else {
       allOK = 0;
    } // if/else
-   close(fd);
+   myDisk->Close();
    return allOK;
 } // MBRData::WriteMBRData(void)
 
 // Save the MBR data to a file. Note that this function writes ONLY the
 // MBR data, not the logical partitions (if any are defined).
-void MBRData::WriteMBRData(int fd) {
-   int i, j;
+int MBRData::WriteMBRData(DiskIO *theDisk) {
+   int i, j, allOK;
    TempMBR tempMBR;
 
    // Reverse the byte order, if necessary
@@ -288,10 +293,17 @@ void MBRData::WriteMBRData(int fd) {
    } // for i...
 
    // Now write that data structure...
-   lseek64(fd, 0, SEEK_SET);
-   if (myWrite(fd, (char*) &tempMBR, 512) != 512) {
-      fprintf(stderr, "Warning! Error %d when saving MBR!\n", errno);
-   } // if
+   allOK = theDisk->OpenForWrite();
+   if (allOK && theDisk->Seek(0)) {
+      if (theDisk->Write(&tempMBR, 512) != 512) {
+         allOK = 0;
+         fprintf(stderr, "Warning! Error %d when saving MBR!\n", errno);
+      } // if
+   } else {
+      allOK = 0;
+      fprintf(stderr, "Warning! Error %d when seeking to MBR to write it!\n", errno);
+   } // if/else
+   theDisk->Close();
 
    // Reverse the byte order back, if necessary
    if (IsLittleEndian() == 0) {
@@ -303,7 +315,8 @@ void MBRData::WriteMBRData(int fd) {
          ReverseBytes(&partitions[i].lengthLBA, 4);
       } // for
    }// if
-} // MBRData::WriteMBRData(int fd)
+   return allOK;
+} // MBRData::WriteMBRData(DiskIO theDisk)
 
 int MBRData::WriteMBRData(char* deviceFilename) {
    strcpy(device, deviceFilename);
@@ -336,8 +349,8 @@ void MBRData::DisplayMBRData(void) {
                 (unsigned long) partitions[i].lengthLBA, partitions[i].partitionType);
       } // if
    } // for
-   printf("\nDisk size is %llu sectors (%s)\n", (unsigned long long) diskSize,
-          BytesToSI(diskSize * (uint64_t) blockSize, tempStr));
+   printf("\nDisk size is %llu sectors ", (unsigned long long) diskSize);
+   printf("(%s)\n", BytesToSI(diskSize * (uint64_t) blockSize, tempStr));
 } // MBRData::DisplayMBRData()
 
 // Displays the state, as a word, on stdout. Used for debugging & to
@@ -588,12 +601,12 @@ int MBRData::DeleteByLocation(uint64_t start64, uint64_t length64) {
       length32 = (uint32_t) length64;
       for (i = 0; i < MAX_MBR_PARTS; i++) {
          if ((partitions[i].firstLBA == start32) && (partitions[i].lengthLBA = length32) &&
-              (partitions[i].partitionType != 0xEE)) {
+             (partitions[i].partitionType != 0xEE)) {
             DeletePartition(i);
             if (state == hybrid)
                OptimizeEESize();
             deleted = 1;
-              } // if (match found)
+         } // if (match found)
       } // for i (partition scan)
    } // if (hybrid & GPT partition < 2TiB)
    return deleted;
@@ -794,7 +807,7 @@ GPTPart MBRData::AsGPT(int i) {
          newPart.SetType(((uint16_t) origType) * 0x0100);
          newPart.SetUniqueGUID(1);
          newPart.SetAttributes(0);
-         newPart.SetName((unsigned char*) newPart.GetNameType(tempStr));
+         newPart.SetName((unsigned char*) newPart.GetNameType().c_str());
       } // if not extended, protective, or non-existent
    } // if (origPart != NULL)
    return newPart;

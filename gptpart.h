@@ -16,8 +16,8 @@
 #define __GPTPART_H
 
 #include <stdint.h>
+#include <string>
 #include <sys/types.h>
-#include <sys/ioctl.h>
 #include "support.h"
 #include "parttypes.h"
 
@@ -53,13 +53,13 @@ class GPTPart {
       // Simple data retrieval:
       struct GUIDData GetType(void) {return partitionType;}
       uint16_t GetHexType(void);
-      char* GetNameType(char* theName);
+      string GetNameType(void);
       struct GUIDData GetUniqueGUID(void) {return uniqueGUID;}
       uint64_t GetFirstLBA(void) {return firstLBA;}
       uint64_t GetLastLBA(void) {return lastLBA;}
       uint64_t GetLengthLBA(void);
       uint64_t GetAttributes(void) {return attributes;}
-      unsigned char* GetName(unsigned char* theName);
+      string GetName(void);
 
       // Simple data assignment:
       void SetType(struct GUIDData t) {partitionType = t;}

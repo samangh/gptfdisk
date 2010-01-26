@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <sys/ioctl.h>
+#include "gptpart.h"
 #include "support.h"
 #include "parttypes.h"
 #include "mbr.h"
@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.1"
+#define GPTFDISK_VERSION "0.6.2-pre1"
 
 using namespace std;
 
@@ -60,6 +60,7 @@ protected:
    struct GPTHeader secondHeader;
    MBRData protectiveMBR;
    char device[256]; // device filename
+   DiskIO myDisk;
    uint32_t blockSize; // device block size
    uint64_t diskSize; // size of device, in blocks
    GPTValidity state; // is GPT valid?
@@ -93,11 +94,11 @@ public:
 
    // Load or save data from/to disk
    int LoadMBR(char* f) {return protectiveMBR.ReadMBRData(f);}
-   void PartitionScan(int fd);
+   void PartitionScan(void);
    int LoadPartitions(char* deviceFilename);
-   int ForceLoadGPTData(int fd);
+   int ForceLoadGPTData(void);
    int LoadMainTable(void);
-   void LoadSecondTableAsMain(void);
+   int LoadSecondTableAsMain(void);
    int SaveGPTData(int quiet = 0);
    int SaveGPTBackup(char* filename);
    int LoadGPTBackup(char* filename);
