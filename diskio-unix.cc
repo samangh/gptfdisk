@@ -1,0 +1,366 @@
+//
+// C++ Interface: diskio (Unix components [Linux, FreeBSD, Mac OS X])
+//
+// Description: Class to handle low-level disk I/O for GPT fdisk
+//
+//
+// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2009
+//
+// Copyright: See COPYING file that comes with this distribution
+//
+//
+// This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+// under the terms of the GNU GPL version 2, as detailed in the COPYING file.
+
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
+#include <sys/ioctl.h>
+#include <stdio.h>
+#include <string>
+#include <stdint.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <iostream>
+
+#include "support.h"
+#include "diskio.h"
+
+using namespace std;
+
+// Returns the official "real" name for a shortened version of same.
+// Trivial here; more important in Windows
+void DiskIO::MakeRealName(void) {
+   realFilename = userFilename;
+} // DiskIO::MakeRealName()
+
+// Open the currently on-record file for reading
+int DiskIO::OpenForRead(void) {
+   int shouldOpen = 1;
+
+   if (isOpen) { // file is already open
+      if (openForWrite) {
+         Close();
+      } else {
+         shouldOpen = 0;
+      } // if/else
+   } // if
+
+   if (shouldOpen) {
+      fd = open(realFilename.c_str(), O_RDONLY);
+      if (fd == -1) {
+         fprintf(stderr, "Problem opening %s for reading! Error is %d\n",
+                 realFilename.c_str(), errno);
+         if (errno == EACCES) { // User is probably not running as root
+            fprintf(stderr, "You must run this program as root or use sudo!\n");
+         } // if
+         realFilename = "";
+         userFilename = "";
+         isOpen = 0;
+         openForWrite = 0;
+      } else {
+         isOpen = 1;
+         openForWrite = 0;
+      } // if/else
+   } // if
+
+   return isOpen;
+} // DiskIO::OpenForRead(void)
+
+// An extended file-open function. This includes some system-specific checks.
+// Returns 1 if the file is open, 0 otherwise....
+int DiskIO::OpenForWrite(void) {
+   if ((isOpen) && (openForWrite))
+      return 1;
+
+   // Close the disk, in case it's already open for reading only....
+   Close();
+
+   // try to open the device; may fail....
+   fd = open(realFilename.c_str(), O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+#ifdef __APPLE__
+   // MacOS X requires a shared lock under some circumstances....
+   if (fd < 0) {
+      fd = open(realFilename.c_str(), O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH | O_SHLOCK);
+   } // if
+#endif
+   if (fd >= 0) {
+      isOpen = 1;
+      openForWrite = 1;
+   } else {
+      isOpen = 0;
+      openForWrite = 0;
+   } // if/else
+   return isOpen;
+} // DiskIO::OpenForWrite(void)
+
+// Close the disk device. Note that this does NOT erase the stored filenames,
+// so the file can be re-opened without specifying the filename.
+void DiskIO::Close(void) {
+   if (isOpen)
+      close(fd);
+   isOpen = 0;
+   openForWrite = 0;
+} // DiskIO::Close()
+
+// Returns block size of device pointed to by fd file descriptor. If the ioctl
+// returns an error condition, print a warning but return a value of SECTOR_SIZE
+// (512)..
+int DiskIO::GetBlockSize(void) {
+   int err = -1, blockSize = 0;
+
+   // If disk isn't open, try to open it....
+   if (!isOpen) {
+      OpenForRead();
+   } // if
+
+   if (isOpen) {
+#ifdef __APPLE__
+      err = ioctl(fd, DKIOCGETBLOCKSIZE, &blockSize);
+#endif
+#ifdef __FreeBSD__
+      err = ioctl(fd, DIOCGSECTORSIZE, &blockSize);
+#endif
+#ifdef __linux__
+      err = ioctl(fd, BLKSSZGET, &blockSize);
+#endif
+
+      if (err == -1) {
+         blockSize = SECTOR_SIZE;
+         // ENOTTY = inappropriate ioctl; probably being called on a disk image
+         // file, so don't display the warning message....
+         // 32-bit code returns EINVAL, I don't know why. I know I'm treading on
+         // thin ice here, but it should be OK in all but very weird cases....
+         if ((errno != ENOTTY) && (errno != EINVAL)) {
+            printf("\aError %d when determining sector size! Setting sector size to %d\n",
+                  errno, SECTOR_SIZE);
+         } // if
+      } // if (err == -1)
+   } // if (isOpen)
+
+   return (blockSize);
+} // DiskIO::GetBlockSize()
+
+// Resync disk caches so the OS uses the new partition table. This code varies
+// a lot from one OS to another.
+void DiskIO::DiskSync(void) {
+   int i, platformFound = 0;
+
+   // If disk isn't open, try to open it....
+   if (!isOpen) {
+      OpenForRead();
+   } // if
+
+   if (isOpen) {
+      sync();
+#ifdef __APPLE__
+      printf("Warning: The kernel may continue to use old or deleted partitions.\n"
+            "You should reboot or remove the drive.\n");
+               /* don't know if this helps
+               * it definitely will get things on disk though:
+               * http://topiks.org/mac-os-x/0321278542/ch12lev1sec8.html */
+      i = ioctl(fd, DKIOCSYNCHRONIZECACHE);
+      platformFound++;
+#endif
+#ifdef __FreeBSD__
+      sleep(2);
+      i = ioctl(fd, DIOCGFLUSH);
+      printf("Warning: The kernel may continue to use old or deleted partitions.\n"
+            "You should reboot or remove the drive.\n");
+      platformFound++;
+#endif
+#ifdef __linux__
+      sleep(2);
+      i = ioctl(fd, BLKRRPART);
+      if (i)
+         printf("Warning: The kernel is still using the old partition table.\n"
+               "The new table will be used at the next reboot.\n");
+      platformFound++;
+#endif
+      if (platformFound == 0)
+         fprintf(stderr, "Warning: Platform not recognized!\n");
+      if (platformFound > 1)
+         fprintf(stderr, "\nWarning: We seem to be running on multiple platforms!\n");
+   } // if (isOpen)
+} // DiskIO::DiskSync()
+
+// Seek to the specified sector. Returns 1 on success, 0 on failure.
+int DiskIO::Seek(uint64_t sector) {
+   int retval = 1;
+   off_t seekTo, sought;
+
+   // If disk isn't open, try to open it....
+   if (!isOpen) {
+      retval = OpenForRead();
+   } // if
+
+   if (isOpen) {
+      seekTo = sector * (uint64_t) GetBlockSize();
+      sought = lseek64(fd, seekTo, SEEK_SET);
+      if (sought != seekTo) {
+         retval = 0;
+      } // if
+   } // if
+   return retval;
+} // DiskIO::Seek()
+
+// A variant on the standard read() function. Done to work around
+// limitations in FreeBSD concerning the matching of the sector
+// size with the number of bytes read.
+// Returns the number of bytes read into buffer.
+int DiskIO::Read(void* buffer, int numBytes) {
+   int blockSize = 512, i, numBlocks, retval = 0;
+   char* tempSpace;
+
+   // If disk isn't open, try to open it....
+   if (!isOpen) {
+      OpenForRead();
+   } // if
+
+   if (isOpen) {
+      // Compute required space and allocate memory
+      blockSize = GetBlockSize();
+      if (numBytes <= blockSize) {
+         numBlocks = 1;
+         tempSpace = (char*) malloc(blockSize);
+      } else {
+         numBlocks = numBytes / blockSize;
+         if ((numBytes % blockSize) != 0) numBlocks++;
+         tempSpace = (char*) malloc(numBlocks * blockSize);
+      } // if/else
+
+      // Read the data into temporary space, then copy it to buffer
+      retval = read(fd, tempSpace, numBlocks * blockSize);
+      memcpy(buffer, tempSpace, numBytes);
+/*      for (i = 0; i < numBytes; i++) {
+         ((char*) buffer)[i] = tempSpace[i];
+      } // for */
+
+      // Adjust the return value, if necessary....
+      if (((numBlocks * blockSize) != numBytes) && (retval > 0))
+         retval = numBytes;
+
+      free(tempSpace);
+   } // if (isOpen)
+   return retval;
+} // DiskIO::Read()
+
+// A variant on the standard write() function. Done to work around
+// limitations in FreeBSD concerning the matching of the sector
+// size with the number of bytes read.
+// Returns the number of bytes written.
+int DiskIO::Write(void* buffer, int numBytes) {
+   int blockSize = 512, i, numBlocks, retval = 0;
+   char* tempSpace;
+
+   // If disk isn't open, try to open it....
+   if ((!isOpen) || (!openForWrite)) {
+      OpenForWrite();
+   } // if
+
+   if (isOpen) {
+      // Compute required space and allocate memory
+      blockSize = GetBlockSize();
+      if (numBytes <= blockSize) {
+         numBlocks = 1;
+         tempSpace = (char*) malloc(blockSize);
+      } else {
+         numBlocks = numBytes / blockSize;
+         if ((numBytes % blockSize) != 0) numBlocks++;
+         tempSpace = (char*) malloc(numBlocks * blockSize);
+      } // if/else
+
+      // Copy the data to my own buffer, then write it
+/*      for (i = 0; i < numBytes; i++) {
+         tempSpace[i] = ((char*) buffer)[i];
+      } // for */
+      memcpy(tempSpace, buffer, numBytes);
+      for (i = numBytes; i < numBlocks * blockSize; i++) {
+         tempSpace[i] = 0;
+      } // for
+      retval = write(fd, tempSpace, numBlocks * blockSize);
+
+      // Adjust the return value, if necessary....
+      if (((numBlocks * blockSize) != numBytes) && (retval > 0))
+         retval = numBytes;
+
+      free(tempSpace);
+   } // if (isOpen)
+   return retval;
+} // DiskIO:Write()
+
+/**************************************************************************************
+ *                                                                                    *
+ * Below functions are lifted from various sources, as documented in comments before  *
+ * each one.                                                                          *
+ *                                                                                    *
+ **************************************************************************************/
+
+// The disksize function is taken from the Linux fdisk code and modified
+// greatly since then to enable FreeBSD and MacOS support, as well as to
+// return correct values for disk image files.
+uint64_t DiskIO::DiskSize(int *err) {
+   long sz; // Do not delete; needed for Linux
+   long long b; // Do not delete; needed for Linux
+   uint64_t sectors = 0; // size in sectors
+   off_t bytes = 0; // size in bytes
+   struct stat64 st;
+   int platformFound = 0;
+
+   // If disk isn't open, try to open it....
+   if (!isOpen) {
+      OpenForRead();
+   } // if
+
+   if (isOpen) {
+      // Note to self: I recall testing a simplified version of
+      // this code, similar to what's in the __APPLE__ block,
+      // on Linux, but I had some problems. IIRC, it ran OK on 32-bit
+      // systems but not on 64-bit. Keep this in mind in case of
+      // 32/64-bit issues on MacOS....
+#ifdef __APPLE__
+      *err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
+      platformFound++;
+#endif
+#ifdef __FreeBSD__
+      *err = ioctl(fd, DIOCGMEDIASIZE, &bytes);
+      b = GetBlockSize();
+      sectors = bytes / b;
+      platformFound++;
+#endif
+#ifdef __linux__
+      *err = ioctl(fd, BLKGETSIZE, &sz);
+      if (*err) {
+         sectors = sz = 0;
+      } // if
+      if ((errno == EFBIG) || (!*err)) {
+         *err = ioctl(fd, BLKGETSIZE64, &b);
+         if (*err || b == 0 || b == sz)
+            sectors = sz;
+         else
+            sectors = (b >> 9);
+      } // if
+      // Unintuitively, the above returns values in 512-byte blocks, no
+      // matter what the underlying device's block size. Correct for this....
+      sectors /= (GetBlockSize() / 512);
+      platformFound++;
+#endif
+      if (platformFound != 1)
+         fprintf(stderr, "Warning! We seem to be running on no known platform!\n");
+
+      // The above methods have failed, so let's assume it's a regular
+      // file (a QEMU image, dd backup, or what have you) and see what
+      // fstat() gives us....
+      if ((sectors == 0) || (*err == -1)) {
+         if (fstat64(fd, &st) == 0) {
+            bytes = (off_t) st.st_size;
+            if ((bytes % UINT64_C(512)) != 0)
+               fprintf(stderr, "Warning: File size is not a multiple of 512 bytes!"
+                       " Misbehavior is likely!\n\a");
+            sectors = bytes / UINT64_C(512);
+         } // if
+      } // if
+   } // if (isOpen)
+   return sectors;
+} // DiskIO::DiskSize()
