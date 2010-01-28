@@ -14,9 +14,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <fcntl.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <iostream>
+#include <string>
 #include "support.h"
 #include "bsd.h"
 
@@ -41,39 +42,30 @@ BSDData::~BSDData(void) {
 
 // Read BSD disklabel data from the specified device filename. This function
 // just opens the device file and then calls an overloaded function to do
-// the bulk of the work.
-int BSDData::ReadBSDData(char* device, uint64_t startSector, uint64_t endSector) {
-   int allOK = 1, tempMyDisk = 0;
+// the bulk of the work. Returns 1 on success, 0 on failure.
+int BSDData::ReadBSDData(string *device, uint64_t startSector, uint64_t endSector) {
+   int allOK = 1;
+   DiskIO myDisk;
 
-   if (device != NULL) {
-      if (myDisk == NULL) {
-         myDisk = new DiskIO;
-         tempMyDisk = 1;
-      } // if
-      if (myDisk->OpenForRead(device)) {
-         ReadBSDData(myDisk, startSector, endSector);
+   if (*device != "") {
+      if (myDisk.OpenForRead(*device)) {
+         allOK = ReadBSDData(&myDisk, startSector, endSector);
       } else {
          allOK = 0;
       } // if/else
 
-      myDisk->Close();
+      myDisk.Close();
    } else {
       allOK = 0;
    } // if/else
-
-   if (tempMyDisk) {
-      delete myDisk;
-      myDisk = NULL;
-   } // if
-
    return allOK;
 } // BSDData::ReadBSDData() (device filename version)
 
 // Load the BSD disklabel data from an already-opened disk
 // file, starting with the specified sector number.
-void BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSector) {
+int BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSector) {
    uint8_t buffer[4096]; // I/O buffer
-   int i, err, foundSig = 0, bigEnd = 0;
+   int i, err, foundSig = 0, bigEnd = 0, allOK = 1;
    int relative = 0; // assume absolute partition sector numbering
    uint32_t realSig;
    uint32_t* temp32;
@@ -81,54 +73,59 @@ void BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSec
    BSDRecord* tempRecords;
    int offset[NUM_OFFSETS] = { LABEL_OFFSET1, LABEL_OFFSET2 };
 
-   myDisk = theDisk;
+//   myDisk = theDisk;
    labelFirstLBA = startSector;
    labelLastLBA = endSector;
-   offset[1] = myDisk->GetBlockSize();
+   offset[1] = theDisk->GetBlockSize();
 
    // Read 4096 bytes (eight 512-byte sectors or equivalent)
    // into memory; we'll extract data from this buffer.
    // (Done to work around FreeBSD limitation on size of reads
    // from block devices.)
-   myDisk->Seek(startSector /* * myDisk->GetBlockSize() */);
-   myDisk->Read(buffer, 4096);
+   allOK = theDisk->Seek(startSector);
+   if (allOK) allOK = theDisk->Read(buffer, 4096);
 
    // Do some strangeness to support big-endian architectures...
    bigEnd = (IsLittleEndian() == 0);
    realSig = BSD_SIGNATURE;
-   if (bigEnd)
+   if (bigEnd && allOK)
       ReverseBytes(&realSig, 4);
 
    // Look for the signature at any of two locations.
    // Note that the signature is repeated at both the original
    // offset and 132 bytes later, so we need two checks....
-   i = 0;
-   do {
-      temp32 = (uint32_t*) &buffer[offset[i]];
-      signature = *temp32;
-      if (signature == realSig) { // found first, look for second
-         temp32 = (uint32_t*) &buffer[offset[i] + 132];
-         signature2 = *temp32;
-         if (signature2 == realSig) {
-            foundSig = 1;
-            labelStart = offset[i];
-         } // if found signature
-      } // if/else
-      i++;
-   } while ((!foundSig) && (i < NUM_OFFSETS));
+   if (allOK) {
+      i = 0;
+      do {
+         temp32 = (uint32_t*) &buffer[offset[i]];
+         signature = *temp32;
+         if (signature == realSig) { // found first, look for second
+            temp32 = (uint32_t*) &buffer[offset[i] + 132];
+            signature2 = *temp32;
+            if (signature2 == realSig) {
+               foundSig = 1;
+               labelStart = offset[i];
+            } // if found signature
+         } // if/else
+         i++;
+      } while ((!foundSig) && (i < NUM_OFFSETS));
+      allOK = foundSig;
+   } // if
 
    // Load partition metadata from the buffer....
-   temp32 = (uint32_t*) &buffer[labelStart + 40];
-   sectorSize = *temp32;
-   temp16 = (uint16_t*) &buffer[labelStart + 138];
-   numParts = *temp16;
+   if (allOK) {
+      temp32 = (uint32_t*) &buffer[labelStart + 40];
+      sectorSize = *temp32;
+      temp16 = (uint16_t*) &buffer[labelStart + 138];
+      numParts = *temp16;
+   } // if
 
    // Make it big-endian-aware....
-   if (IsLittleEndian() == 0)
+   if ((IsLittleEndian() == 0) && allOK)
       ReverseMetaBytes();
 
    // Check validity of the data and flag it appropriately....
-   if (foundSig && (numParts <= MAX_BSD_PARTS)) {
+   if (foundSig && (numParts <= MAX_BSD_PARTS) && allOK) {
       state = bsd;
    } else {
       state = bsd_invalid;
@@ -167,7 +164,8 @@ void BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSec
       } // if
    } // if signatures OK
 //   DisplayBSDData();
-} // BSDData::ReadBSDData(int fd, uint64_t startSector)
+   return allOK;
+} // BSDData::ReadBSDData(DiskIO* theDisk, uint64_t startSector)
 
 // Reverse metadata's byte order; called only on big-endian systems
 void BSDData::ReverseMetaBytes(void) {
@@ -182,12 +180,19 @@ void BSDData::DisplayBSDData(void) {
    int i;
 
    if (state == bsd) {
-      printf("BSD partitions:\n");
-      printf("Number\t Start (sector)\t Length (sectors)\tType\n");
+      cout << "BSD partitions:\n";
       for (i = 0; i < numParts; i++) {
-         printf("%4d\t%13lu\t%15lu \t0x%02X\n", i + 1,
-                (unsigned long) partitions[i].firstLBA,
-                (unsigned long) partitions[i].lengthLBA, partitions[i].fsType);
+         cout.width(4);
+         cout << i + 1 << "\t";
+         cout.width(13);
+         cout << partitions[i].firstLBA << "\t";
+         cout.width(15);
+         cout << partitions[i].lengthLBA << " \t0x";
+         cout.width(2);
+         cout.fill('0');
+         cout.setf(ios::uppercase);
+         cout << hex << (int) partitions[i].fsType << "\n" << dec;
+         cout.fill(' ');
       } // for
    } // if
 } // BSDData::DisplayBSDData()
@@ -199,14 +204,14 @@ int BSDData::ShowState(void) {
 
    switch (state) {
       case bsd_invalid:
-         printf("  BSD: not present\n");
+         cout << "  BSD: not present\n";
          break;
       case bsd:
-         printf("  BSD: present\n");
+         cout << "  BSD: present\n";
          retval = 1;
          break;
       default:
-         printf("\a  BSD: unknown -- bug!\n");
+         cout << "\a  BSD: unknown -- bug!\n";
          break;
    } // switch
    return retval;
@@ -318,7 +323,7 @@ GPTPart BSDData::AsGPT(int i) {
             guid.SetType(0x0700); break;
       } // switch
       // Set the partition name to the name of the type code....
-      guid.SetName((unsigned char*) guid.GetNameType().c_str());
+      guid.SetName(guid.GetNameType());
    } // if
    return guid;
 } // BSDData::AsGPT()

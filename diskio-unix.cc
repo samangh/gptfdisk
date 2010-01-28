@@ -16,7 +16,7 @@
 #define __STDC_CONSTANT_MACROS
 
 #include <sys/ioctl.h>
-#include <stdio.h>
+#include <string.h>
 #include <string>
 #include <stdint.h>
 #include <errno.h>
@@ -24,7 +24,6 @@
 #include <sys/stat.h>
 #include <iostream>
 
-#include "support.h"
 #include "diskio.h"
 
 using namespace std;
@@ -50,10 +49,9 @@ int DiskIO::OpenForRead(void) {
    if (shouldOpen) {
       fd = open(realFilename.c_str(), O_RDONLY);
       if (fd == -1) {
-         fprintf(stderr, "Problem opening %s for reading! Error is %d\n",
-                 realFilename.c_str(), errno);
+         cerr << "Problem opening " << realFilename << " for reading! Error is " << errno << "\n";
          if (errno == EACCES) { // User is probably not running as root
-            fprintf(stderr, "You must run this program as root or use sudo!\n");
+            cerr << "You must run this program as root or use sudo!\n";
          } // if
          realFilename = "";
          userFilename = "";
@@ -82,7 +80,7 @@ int DiskIO::OpenForWrite(void) {
 #ifdef __APPLE__
    // MacOS X requires a shared lock under some circumstances....
    if (fd < 0) {
-      fd = open(realFilename.c_str(), O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH | O_SHLOCK);
+      fd = open(realFilename.c_str(), O_WRONLY | O_SHLOCK);
    } // if
 #endif
    if (fd >= 0) {
@@ -133,8 +131,8 @@ int DiskIO::GetBlockSize(void) {
          // 32-bit code returns EINVAL, I don't know why. I know I'm treading on
          // thin ice here, but it should be OK in all but very weird cases....
          if ((errno != ENOTTY) && (errno != EINVAL)) {
-            printf("\aError %d when determining sector size! Setting sector size to %d\n",
-                  errno, SECTOR_SIZE);
+            cerr << "\aError " << errno << " when determining sector size! Setting sector size to "
+                 << SECTOR_SIZE << "\n";
          } // if
       } // if (err == -1)
    } // if (isOpen)
@@ -155,8 +153,8 @@ void DiskIO::DiskSync(void) {
    if (isOpen) {
       sync();
 #ifdef __APPLE__
-      printf("Warning: The kernel may continue to use old or deleted partitions.\n"
-            "You should reboot or remove the drive.\n");
+      cout << "Warning: The kernel may continue to use old or deleted partitions.\n"
+           << "You should reboot or remove the drive.\n";
                /* don't know if this helps
                * it definitely will get things on disk though:
                * http://topiks.org/mac-os-x/0321278542/ch12lev1sec8.html */
@@ -166,22 +164,22 @@ void DiskIO::DiskSync(void) {
 #ifdef __FreeBSD__
       sleep(2);
       i = ioctl(fd, DIOCGFLUSH);
-      printf("Warning: The kernel may continue to use old or deleted partitions.\n"
-            "You should reboot or remove the drive.\n");
+      cout << "Warning: The kernel may continue to use old or deleted partitions.\n"
+           << "You should reboot or remove the drive.\n";
       platformFound++;
 #endif
 #ifdef __linux__
       sleep(2);
       i = ioctl(fd, BLKRRPART);
       if (i)
-         printf("Warning: The kernel is still using the old partition table.\n"
-               "The new table will be used at the next reboot.\n");
+         cout << "Warning: The kernel is still using the old partition table.\n"
+              << "The new table will be used at the next reboot.\n";
       platformFound++;
 #endif
       if (platformFound == 0)
-         fprintf(stderr, "Warning: Platform not recognized!\n");
+         cerr << "Warning: Platform not recognized!\n";
       if (platformFound > 1)
-         fprintf(stderr, "\nWarning: We seem to be running on multiple platforms!\n");
+         cerr << "\nWarning: We seem to be running on multiple platforms!\n";
    } // if (isOpen)
 } // DiskIO::DiskSync()
 
@@ -233,9 +231,6 @@ int DiskIO::Read(void* buffer, int numBytes) {
       // Read the data into temporary space, then copy it to buffer
       retval = read(fd, tempSpace, numBlocks * blockSize);
       memcpy(buffer, tempSpace, numBytes);
-/*      for (i = 0; i < numBytes; i++) {
-         ((char*) buffer)[i] = tempSpace[i];
-      } // for */
 
       // Adjust the return value, if necessary....
       if (((numBlocks * blockSize) != numBytes) && (retval > 0))
@@ -347,7 +342,7 @@ uint64_t DiskIO::DiskSize(int *err) {
       platformFound++;
 #endif
       if (platformFound != 1)
-         fprintf(stderr, "Warning! We seem to be running on no known platform!\n");
+         cerr << "Warning! We seem to be running on no known platform!\n";
 
       // The above methods have failed, so let's assume it's a regular
       // file (a QEMU image, dd backup, or what have you) and see what
@@ -356,8 +351,8 @@ uint64_t DiskIO::DiskSize(int *err) {
          if (fstat64(fd, &st) == 0) {
             bytes = (off_t) st.st_size;
             if ((bytes % UINT64_C(512)) != 0)
-               fprintf(stderr, "Warning: File size is not a multiple of 512 bytes!"
-                       " Misbehavior is likely!\n\a");
+               cerr << "Warning: File size is not a multiple of 512 bytes!"
+                    << " Misbehavior is likely!\n\a";
             sectors = bytes / UINT64_C(512);
          } // if
       } // if

@@ -71,16 +71,16 @@ protected:
    uint64_t numHeads; // number of heads, in CHS scheme
    uint64_t numSecspTrack; // number of sectors per track, in CHS scheme
    DiskIO* myDisk;
-   char device[256];
+   string device;
    MBRValidity state;
    struct MBRRecord* GetPartition(int i); // Return primary or logical partition
 public:
    MBRData(void);
-   MBRData(char* deviceFilename);
+   MBRData(string deviceFilename);
    ~MBRData(void);
 
    // File I/O functions...
-   int ReadMBRData(char* deviceFilename);
+   int ReadMBRData(string deviceFilename);
    void ReadMBRData(DiskIO * theDisk, int checkBlockSize = 1);
    // ReadLogicalPart() returns last partition # read to logicals[] array,
    // or -1 if there was a problem....
@@ -88,7 +88,7 @@ public:
                        int partNum);
    int WriteMBRData(void);
    int WriteMBRData(DiskIO *theDisk);
-   int WriteMBRData(char* deviceFilename);
+   int WriteMBRData(string deviceFilename);
 
    // Display data for user...
    void DisplayMBRData(void);

@@ -18,7 +18,7 @@ using namespace std;
 class Attributes {
 protected:
    uint64_t attributes;
-   char atNames[NUM_ATR][ATR_NAME_SIZE];
+   string atNames[NUM_ATR];
 public:
    Attributes(void);
    ~Attributes(void);

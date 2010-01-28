@@ -69,7 +69,7 @@ class GPTPart {
       void SetFirstLBA(uint64_t f) {firstLBA = f;}
       void SetLastLBA(uint64_t l) {lastLBA = l;}
       void SetAttributes(uint64_t a) {attributes = a;}
-      void SetName(unsigned char* n);
+      void SetName(string n);
 
       // Additional functions
       GPTPart & operator=(const GPTPart & orig);

@@ -18,6 +18,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <iostream>
 #include "crc32.h"
 #include "gpt.h"
 #include "bsd.h"
@@ -40,7 +41,7 @@ GPTData::GPTData(void) {
    diskSize = 0;
    partitions = NULL;
    state = gpt_valid;
-   strcpy(device, "");
+   device = "";
    justLooking = 0;
    mainCrcOk = 0;
    secondCrcOk = 0;
@@ -57,12 +58,12 @@ GPTData::GPTData(void) {
 } // GPTData default constructor
 
 // The following constructor loads GPT data from a device file
-GPTData::GPTData(char* filename) {
+GPTData::GPTData(string filename) {
    blockSize = SECTOR_SIZE; // set a default
    diskSize = 0;
    partitions = NULL;
    state = gpt_invalid;
-   strcpy(device, "");
+   device = "";
    justLooking = 0;
    mainCrcOk = 0;
    secondCrcOk = 0;
@@ -77,7 +78,7 @@ GPTData::GPTData(char* filename) {
    mainHeader.numParts = 0;
    if (!LoadPartitions(filename))
       exit(2);
-} // GPTData(char* filename) constructor
+} // GPTData(string filename) constructor
 
 // Destructor
 GPTData::~GPTData(void) {
@@ -102,116 +103,109 @@ int GPTData::Verify(void) {
    // First, check for CRC errors in the GPT data....
    if (!mainCrcOk) {
       problems++;
-      printf("\nProblem: The CRC for the main GPT header is invalid. The main GPT header may\n"
-             "be corrupt. Consider loading the backup GPT header to rebuild the main GPT\n"
-             "header ('b' on the recovery & transformation menu). This report may be a false\n"
-             "alarm if you've already corrected other problems.\n");
+      cout << "\nProblem: The CRC for the main GPT header is invalid. The main GPT header may\n"
+           << "be corrupt. Consider loading the backup GPT header to rebuild the main GPT\n"
+           << "header ('b' on the recovery & transformation menu). This report may be a false\n"
+           << "alarm if you've already corrected other problems.\n";
    } // if
    if (!mainPartsCrcOk) {
       problems++;
-      printf("\nProblem: The CRC for the main partition table is invalid. This table may be\n"
-             "corrupt. Consider loading the backup partition table ('c' on the recovery &\n"
-             "transformation menu). This report may be a false alarm if you've already\n"
-             "corrected other problems.\n");
+      cout << "\nProblem: The CRC for the main partition table is invalid. This table may be\n"
+           << "corrupt. Consider loading the backup partition table ('c' on the recovery &\n"
+           << "transformation menu). This report may be a false alarm if you've already\n"
+           << "corrected other problems.\n";
    } // if
    if (!secondCrcOk) {
       problems++;
-      printf("\nProblem: The CRC for the backup GPT header is invalid. The backup GPT header\n"
-            "may be corrupt. Consider using the main GPT header to rebuild the backup GPT\n"
-            "header ('d' on the recovery & transformation menu). This report may be a false\n"
-            "alarm if you've already corrected other problems.\n");
+      cout << "\nProblem: The CRC for the backup GPT header is invalid. The backup GPT header\n"
+           << "may be corrupt. Consider using the main GPT header to rebuild the backup GPT\n"
+           << "header ('d' on the recovery & transformation menu). This report may be a false\n"
+           << "alarm if you've already corrected other problems.\n";
    } // if
    if (!secondPartsCrcOk) {
       problems++;
-      printf("\nCaution: The CRC for the backup partition table is invalid. This table may\n"
-             "be corrupt. This program will automatically create a new backup partition\n"
-             "table when you save your partitions.\n");
+      cout << "\nCaution: The CRC for the backup partition table is invalid. This table may\n"
+           << "be corrupt. This program will automatically create a new backup partition\n"
+           << "table when you save your partitions.\n";
    } // if
 
    // Now check that the main and backup headers both point to themselves....
    if (mainHeader.currentLBA != 1) {
       problems++;
-      printf("\nProblem: The main header's self-pointer doesn't point to itself. This problem\n"
-             "is being automatically corrected, but it may be a symptom of more serious\n"
-             "problems. Think carefully before saving changes with 'w' or using this disk.\n");
+      cout << "\nProblem: The main header's self-pointer doesn't point to itself. This problem\n"
+           << "is being automatically corrected, but it may be a symptom of more serious\n"
+           << "problems. Think carefully before saving changes with 'w' or using this disk.\n";
       mainHeader.currentLBA = 1;
    } // if
    if (secondHeader.currentLBA != (diskSize - UINT64_C(1))) {
       problems++;
-      printf("\nProblem: The secondary header's self-pointer indicates that it doesn't reside\n"
-             "at the end of the disk. If you've added a disk to a RAID array, use the 'e'\n"
-             "option on the experts' menu to adjust the secondary header's and partition\n"
-             "table's locations.\n");
+      cout << "\nProblem: The secondary header's self-pointer indicates that it doesn't reside\n"
+           << "at the end of the disk. If you've added a disk to a RAID array, use the 'e'\n"
+           << "option on the experts' menu to adjust the secondary header's and partition\n"
+           << "table's locations.\n";
    } // if
 
    // Now check that critical main and backup GPT entries match each other
    if (mainHeader.currentLBA != secondHeader.backupLBA) {
       problems++;
-      printf("\nProblem: main GPT header's current LBA pointer (%llu) doesn't\n"
-            "match the backup GPT header's LBA pointer(%llu).\n",
-            (unsigned long long) mainHeader.currentLBA,
-             (unsigned long long) secondHeader.backupLBA);
+      cout << "\nProblem: main GPT header's current LBA pointer (" << mainHeader.currentLBA
+           << ") doesn't\nmatch the backup GPT header's alternate LBA pointer("
+           << secondHeader.backupLBA << ").\n";
    } // if
    if (mainHeader.backupLBA != secondHeader.currentLBA) {
       problems++;
-      printf("\nProblem: main GPT header's backup LBA pointer (%llu) doesn't\n"
-             "match the backup GPT header's current LBA pointer (%llu).\n"
-             "The 'e' option on the experts' menu may fix this problem.\n",
-             (unsigned long long) mainHeader.backupLBA,
-             (unsigned long long) secondHeader.currentLBA);
+      cout << "\nProblem: main GPT header's backup LBA pointer (" << mainHeader.backupLBA
+           << ") doesn't\nmatch the backup GPT header's current LBA pointer ("
+           << secondHeader.currentLBA << ").\n"
+           << "The 'e' option on the experts' menu may fix this problem.\n";
    } // if
    if (mainHeader.firstUsableLBA != secondHeader.firstUsableLBA) {
       problems++;
-      printf("\nProblem: main GPT header's first usable LBA pointer (%llu) doesn't\n"
-             "match the backup GPT header's first usable LBA pointer (%llu)\n",
-             (unsigned long long) mainHeader.firstUsableLBA,
-             (unsigned long long) secondHeader.firstUsableLBA);
+      cout << "\nProblem: main GPT header's first usable LBA pointer (" << mainHeader.firstUsableLBA
+           << ") doesn't\nmatch the backup GPT header's first usable LBA pointer ("
+           << secondHeader.firstUsableLBA << ")\n";
    } // if
    if (mainHeader.lastUsableLBA != secondHeader.lastUsableLBA) {
       problems++;
-      printf("\nProblem: main GPT header's last usable LBA pointer (%llu) doesn't\n"
-             "match the backup GPT header's last usable LBA pointer (%llu)\n",
-             (unsigned long long) mainHeader.lastUsableLBA,
-             (unsigned long long) secondHeader.lastUsableLBA);
-      printf("The 'e' option on the experts' menu can probably fix this problem.\n");
+      cout << "\nProblem: main GPT header's last usable LBA pointer (" << mainHeader.lastUsableLBA
+           << ") doesn't\nmatch the backup GPT header's last usable LBA pointer ("
+           << secondHeader.lastUsableLBA << ")\n"
+           << "The 'e' option on the experts' menu can probably fix this problem.\n";
    } // if
    if ((mainHeader.diskGUID.data1 != secondHeader.diskGUID.data1) ||
         (mainHeader.diskGUID.data2 != secondHeader.diskGUID.data2)) {
       problems++;
-      printf("\nProblem: main header's disk GUID (%s) doesn't\n",
-             GUIDToStr(mainHeader.diskGUID, tempStr));
-      printf("match the backup GPT header's disk GUID (%s)\n",
-             GUIDToStr(secondHeader.diskGUID, tempStr));
-      printf("You should use the 'b' or 'd' option on the recovery & transformation menu to\n"
-             "select one or the other header.\n");
+      cout << "\nProblem: main header's disk GUID (" << GUIDToStr(mainHeader.diskGUID)
+           << ") doesn't\nmatch the backup GPT header's disk GUID ("
+           << GUIDToStr(secondHeader.diskGUID) << ")\n"
+           << "You should use the 'b' or 'd' option on the recovery & transformation menu to\n"
+           << "select one or the other header.\n";
    } // if
    if (mainHeader.numParts != secondHeader.numParts) {
       problems++;
-      printf("\nProblem: main GPT header's number of partitions (%lu) doesn't\n"
-            "match the backup GPT header's number of partitions (%lu)\n",
-            (unsigned long) mainHeader.numParts,
-            (unsigned long) secondHeader.numParts);
-      printf("Resizing the partition table ('s' on the experts' menu) may help.\n");
+      cout << "\nProblem: main GPT header's number of partitions (" << mainHeader.numParts
+           << ") doesn't\nmatch the backup GPT header's number of partitions ("
+           << secondHeader.numParts << ")\n"
+           << "Resizing the partition table ('s' on the experts' menu) may help.\n";
    } // if
    if (mainHeader.sizeOfPartitionEntries != secondHeader.sizeOfPartitionEntries) {
       problems++;
-      printf("\nProblem: main GPT header's size of partition entries (%lu) doesn't\n"
-            "match the backup GPT header's size of partition entries (%lu)\n",
-            (unsigned long) mainHeader.sizeOfPartitionEntries,
-            (unsigned long) secondHeader.sizeOfPartitionEntries);
-      printf("You should use the 'b' or 'd' option on the recovery & transformation menu to\n"
-            "select one or the other header.\n");
+      cout << "\nProblem: main GPT header's size of partition entries ("
+           << mainHeader.sizeOfPartitionEntries << ") doesn't\n"
+           << "match the backup GPT header's size of partition entries ("
+           << secondHeader.sizeOfPartitionEntries << ")\n"
+           << "You should use the 'b' or 'd' option on the recovery & transformation menu to\n"
+           << "select one or the other header.\n";
    } // if
 
    // Now check for a few other miscellaneous problems...
    // Check that the disk size will hold the data...
    if (mainHeader.backupLBA > diskSize) {
       problems++;
-      printf("\nProblem: Disk is too small to hold all the data!\n");
-      printf("(Disk size is %llu sectors, needs to be %llu sectors.)\n",
-             (unsigned long long) diskSize,
-             (unsigned long long) mainHeader.backupLBA);
-      printf("The 'e' option on the experts' menu may fix this problem.\n");
+      cout << "\nProblem: Disk is too small to hold all the data!\n"
+           << "(Disk size is " << diskSize << " sectors, needs to be "
+           << mainHeader.backupLBA << " sectors.)\n"
+           << "The 'e' option on the experts' menu may fix this problem.\n";
    } // if
 
    // Check for overlapping partitions....
@@ -227,9 +221,9 @@ int GPTData::Verify(void) {
    // Format and similar disks)....
    for (i = 0; i < mainHeader.numParts; i++) {
       if ((partitions[i].GetFirstLBA() % sectorAlignment) != 0) {
-         printf("\nCaution: Partition %d doesn't begin on a %d-sector boundary. This may\n"
-                "result in degraded performance on some modern (2010 and later) hard disks.\n",
-                i + 1, sectorAlignment);
+         cout << "\nCaution: Partition " << i + 1 << " doesn't begin on a "
+              << sectorAlignment << "-sector boundary. This may\nresult "
+              << "in degraded performance on some modern (2009 and later) hard disks.\n";
       } // if
    } // for
 
@@ -237,14 +231,15 @@ int GPTData::Verify(void) {
    // problems could affect the results
    if (problems == 0) {
       totalFree = FindFreeBlocks(&numSegments, &largestSegment);
-      BytesToSI(totalFree * (uint64_t) blockSize, siTotal);
-      BytesToSI(largestSegment * (uint64_t) blockSize, siLargest);
-      printf("No problems found. %llu free sectors ", (unsigned long long) totalFree);
-      printf("(%s) available in %u\n", siTotal, numSegments);
-      printf("segments, the largest of which is %llu sectors ", (unsigned long long) largestSegment);
-      printf("(%s) in size\n", siLargest);
+      strcpy(siTotal, BytesToSI(totalFree * (uint64_t) blockSize).c_str());
+      strcpy(siLargest, BytesToSI(largestSegment * (uint64_t) blockSize).c_str());
+      cout << "No problems found. " << totalFree << " free sectors ("
+           << BytesToSI(totalFree * (uint64_t) blockSize) << ") available in "
+           << numSegments << "\nsegments, the largest of which is "
+           << largestSegment << " (" << BytesToSI(largestSegment * (uint64_t) blockSize)
+           << ") in size\n";
    } else {
-      printf("\nIdentified %d problems!\n", problems);
+      cout << "\nIdentified %d problems!\n", problems;
    } // if/else
 
    return (problems);
@@ -275,27 +270,25 @@ int GPTData::CheckGPTSize(void) {
    if (diskSize != 0) {
       if (mainHeader.firstUsableLBA > firstUsedBlock) {
          overlap = mainHeader.firstUsableLBA - firstUsedBlock;
-         printf("Warning! Main partition table overlaps the first partition by %lu blocks!\n",
-                (unsigned long) overlap);
+         cout << "Warning! Main partition table overlaps the first partition by "
+              << overlap << " blocks!\n";
          if (firstUsedBlock > 2) {
-            printf("Try reducing the partition table size by %lu entries.\n",
-                   (unsigned long) (overlap * 4));
-            printf("(Use the 's' item on the experts' menu.)\n");
+            cout << "Try reducing the partition table size by " << overlap * 4
+                 << " entries.\n(Use the 's' item on the experts' menu.)\n";
          } else {
-            printf("You will need to delete this partition or resize it in another utility.\n");
+            cout << "You will need to delete this partition or resize it in another utility.\n";
          } // if/else
          numProbs++;
       } // Problem at start of disk
       if (mainHeader.lastUsableLBA < lastUsedBlock) {
          overlap = lastUsedBlock - mainHeader.lastUsableLBA;
-         printf("Warning! Secondary partition table overlaps the last partition by %lu blocks!\n",
-                (unsigned long) overlap);
+         cout << "Warning! Secondary partition table overlaps the last partition by "
+              << overlap << " blocks!\n";
          if (lastUsedBlock > (diskSize - 2)) {
-            printf("You will need to delete this partition or resize it in another utility.\n");
+            cout << "You will need to delete this partition or resize it in another utility.\n";
          } else {
-            printf("Try reducing the partition table size by %lu entries.\n",
-                   (unsigned long) (overlap * 4));
-            printf("(Use the 's' item on the experts' menu.)\n");
+            cout << "Try reducing the partition table size by " << overlap * 4
+                 << " entries.\n(Use the 's' item on the experts' menu.)\n";
          } // if/else
          numProbs++;
       } // Problem at end of disk
@@ -310,24 +303,31 @@ int GPTData::CheckGPTSize(void) {
 int GPTData::CheckHeaderValidity(void) {
    int valid = 3;
 
+   cout.setf(ios::uppercase);
+   cout.fill('0');
+
+   // Note: failed GPT signature checks produce no error message because
+   // a message is displayed in the ReversePartitionBytes() function
    if (mainHeader.signature != GPT_SIGNATURE) {
       valid -= 1;
-//      printf("Main GPT signature invalid; read 0x%016llX, should be\n0x%016llX\n",
-//             (unsigned long long) mainHeader.signature, (unsigned long long) GPT_SIGNATURE);
    } else if ((mainHeader.revision != 0x00010000) && valid) {
       valid -= 1;
-      printf("Unsupported GPT version in main header; read 0x%08lX, should be\n0x%08lX\n",
-             (unsigned long) mainHeader.revision, (unsigned long) UINT32_C(0x00010000));
+      cout << "Unsupported GPT version in main header; read 0x";
+      cout.width(8);
+      cout << hex << mainHeader.revision << ", should be\n0x";
+      cout.width(8);
+      cout << UINT32_C(0x00010000) << dec << "\n";
    } // if/else/if
 
    if (secondHeader.signature != GPT_SIGNATURE) {
       valid -= 2;
-//      printf("Secondary GPT signature invalid; read 0x%016llX, should be\n0x%016llX\n",
-//             (unsigned long long) secondHeader.signature, (unsigned long long) GPT_SIGNATURE);
    } else if ((secondHeader.revision != 0x00010000) && valid) {
       valid -= 2;
-      printf("Unsupported GPT version in backup header; read 0x%08lX, should be\n0x%08lX\n",
-             (unsigned long) mainHeader.revision, (unsigned long) UINT32_C(0x00010000));
+      cout << "Unsupported GPT version in backup header; read 0x";
+      cout.width(8);
+      cout << hex << secondHeader.revision << ", should be\n0x";
+      cout.width(8);
+      cout << UINT32_C(0x00010000) << dec << "\n";
    } // if/else/if
 
    // If MBR bad, check for an Apple disk signature
@@ -336,8 +336,9 @@ int GPTData::CheckHeaderValidity(void) {
         (mainHeader.signature << 32) == APM_SIGNATURE2)) {
       apmFound = 1; // Will display warning message later
    } // if
+   cout.fill(' ');
 
-        return valid;
+   return valid;
 } // GPTData::CheckHeaderValidity()
 
 // Check the header CRC to see if it's OK...
@@ -474,10 +475,15 @@ int GPTData::FindHybridMismatches(void) {
          } while ((!found) && (j < mainHeader.numParts));
          if (!found) {
             numFound++;
-            printf("\nWarning! Mismatched GPT and MBR partitions! MBR partition "
-                   "%d, of type 0x%02X,\nhas no corresponding GPT partition! "
-                   "You may continue, but this condition\nmight cause data loss"
-                   " in the future!\a\n", i + 1, protectiveMBR.GetType(i));
+            cout << "\nWarning! Mismatched GPT and MBR partition! MBR partition "
+                 << i + 1 << ", of type 0x";
+            cout.fill('0');
+            cout.setf(ios::uppercase);
+            cout.width(2);
+            cout << hex << (int) protectiveMBR.GetType(i) << ",\n"
+                 << "has no corresponding GPT partition! You may continue, but this condition\n"
+                 << "might cause data loss in the future!\a\n" << dec;
+            cout.fill(' ');
          } // if
       } // if
    } // for
@@ -493,13 +499,11 @@ int GPTData::FindOverlaps(void) {
       for (j = 0; j < i; j++) {
          if (partitions[i].DoTheyOverlap(&partitions[j])) {
             problems++;
-            printf("\nProblem: partitions %d and %d overlap:\n", i + 1, j + 1);
-            printf("  Partition %d: %llu to %llu\n", i,
-                   (unsigned long long) partitions[i].GetFirstLBA(),
-                    (unsigned long long) partitions[i].GetLastLBA());
-            printf("  Partition %d: %llu to %llu\n", j,
-                   (unsigned long long) partitions[j].GetFirstLBA(),
-                    (unsigned long long) partitions[j].GetLastLBA());
+            cout << "\nProblem: partitions " << i + 1 << " and " << j + 1 << " overlap:\n";
+            cout << "  Partition " << i + 1 << ": " << partitions[i].GetFirstLBA()
+                 << " to " << partitions[i].GetLastLBA() << "\n";
+            cout << "  Partition " << j + 1 << ": " << partitions[j].GetFirstLBA()
+                 << " to " << partitions[j].GetLastLBA() << "\n";
          } // if
       } // for j...
    } // for i...
@@ -527,44 +531,44 @@ void GPTData::PartitionScan(void) {
    ForceLoadGPTData();
 
    if (!beQuiet) {
-      printf("Partition table scan:\n");
+      cout << "Partition table scan:\n";
       protectiveMBR.ShowState();
       bsdDisklabel.ShowState();
       ShowAPMState(); // Show whether there's an Apple Partition Map present
       ShowGPTState(); // Show GPT status
-      printf("\n");
+      cout << "\n";
    } // if
 
    if (apmFound) {
-      printf("\n*******************************************************************\n");
-      printf("This disk appears to contain an Apple-format (APM) partition table!\n");
+      cout << "\n*******************************************************************\n"
+           << "This disk appears to contain an Apple-format (APM) partition table!\n";
       if (!justLooking) {
-         printf("It will be destroyed if you continue!\n");
+         cout << "It will be destroyed if you continue!\n";
       } // if
-      printf("*******************************************************************\n\n\a");
+      cout << "*******************************************************************\n\n\a";
    } // if
 } // GPTData::PartitionScan()
 
 // Read GPT data from a disk.
-int GPTData::LoadPartitions(char* deviceFilename) {
-   int fd, err;
+int GPTData::LoadPartitions(string deviceFilename) {
+   int err;
    int allOK = 1, i;
    uint64_t firstBlock, lastBlock;
    BSDData bsdDisklabel;
+   MBRValidity mbrState;
 
    // First, do a test to see if writing will be possible later....
-   fd = myDisk.OpenForWrite(deviceFilename);
-   if ((fd == -1) && (!justLooking)) {
-      printf("\aNOTE: Write test failed with error number %d. It will be "
-             "impossible to save\nchanges to this disk's partition table!\n",
-             errno);
+   err = myDisk.OpenForWrite(deviceFilename);
+   if ((err == 0) && (!justLooking)) {
+      cout << "\aNOTE: Write test failed with error number " << errno
+           << ". It will be impossible to save\nchanges to this disk's partition table!\n";
 #ifdef __FreeBSD__
-      printf("You may be able to enable writes by exiting this program, typing\n"
-             "'sysctl kern.geom.debugflags=16' at a shell prompt, and re-running this\n"
-             "program.\n");
+      cout << "You may be able to enable writes by exiting this program, typing\n"
+           << "'sysctl kern.geom.debugflags=16' at a shell prompt, and re-running this\n"
+           << "program.\n";
 #endif
-      printf("\n");
-      justLooking = 1;
+      cout << "\n";
+//      justLooking = 1;
    } // if
    myDisk.Close();
 
@@ -574,7 +578,7 @@ int GPTData::LoadPartitions(char* deviceFilename) {
       diskSize = myDisk.DiskSize(&err);
       blockSize = (uint32_t) myDisk.GetBlockSize();
       sectorAlignment = myDisk.FindAlignment();
-      strcpy(device, deviceFilename);
+      device = deviceFilename;
       PartitionScan(); // Check for partition types, load GPT, & print summary
 
       whichWasUsed = UseWhichPartitions();
@@ -590,6 +594,9 @@ int GPTData::LoadPartitions(char* deviceFilename) {
             XFormDisklabel(&bsdDisklabel, 0);
             break;
          case use_gpt:
+            mbrState = protectiveMBR.GetValidity();
+            if ((mbrState == invalid) || (mbrState == mbr))
+               protectiveMBR.MakeProtectiveMBR();
             break;
          case use_new:
             ClearGPTData();
@@ -597,7 +604,7 @@ int GPTData::LoadPartitions(char* deviceFilename) {
             break;
          case use_abort:
             allOK = 0;
-            printf("Aborting because of invalid partition data!\n");
+            cerr << "Aborting because of invalid partition data!\n";
             break;
       } // switch
 
@@ -616,10 +623,10 @@ int GPTData::LoadPartitions(char* deviceFilename) {
       } // if
    } else {
       allOK = 0;
-      fprintf(stderr, "Problem opening %s for reading! Error is %d\n",
-              deviceFilename, errno);
+      cerr << "Problem opening " << deviceFilename << " for reading! Error is "
+           << errno << "\n";
       if (errno == EACCES) { // User is probably not running as root
-         fprintf(stderr, "You must run this program as root or use sudo!\n");
+         cerr << "You must run this program as root or use sudo!\n";
       } // if
    } // if/else
    return (allOK);
@@ -630,13 +637,13 @@ int GPTData::LoadPartitions(char* deviceFilename) {
 int GPTData::ForceLoadGPTData(void) {
    int allOK = 1, validHeaders;
    off_t seekTo;
-   char* storage;
+   uint8_t* storage;
    uint32_t newCRC, sizeOfParts;
 
    // Seek to and read the main GPT header
    if (myDisk.Seek(1)) {
       if (myDisk.Read(&mainHeader, 512) != 512) { // read main GPT header
-         fprintf(stderr, "Warning! Error %d reading main GPT header!\n", errno);
+         cerr << "Warning! Error " << errno << " reading main GPT header!\n";
       } // if read not OK
    } else allOK = 0; // if/else seek OK
    mainCrcOk = CheckHeaderCRC(&mainHeader);
@@ -653,10 +660,10 @@ int GPTData::ForceLoadGPTData(void) {
          seekTo = mainHeader.backupLBA;
       } else {
          seekTo = diskSize - UINT64_C(1);
-         printf("Warning! Disk size is smaller than the main header indicates! Loading\n"
-                "secondary header from the last sector of the disk! You should use 'v' to\n"
-                "verify disk integrity, and perhaps options on the experts' menu to repair\n"
-                "the disk.\n");
+         cout << "Warning! Disk size is smaller than the main header indicates! Loading\n"
+              << "secondary header from the last sector of the disk! You should use 'v' to\n"
+              << "verify disk integrity, and perhaps options on the experts' menu to repair\n"
+              << "the disk.\n";
       } // else
    } else {
       seekTo = diskSize - UINT64_C(1);
@@ -664,7 +671,7 @@ int GPTData::ForceLoadGPTData(void) {
 
    if (myDisk.Seek(seekTo)) {
       if (myDisk.Read(&secondHeader, 512) != 512) { // read secondary GPT header
-         fprintf(stderr, "Warning! Error %d reading secondary GPT header!\n", errno);
+         cerr << "Warning! Error " << errno << " reading secondary GPT header!\n";
       } // if
       secondCrcOk = CheckHeaderCRC(&secondHeader);
       if (IsLittleEndian() == 0) // big-endian system; adjust header byte order....
@@ -672,8 +679,8 @@ int GPTData::ForceLoadGPTData(void) {
    } else {
       allOK = 0;
       state = gpt_invalid;
-      fprintf(stderr, "Unable to seek to secondary GPT header at sector %llu!\n",
-              (unsigned long long) (diskSize - (UINT64_C(1))));
+      cerr << "Unable to seek to secondary GPT header at sector "
+           << (diskSize - (UINT64_C(1))) << "!\n";
    } // if/else lseek
 
    // Return valid headers code: 0 = both headers bad; 1 = main header
@@ -692,14 +699,14 @@ int GPTData::ForceLoadGPTData(void) {
       // of the two headers is corrupt. If so, use the one that seems to
       // be in better shape to regenerate the bad one
       if (validHeaders == 1) { // valid main header, invalid backup header
-         fprintf(stderr, "\aCaution: invalid backup GPT header, but valid main header; regenerating\n"
-                 "backup header from main header.\n\n");
+         cerr << "\aCaution: invalid backup GPT header, but valid main header; regenerating\n"
+              << "backup header from main header.\n\n";
          RebuildSecondHeader();
          state = gpt_corrupt;
          secondCrcOk = mainCrcOk; // Since regenerated, use CRC validity of main
       } else if (validHeaders == 2) { // valid backup header, invalid main header
-         fprintf(stderr, "\aCaution: invalid main GPT header, but valid backup; regenerating main header\n"
-                 "from backup!\n\n");
+         cerr << "\aCaution: invalid main GPT header, but valid backup; regenerating main header\n"
+              << "from backup!\n\n";
          RebuildMainHeader();
          state = gpt_corrupt;
          mainCrcOk = secondCrcOk; // Since copied, use CRC validity of backup
@@ -714,11 +721,11 @@ int GPTData::ForceLoadGPTData(void) {
       } else { // bad main header CRC and backup header CRC is OK
          state = gpt_corrupt;
          if (LoadSecondTableAsMain()) {
-            fprintf(stderr, "\aWarning: Invalid CRC on main header data; loaded backup partition table.\n");
+            cerr << "\aWarning: Invalid CRC on main header data; loaded backup partition table.\n";
          } else { // backup table bad, bad main header CRC, but try main table in desperation....
             if (LoadMainTable() == 0) {
                allOK = 0;
-               fprintf(stderr, "\a\aWarning! Unable to load either main or backup partition table!\n");
+               cerr << "\a\aWarning! Unable to load either main or backup partition table!\n";
             } // if
          } // if/else (LoadSecondTableAsMain())
       } // if/else (load partition table)
@@ -729,9 +736,9 @@ int GPTData::ForceLoadGPTData(void) {
       seekTo = secondHeader.partitionEntriesLBA;
       if ((myDisk.Seek(seekTo)) && (secondCrcOk)) {
          sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
-         storage = (char*) malloc(sizeOfParts);
+         storage = (uint8_t*) malloc(sizeOfParts);
          if (myDisk.Read(storage, sizeOfParts) != sizeOfParts) {
-            fprintf(stderr, "Warning! Error %d reading backup partition table!\n", errno);
+            cerr << "Warning! Error " << errno << " reading backup partition table!\n";
          } // if
          newCRC = chksum_crc32((unsigned char*) storage,  sizeOfParts);
          free(storage);
@@ -742,14 +749,14 @@ int GPTData::ForceLoadGPTData(void) {
       if (secondPartsCrcOk && secondCrcOk && !mainPartsCrcOk) {
          state = gpt_corrupt;
          allOK = allOK && LoadSecondTableAsMain();
-         fprintf(stderr, "\aWarning! Main partition table CRC mismatch! Loaded backup "
-                         "partition table\ninstead of main partition table!\n\n");
+         cerr << "\aWarning! Main partition table CRC mismatch! Loaded backup "
+              << "partition table\ninstead of main partition table!\n\n";
       } // if
 
       // Check for valid CRCs and warn if there are problems
       if ((mainCrcOk == 0) || (secondCrcOk == 0) || (mainPartsCrcOk == 0) ||
            (secondPartsCrcOk == 0)) {
-         printf("Warning! One or more CRCs don't match. You should repair the disk!\n\n");
+         cerr << "Warning! One or more CRCs don't match. You should repair the disk!\n\n";
          state = gpt_corrupt;
       } // if
    } else {
@@ -776,7 +783,7 @@ int GPTData::LoadMainTable(void) {
          retval = 0;
       sizeOfParts = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
       if (myDisk.Read(partitions, sizeOfParts) != sizeOfParts) {
-         fprintf(stderr, "Warning! Error %d when loading the main partition table!\n", errno);
+         cerr << "Warning! Error " << errno << " when loading the main partition table!\n";
          retval = 0;
       } // if
       newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
@@ -803,7 +810,7 @@ int GPTData::LoadSecondTableAsMain(void) {
          SetGPTSize(secondHeader.numParts);
          sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
          if (myDisk.Read(partitions, sizeOfParts) != sizeOfParts) {
-            fprintf(stderr, "Warning! Read error %d! Misbehavior now likely!\n", errno);
+            cerr << "Warning! Read error " << errno << "! Misbehavior now likely!\n";
             retval = 0;
          } // if
          newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
@@ -812,13 +819,14 @@ int GPTData::LoadSecondTableAsMain(void) {
          if (IsLittleEndian() == 0)
             ReversePartitionBytes();
          if (!secondPartsCrcOk) {
-            printf("Error! After loading backup partitions, the CRC still doesn't check out!\n");
+            cout << "Caution! After loading backup partitions, the CRC still doesn't check out!\n";
          } // if
       } else {
-         printf("Error! Couldn't seek to backup partition table!\n", retval);
+         cerr << "Error! Couldn't seek to backup partition table!\n";
       } // if/else
    } else {
-      printf("Error! Couldn't open device %s when recovering backup partition table!\n", device);
+      cerr << "Error! Couldn't open device " << device
+           << " when recovering backup partition table!\n";
       retval = 0;
    } // if/else
    return retval;
@@ -833,15 +841,15 @@ int GPTData::SaveGPTData(int quiet) {
    uint32_t numParts;
    off_t offset;
 
-   if (strlen(device) == 0) {
-      printf("Device not defined.\n");
+   if (device == "") {
+      cerr << "Device not defined.\n";
    } // if
 
    // First do some final sanity checks....
 
    // This test should only fail on read-only disks....
    if (justLooking) {
-      printf("The justLooking flag is set. This probably means you can't write to the disk.\n");
+      cout << "The justLooking flag is set. This probably means you can't write to the disk.\n";
       allOK = 0;
    } // if
 
@@ -853,29 +861,28 @@ int GPTData::SaveGPTData(int quiet) {
 
    // Check that disk is really big enough to handle this...
    if (mainHeader.backupLBA > diskSize) {
-      fprintf(stderr, "Error! Disk is too small! The 'e' option on the experts' menu might fix the\n"
-              "problem (or it might not). Aborting!\n");
-      printf("(Disk size is %llu sectors, needs to be %llu sectors.)\n",
-             (unsigned long long) diskSize, (unsigned long long) mainHeader.backupLBA);
+      cerr << "Error! Disk is too small! The 'e' option on the experts' menu might fix the\n"
+           << "problem (or it might not). Aborting!\n(Disk size is "
+           << diskSize << " sectors, needs to be " << mainHeader.backupLBA << " sectors.)\n";
       allOK = 0;
    } // if
    // Check that second header is properly placed. Warn and ask if this should
    // be corrected if the test fails....
    if ((mainHeader.backupLBA < (diskSize - UINT64_C(1))) && (quiet == 0)) {
-      printf("Warning! Secondary header is placed too early on the disk! Do you want to\n"
-             "correct this problem? ");
+      cout << "Warning! Secondary header is placed too early on the disk! Do you want to\n"
+           << "correct this problem? ";
       if (GetYN() == 'Y') {
          MoveSecondHeaderToEnd();
-         printf("Have moved second header and partition table to correct location.\n");
+         cout << "Have moved second header and partition table to correct location.\n";
       } else {
-         printf("Have not corrected the problem. Strange problems may occur in the future!\n");
+         cout << "Have not corrected the problem. Strange problems may occur in the future!\n";
       } // if correction requested
    } // if
 
    // Check for overlapping partitions....
    if (FindOverlaps() > 0) {
       allOK = 0;
-      fprintf(stderr, "Aborting write operation!\n");
+      cerr << "Aborting write operation!\n";
    } // if
 
    // Check for mismatched MBR and GPT data, but let it pass if found
@@ -896,12 +903,11 @@ int GPTData::SaveGPTData(int quiet) {
    RecomputeCRCs();
 
    if ((allOK) && (!quiet)) {
-      printf("\nFinal checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING\n");
-      printf("MBR PARTITIONS!!\n\n");
-      printf("Do you want to proceed, possibly destroying your data? ");
+      cout << "\nFinal checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING\n"
+           << "PARTITIONS!!\n\nDo you want to proceed, possibly destroying your data? ";
       answer = GetYN();
       if (answer == 'Y') {
-         printf("OK; writing new GUID partition table (GPT).\n");
+         cout << "OK; writing new GUID partition table (GPT).\n";
       } else {
          allOK = 0;
       } // if/else
@@ -933,8 +939,8 @@ int GPTData::SaveGPTData(int quiet) {
             offset = (off_t) secondTable;
             if (myDisk.Seek(offset) != 1) {
                allOK = 0;
-               printf("Unable to seek to end of disk! Perhaps the 'e' option on the experts' menu\n"
-                      "will resolve this problem.\n");
+               cerr << "Unable to seek to end of disk! Perhaps the 'e' option on the experts' menu\n"
+                    << "will resolve this problem.\n";
             } // if
          } // if
 
@@ -959,20 +965,20 @@ int GPTData::SaveGPTData(int quiet) {
          } // if
 
          if (allOK) { // writes completed OK
-            printf("The operation has completed successfully.\n");
+            cout << "The operation has completed successfully.\n";
          } else {
-            printf("Warning! An error was reported when writing the partition table! This error\n");
-            printf("MIGHT be harmless, but you may have trashed the disk! Use parted and, if\n");
-            printf("necessary, restore your original partition table.\n");
+            cerr << "Warning! An error was reported when writing the partition table! This error\n"
+                 << "MIGHT be harmless, but you may have trashed the disk! Use parted and, if\n"
+                 << "necessary, restore your original partition table.\n";
          } // if/else
          myDisk.Close();
       } else {
-         fprintf(stderr, "Unable to open device %s for writing! Errno is %d! Aborting write!\n",
-                 device, errno);
+         cerr << "Unable to open device " << device << " for writing! Errno is "
+              << errno << "! Aborting write!\n";
          allOK = 0;
       } // if/else
    } else {
-      printf("Aborting write of new partition table.\n");
+      cout << "Aborting write of new partition table.\n";
    } // if
 
    if (IsLittleEndian() == 0) {
@@ -992,7 +998,7 @@ int GPTData::SaveGPTData(int quiet) {
 // the main GPT header, the backup GPT header, and the main partition
 // table; it discards the backup partition table, since it should be
 // identical to the main partition table on healthy disks.
-int GPTData::SaveGPTBackup(char* filename) {
+int GPTData::SaveGPTBackup(string filename) {
    int fd, allOK = 1;
    uint32_t numParts;
    DiskIO backupFile;
@@ -1036,10 +1042,10 @@ int GPTData::SaveGPTBackup(char* filename) {
       } // if
 
       if (allOK) { // writes completed OK
-         printf("The operation has completed successfully.\n");
+         cout << "The operation has completed successfully.\n";
       } else {
-         printf("Warning! An error was reported when writing the backup file.\n");
-         printf("It may not be usable!\n");
+         cerr << "Warning! An error was reported when writing the backup file.\n"
+              << "It may not be usable!\n";
       } // if/else
       backupFile.Close();
 
@@ -1050,7 +1056,7 @@ int GPTData::SaveGPTBackup(char* filename) {
          ReversePartitionBytes();
       } // if
    } else {
-      fprintf(stderr, "Unable to open file %s for writing! Aborting!\n", filename);
+      cerr << "Unable to open file " << filename << " for writing! Aborting!\n";
       allOK = 0;
    } // if/else
    return allOK;
@@ -1060,7 +1066,7 @@ int GPTData::SaveGPTBackup(char* filename) {
 // does minimal error checking. It returns 1 if it completed successfully,
 // 0 if there was a problem. In the latter case, it creates a new empty
 // set of partitions.
-int GPTData::LoadGPTBackup(char* filename) {
+int GPTData::LoadGPTBackup(string filename) {
    int fd, allOK = 1, val;
    uint32_t numParts, sizeOfEntries, sizeOfParts, newCRC;
    int littleEndian = 1;
@@ -1077,7 +1083,7 @@ int GPTData::LoadGPTBackup(char* filename) {
       // Load the main GPT header, check its vaility, and set the GPT
       // size based on the data
       if (backupFile.Read(&mainHeader, 512) != 512) {
-         fprintf(stderr, "Warning! Read error %d; strange behavior now likely!\n", errno);
+         cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
       } // if
       mainCrcOk = CheckHeaderCRC(&mainHeader);
 
@@ -1089,7 +1095,7 @@ int GPTData::LoadGPTBackup(char* filename) {
       // Load the backup GPT header in much the same way as the main
       // GPT header....
       if (backupFile.Read(&secondHeader, 512) != 512) {
-         fprintf(stderr, "Warning! Read error %d; strange behavior now likely!\n", errno);
+         cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
       } // if
       secondCrcOk = CheckHeaderCRC(&secondHeader);
 
@@ -1116,8 +1122,8 @@ int GPTData::LoadGPTBackup(char* filename) {
 
          // If current disk size doesn't match that of backup....
          if (secondHeader.currentLBA != diskSize - UINT64_C(1)) {
-            printf("Warning! Current disk size doesn't match that of the backup!\n"
-                  "Adjusting sizes to match, but subsequent problems are possible!\n");
+            cout << "Warning! Current disk size doesn't match that of the backup!\n"
+                 << "Adjusting sizes to match, but subsequent problems are possible!\n";
             MoveSecondHeaderToEnd();
          } // if
 
@@ -1125,7 +1131,7 @@ int GPTData::LoadGPTBackup(char* filename) {
          // matches the stored value
          sizeOfParts = numParts * sizeOfEntries;
          if (backupFile.Read(partitions, sizeOfParts) != sizeOfParts) {
-            fprintf(stderr, "Warning! Read error %d; strange behavior now likely!\n", errno);
+            cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
          } // if
 
          newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
@@ -1141,7 +1147,7 @@ int GPTData::LoadGPTBackup(char* filename) {
       } // if/else
    } else {
       allOK = 0;
-      fprintf(stderr, "Unable to open file %s for reading! Aborting!\n", filename);
+      cerr << "Unable to open file " << filename << " for reading! Aborting!\n";
    } // if/else
 
    // Something went badly wrong, so blank out partitions
@@ -1155,25 +1161,25 @@ int GPTData::LoadGPTBackup(char* filename) {
 // Tell user whether Apple Partition Map (APM) was discovered....
 void GPTData::ShowAPMState(void) {
    if (apmFound)
-      printf("  APM: present\n");
+      cout << "  APM: present\n";
    else
-      printf("  APM: not present\n");
+      cout << "  APM: not present\n";
 } // GPTData::ShowAPMState()
 
 // Tell user about the state of the GPT data....
 void GPTData::ShowGPTState(void) {
    switch (state) {
       case gpt_invalid:
-         printf("  GPT: not present\n");
+         cout << "  GPT: not present\n";
          break;
       case gpt_valid:
-         printf("  GPT: present\n");
+         cout << "  GPT: present\n";
          break;
       case gpt_corrupt:
-         printf("  GPT: damaged\n");
+         cout << "  GPT: damaged\n";
          break;
       default:
-         printf("\a  GPT: unknown -- bug!\n");
+         cout << "\a  GPT: unknown -- bug!\n";
          break;
    } // switch
 } // GPTData::ShowGPTState()
@@ -1181,24 +1187,20 @@ void GPTData::ShowGPTState(void) {
 // Display the basic GPT data
 void GPTData::DisplayGPTData(void) {
    int i;
-   char sizeInSI[255]; // String to hold size of disk in SI units
-   char tempStr[255];
+//   char tempStr[255];
    uint64_t temp, totalFree;
 
-   BytesToSI(diskSize * blockSize, sizeInSI);
-   printf("Disk %s: %llu sectors, ", device,
-          (unsigned long long) diskSize);
-   printf("%s\n", sizeInSI);
-   printf("Logical sector size: %d bytes\n", blockSize);
-   printf("Disk identifier (GUID): %s\n", GUIDToStr(mainHeader.diskGUID, tempStr));
-   printf("Partition table holds up to %lu entries\n", (unsigned long) mainHeader.numParts);
-   printf("First usable sector is %llu, last usable sector is %llu\n",
-          (unsigned long long) mainHeader.firstUsableLBA,
-          (unsigned long long) mainHeader.lastUsableLBA);
+   cout << "Disk " << device << ": " << diskSize << " sectors, "
+        << BytesToSI(diskSize * blockSize) << "\n";
+   cout << "Logical sector size: " << blockSize << " bytes\n";
+   cout << "Disk identifier (GUID): " << GUIDToStr(mainHeader.diskGUID) << "\n";
+   cout << "Partition table holds up to " << mainHeader.numParts << " entries\n";
+   cout << "First usable sector is " << mainHeader.firstUsableLBA
+        << ", last usable sector is " << mainHeader.lastUsableLBA << "\n";
    totalFree = FindFreeBlocks(&i, &temp);
-   printf("Total free space is %llu sectors ", (unsigned long long) totalFree);
-   printf("(%s)\n", BytesToSI(totalFree * (uint64_t) blockSize, sizeInSI));
-   printf("\nNumber  Start (sector)    End (sector)  Size       Code  Name\n");
+   cout << "Total free space is " << totalFree << " sectors ("
+        << BytesToSI(totalFree * (uint64_t) blockSize) << ")\n";
+   cout << "\nNumber  Start (sector)    End (sector)  Size       Code  Name\n";
    for (i = 0; i < mainHeader.numParts; i++) {
       partitions[i].ShowSummary(i, blockSize);
    } // for
@@ -1214,7 +1216,7 @@ void GPTData::ShowDetails(void) {
       partNum = GetPartNum();
       ShowPartDetails(partNum);
    } else {
-      printf("No partitions\n");
+      cout << "No partitions\n";
    } // if/else
 } // GPTData::ShowDetails()
 
@@ -1223,7 +1225,7 @@ void GPTData::ShowPartDetails(uint32_t partNum) {
    if (partitions[partNum].GetFirstLBA() != 0) {
       partitions[partNum].ShowDetails(blockSize);
    } else {
-      printf("Partition #%d does not exist.", (int) (partNum + 1));
+      cout << "Partition #" << partNum + 1 << " does not exist.";
    } // if
 } // GPTData::ShowPartDetails()
 
@@ -1253,8 +1255,7 @@ void GPTData::ResizePartitionTable(void) {
    char prompt[255];
    uint32_t curLow, curHigh;
 
-   printf("Current partition table size is %lu.\n",
-          (unsigned long) mainHeader.numParts);
+   cout << "Current partition table size is " << mainHeader.numParts << ".\n";
    GetPartRange(&curLow, &curHigh);
    curHigh++; // since GetPartRange() returns numbers starting from 0...
    // There's no point in having fewer than four partitions....
@@ -1264,10 +1265,10 @@ void GPTData::ResizePartitionTable(void) {
            (int) NUM_GPT_ENTRIES);
    newSize = GetNumber(4, 65535, 128, prompt);
    if (newSize < 128) {
-      printf("Caution: The partition table size should officially be 16KB or larger,\n"
-            "which works out to 128 entries. In practice, smaller tables seem to\n"
-            "work with most OSes, but this practice is risky. I'm proceeding with\n"
-            "the resize, but you may want to reconsider this action and undo it.\n\n");
+      cout << "Caution: The partition table size should officially be 16KB or larger,\n"
+           << "which works out to 128 entries. In practice, smaller tables seem to\n"
+           << "work with most OSes, but this practice is risky. I'm proceeding with\n"
+           << "the resize, but you may want to reconsider this action and undo it.\n\n";
    } // if
    SetGPTSize(newSize);
 } // GPTData::ResizePartitionTable()
@@ -1295,7 +1296,7 @@ void GPTData::CreatePartition(void) {
          partNum = GetNumber(firstFreePart + 1, mainHeader.numParts,
                              firstFreePart + 1, prompt) - 1;
          if (partitions[partNum].GetFirstLBA() != 0)
-            printf("partition %d is in use.\n", partNum + 1);
+            cout << "partition " << partNum + 1 << " is in use.\n";
       } while (partitions[partNum].GetFirstLBA() != 0);
 
       // Get first block for new partition...
@@ -1320,9 +1321,9 @@ void GPTData::CreatePartition(void) {
 
       firstFreePart = CreatePartition(partNum, firstBlock, lastBlock);
       partitions[partNum].ChangeType();
-      partitions[partNum].SetName((unsigned char*) partitions[partNum].GetNameType().c_str());
+      partitions[partNum].SetName(partitions[partNum].GetNameType());
    } else {
-      printf("No free sectors available\n");
+      cout << "No free sectors available\n";
    } // if/else
 } // GPTData::CreatePartition()
 
@@ -1337,7 +1338,7 @@ void GPTData::DeletePartition(void) {
       partNum = GetNumber(low + 1, high + 1, low, prompt);
       DeletePartition(partNum - 1);
    } else {
-      printf("No partitions\n");
+      cout << "No partitions\n";
    } // if/else
 } // GPTData::DeletePartition()
 
@@ -1351,7 +1352,7 @@ void GPTData::ChangePartType(void) {
       partNum = GetPartNum();
       partitions[partNum].ChangeType();
    } else {
-      printf("No partitions\n");
+      cout << "No partitions\n";
    } // if/else
 } // GPTData::ChangePartType()
 
@@ -1374,52 +1375,45 @@ void GPTData::SetAttributes(uint32_t partNum) {
 // MBR.
 int GPTData::DestroyGPT(int prompt) {
    int fd, i, sum, tableSize;
-   char blankSector[512], goOn = 'Y', blank = 'N';
-   char* emptyTable;
+   uint8_t blankSector[512], goOn = 'Y', blank = 'N';
+   uint8_t* emptyTable;
 
    for (i = 0; i < 512; i++) {
-      blankSector[i] = '\0';
+      blankSector[i] = 0;
    } // for
 
    if (((apmFound) || (bsdFound)) && (prompt > 0)) {
-      printf("WARNING: APM or BSD disklabel structures detected! This operation could\n"
-             "damage any APM or BSD partitions on this disk!\n");
+      cout << "WARNING: APM or BSD disklabel structures detected! This operation could\n"
+           << "damage any APM or BSD partitions on this disk!\n";
    } // if APM or BSD
    if (prompt > 0) {
-      printf("\a\aAbout to wipe out GPT on %s. Proceed? ", device);
+      cout << "\a\aAbout to wipe out GPT on " << device << ". Proceed? ";
       goOn = GetYN();
    } // if
    if (goOn == 'Y') {
-/*      OpenForWrite(device);
-#ifdef __APPLE__
-      // MacOS X requires a shared lock under some circumstances....
-      if (fd < 0) {
-         fd = open(device, O_WRONLY|O_SHLOCK);
-      } // if
-#endif */
       if (myDisk.OpenForWrite(device)) {
          myDisk.Seek(mainHeader.currentLBA); // seek to GPT header
          if (myDisk.Write(blankSector, 512) != 512) { // blank it out
-            fprintf(stderr, "Warning! GPT main header not overwritten! Error is %d\n", errno);
+            cerr << "Warning! GPT main header not overwritten! Error is " << errno << "\n";
          } // if
          myDisk.Seek(mainHeader.partitionEntriesLBA); // seek to partition table
          tableSize = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
-         emptyTable = (char*) malloc(tableSize);
+         emptyTable = (uint8_t*) malloc(tableSize);
          for (i = 0; i < tableSize; i++)
-            emptyTable[i] = (char) 0;
+            emptyTable[i] = 0;
          sum = myDisk.Write(emptyTable, tableSize);
          if (sum != tableSize)
-            fprintf(stderr, "Warning! GPT main partition table not overwritten! Error is %d\n", errno);
+            cerr << "Warning! GPT main partition table not overwritten! Error is " << errno << "\n";
          myDisk.Seek(secondHeader.partitionEntriesLBA); // seek to partition table
          sum = myDisk.Write(emptyTable, tableSize);
          if (sum != tableSize)
-            fprintf(stderr, "Warning! GPT backup partition table not overwritten! Error is %d\n", errno);
+            cerr << "Warning! GPT backup partition table not overwritten! Error is " << errno << "\n";
          myDisk.Seek(secondHeader.currentLBA); // seek to GPT header
          if (myDisk.Write(blankSector, 512) != 512) { // blank it out
-            fprintf(stderr, "Warning! GPT backup header not overwritten! Error is %d\n", errno);
+            cerr << "Warning! GPT backup header not overwritten! Error is " << errno << "\n";
          } // if
          if (prompt > 0) {
-            printf("Blank out MBR? ");
+            cout << "Blank out MBR? ";
             blank = GetYN();
          } // if
          // Note on below: Touch the MBR only if the user wants it completely
@@ -1430,18 +1424,18 @@ int GPTData::DestroyGPT(int prompt) {
          if ((blank == 'Y') || (prompt < 0)) {
             myDisk.Seek(0);
             if (myDisk.Write(blankSector, 512) != 512) { // blank it out
-               fprintf(stderr, "Warning! MBR not overwritten! Error is %d!\n", errno);
+               cerr << "Warning! MBR not overwritten! Error is " << errno << "!\n";
             } // if
          } else {
-            printf("MBR is unchanged. You may need to delete an EFI GPT (0xEE) partition\n"
-                   "with fdisk or another tool.\n");
+            cout << "MBR is unchanged. You may need to delete an EFI GPT (0xEE) partition\n"
+                 << "with fdisk or another tool.\n";
          } // if/else
          myDisk.DiskSync();
          myDisk.Close();
-         printf("GPT data structures destroyed! You may now partition the disk using fdisk or\n"
-               "other utilities. Program will now terminate.\n");
+         cout << "GPT data structures destroyed! You may now partition the disk using fdisk or\n"
+              << "other utilities. Program will now terminate.\n";
       } else {
-         printf("Problem opening %s for writing! Program will now terminate.\n", device);
+         cerr << "Problem opening " << device << " for writing! Program will now terminate.\n";
       } // if/else (fd != -1)
    } // if (goOn == 'Y')
    return (goOn == 'Y');
@@ -1465,54 +1459,55 @@ WhichToUse GPTData::UseWhichPartitions(void) {
    mbrState = protectiveMBR.GetValidity();
 
    if ((state == gpt_invalid) && ((mbrState == mbr) || (mbrState == hybrid))) {
-      printf("\n***************************************************************\n"
-             "Found invalid GPT and valid MBR; converting MBR to GPT format.\n");
+      cout << "\n***************************************************************\n"
+           << "Found invalid GPT and valid MBR; converting MBR to GPT format.\n";
       if (!justLooking) {
-         printf("\aTHIS OPERATON IS POTENTIALLY DESTRUCTIVE! Exit by typing 'q' if\n"
-               "you don't want to convert your MBR partitions to GPT format!\n");
+         cout << "\aTHIS OPERATON IS POTENTIALLY DESTRUCTIVE! Exit by typing 'q' if\n"
+              << "you don't want to convert your MBR partitions to GPT format!\n";
       } // if
-      printf("***************************************************************\n\n");
+      cout << "***************************************************************\n\n";
       which = use_mbr;
    } // if
 
    if ((state == gpt_invalid) && bsdFound) {
-      printf("\n**********************************************************************\n"
-            "Found invalid GPT and valid BSD disklabel; converting BSD disklabel\n"
-            "to GPT format.");
+      cout << "\n**********************************************************************\n"
+           << "Found invalid GPT and valid BSD disklabel; converting BSD disklabel\n"
+           << "to GPT format.";
       if (!justLooking) {
-      printf("\a THIS OPERATON IS POTENTIALLY DESTRUCTIVE! Your first\n"
-            "BSD partition will likely be unusable. Exit by typing 'q' if you don't\n"
-            "want to convert your BSD partitions to GPT format!");
+      cout << "\a THIS OPERATON IS POTENTIALLY DESTRUCTIVE! Your first\n"
+           << "BSD partition will likely be unusable. Exit by typing 'q' if you don't\n"
+           << "want to convert your BSD partitions to GPT format!";
       } // if
-      printf("\n**********************************************************************\n\n");
+      cout << "\n**********************************************************************\n\n";
       which = use_bsd;
    } // if
 
    if ((state == gpt_valid) && (mbrState == gpt)) {
       which = use_gpt;
       if (!beQuiet)
-         printf("Found valid GPT with protective MBR; using GPT.\n");
+         cout << "Found valid GPT with protective MBR; using GPT.\n";
    } // if
    if ((state == gpt_valid) && (mbrState == hybrid)) {
       which = use_gpt;
       if (!beQuiet)
-         printf("Found valid GPT with hybrid MBR; using GPT.\n");
+         cout << "Found valid GPT with hybrid MBR; using GPT.\n";
    } // if
    if ((state == gpt_valid) && (mbrState == invalid)) {
-      printf("\aFound valid GPT with corrupt MBR; using GPT and will create new\nprotective MBR on save.\n");
+      cout << "\aFound valid GPT with corrupt MBR; using GPT and will create new\n"
+           << "protective MBR on save.\n";
       which = use_gpt;
       protectiveMBR.MakeProtectiveMBR();
    } // if
    if ((state == gpt_valid) && (mbrState == mbr)) {
       if (!beQuiet) {
-         printf("Found valid MBR and GPT. Which do you want to use?\n");
-         answer = GetNumber(1, 3, 2, (char*) " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
+         cout << "Found valid MBR and GPT. Which do you want to use?\n";
+         answer = GetNumber(1, 3, 2, " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
          if (answer == 1) {
             which = use_mbr;
          } else if (answer == 2) {
             which = use_gpt;
             protectiveMBR.MakeProtectiveMBR();
-            printf("Using GPT and creating fresh protective MBR.\n");
+            cout << "Using GPT and creating fresh protective MBR.\n";
          } else which = use_new;
       } else which = use_abort;
    } // if
@@ -1524,34 +1519,33 @@ WhichToUse GPTData::UseWhichPartitions(void) {
          which = use_abort;
       } else {
          if ((mbrState == mbr) || (mbrState == hybrid)) {
-            printf("Found valid MBR and corrupt GPT. Which do you want to use? (Using the\n"
-                  "GPT MAY permit recovery of GPT data.)\n");
-            answer = GetNumber(1, 3, 2, (char*) " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
+            cout << "Found valid MBR and corrupt GPT. Which do you want to use? (Using the\n"
+                 << "GPT MAY permit recovery of GPT data.)\n";
+            answer = GetNumber(1, 3, 2, " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
             if (answer == 1) {
                which = use_mbr;
-   //            protectiveMBR.MakeProtectiveMBR();
             } else if (answer == 2) {
                which = use_gpt;
             } else which = use_new;
          } else if (mbrState == invalid) {
-            printf("Found invalid MBR and corrupt GPT. What do you want to do? (Using the\n"
-                  "GPT MAY permit recovery of GPT data.)\n");
-            answer = GetNumber(1, 2, 1, (char*) " 1 - GPT\n 2 - Create blank GPT\n\nYour answer: ");
+            cout << "Found invalid MBR and corrupt GPT. What do you want to do? (Using the\n"
+                 << "GPT MAY permit recovery of GPT data.)\n";
+            answer = GetNumber(1, 2, 1, " 1 - GPT\n 2 - Create blank GPT\n\nYour answer: ");
             if (answer == 1) {
                which = use_gpt;
             } else which = use_new;
          } else { // corrupt GPT, MBR indicates it's a GPT disk....
-            printf("\a\a****************************************************************************\n"
-                  "Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk\n"
-                  "verification and recovery are STRONGLY recommended.\n"
-                  "****************************************************************************\n");
+            cout << "\a\a****************************************************************************\n"
+                 << "Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk\n"
+                 << "verification and recovery are STRONGLY recommended.\n"
+                 << "****************************************************************************\n";
             which = use_gpt;
          } // if/else/else
       } // else (beQuiet)
    } // if (corrupt GPT)
 
    if (which == use_new)
-      printf("Creating new GPT entries.\n");
+      cout << "Creating new GPT entries.\n";
 
    return which;
 } // UseWhichPartitions()
@@ -1611,30 +1605,30 @@ int GPTData::XFormDisklabel(int i) {
       // Now see if the specified partition has a BSD type code....
       hexCode = partitions[partNum].GetHexType();
       if ((hexCode != 0xa500) && (hexCode != 0xa900)) {
-         printf("Specified partition doesn't have a disklabel partition type "
-               "code.\nContinue anyway?");
+         cout << "Specified partition doesn't have a disklabel partition type "
+              << "code.\nContinue anyway? ";
          goOn = (GetYN() == 'Y');
       } // if
 
       // If all is OK, read the disklabel and convert it.
       if (goOn) {
-         goOn = disklabel.ReadBSDData(device, partitions[partNum].GetFirstLBA(),
+         goOn = disklabel.ReadBSDData(&myDisk, partitions[partNum].GetFirstLBA(),
                                       partitions[partNum].GetLastLBA());
          if ((goOn) && (disklabel.IsDisklabel())) {
             numDone = XFormDisklabel(&disklabel, startPart);
             if (numDone == 1)
-               printf("Converted %d BSD partition.\n", numDone);
+               cout << "Converted " << numDone << " BSD partition.\n";
             else
-               printf("Converted %d BSD partitions.\n", numDone);
+               cout << "Converted " << numDone << " BSD partitions.\n";
          } else {
-            printf("Unable to convert partitions! Unrecognized BSD disklabel.\n");
+            cout << "Unable to convert partitions! Unrecognized BSD disklabel.\n";
          } // if/else
       } // if
       if (numDone > 0) { // converted partitions; delete carrier
          partitions[partNum].BlankPartition();
       } // if
    } else {
-      printf("No partitions\n");
+      cout << "No partitions\n";
    } // if/else
    return numDone;
 } // GPTData::XFormDisklable(int i)
@@ -1667,42 +1661,48 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
    char line[255];
    char* junk;
 
+   cout.setf(ios::uppercase);
+   cout.fill('0');
+
    if ((mbrPart < 0) || (mbrPart > 3)) {
-      printf("MBR partition %d is out of range; omitting it.\n", mbrPart + 1);
+      cout << "MBR partition " << mbrPart + 1 << " is out of range; omitting it.\n";
       allOK = 0;
    } // if
    if (gptPart >= mainHeader.numParts) {
-      printf("GPT partition %d is out of range; omitting it.\n", gptPart + 1);
+      cout << "GPT partition " << gptPart + 1 << " is out of range; omitting it.\n";
       allOK = 0;
    } // if
    if (allOK && (partitions[gptPart].GetLastLBA() == UINT64_C(0))) {
-      printf("GPT partition %d is undefined; omitting it.\n", gptPart + 1);
+      cout << "GPT partition " << gptPart + 1 << " is undefined; omitting it.\n";
       allOK = 0;
    } // if
    if (allOK && (partitions[gptPart].GetFirstLBA() <= UINT32_MAX) &&
        (partitions[gptPart].GetLengthLBA() <= UINT32_MAX)) {
       if (partitions[gptPart].GetLastLBA() > UINT32_MAX) {
-         printf("Caution: Partition end point past 32-bit pointer boundary;"
-                " some OSes may\nreact strangely.\n");
+         cout << "Caution: Partition end point past 32-bit pointer boundary;"
+              << " some OSes may\nreact strangely.\n";
       } // if partition ends past 32-bit (usually 2TiB) boundary
       do {
-         printf("Enter an MBR hex code (default %02X): ",
-                  typeHelper.GUIDToID(partitions[gptPart].GetType()) / 256);
+         cout << "Enter an MBR hex code (default " << hex;
+         cout.width(2);
+         cout << typeHelper.GUIDToID(partitions[gptPart].GetType()) / 256 << "): ";
          junk = fgets(line, 255, stdin);
-         sscanf(line, "%x", &typeCode);
          if (line[0] == '\n')
             typeCode = partitions[gptPart].GetHexType() / 256;
+         else
+            sscanf(line, "%x", &typeCode);
       } while ((typeCode <= 0) || (typeCode > 255));
-      printf("Set the bootable flag? ");
+      cout << "Set the bootable flag? ";
       bootable = (GetYN() == 'Y');
       length = partitions[gptPart].GetLengthLBA();
       protectiveMBR.MakePart(mbrPart, (uint32_t) partitions[gptPart].GetFirstLBA(),
                              (uint32_t) length, typeCode, bootable);
    } else { // partition out of range
-      printf("Partition %d begins beyond the 32-bit pointer limit of MBR "
-             "partitions, or is\n too big; omitting it.\n", gptPart + 1);
+      cout << "Partition " << gptPart + 1 << " begins beyond the 32-bit pointer limit of MBR "
+           << "partitions, or is\n too big; omitting it.\n";
       allOK = 0;
    } // if/else
+   cout.fill(' ');
    return allOK;
 } // GPTData::OnePartToMBR()
 
@@ -1720,15 +1720,15 @@ int GPTData::XFormToMBR(void) {
    // Get the numbers of up to four partitions to add to the
    // hybrid MBR....
    numParts = CountParts();
-   printf("Counted %d partitions.\n", numParts);
+   cout << "Counted " << numParts << " partitions.\n";
 
    // Prepare the MBR for conversion (empty it of existing partitions).
    protectiveMBR.EmptyMBR(0);
    protectiveMBR.SetDiskSize(diskSize);
 
    if (numParts > 4) { // Over four partitions; engage in triage
-      printf("Type from one to four GPT partition numbers, separated by spaces, to be\n"
-            "used in the MBR, in sequence: ");
+      cout << "Type from one to four GPT partition numbers, separated by spaces, to be\n"
+           << "used in the MBR, in sequence: ";
       junk = fgets(line, 255, stdin);
       numParts = sscanf(line, "%d %d %d %d", &partNums[0], &partNums[1],
                         &partNums[2], &partNums[3]);
@@ -1743,10 +1743,10 @@ int GPTData::XFormToMBR(void) {
 
    for (i = 0; i < numParts; i++) {
       j = partNums[i] - 1;
-      printf("\nCreating entry for partition #%d\n", j + 1);
+      cout << "\nCreating entry for partition #" << j + 1 << "\n";
       numConverted += OnePartToMBR(j, i);
    } // for
-   printf("MBR writing returned %d\n", protectiveMBR.WriteMBRData(&myDisk));
+   cout << "MBR writing returned " << protectiveMBR.WriteMBRData(&myDisk) << "\n";
    return numConverted;
 } // GPTData::XFormToMBR()
 
@@ -1760,14 +1760,14 @@ void GPTData::MakeHybrid(void) {
    char fillItUp = 'M'; // fill extra partition entries? (Yes/No/Maybe)
    char eeFirst = 'Y'; // Whether EFI GPT (0xEE) partition comes first in table
 
-   printf("\nWARNING! Hybrid MBRs are flaky and potentially dangerous! If you decide not\n"
-         "to use one, just hit the Enter key at the below prompt and your MBR\n"
-         "partition table will be untouched.\n\n\a");
+   cout << "\nWARNING! Hybrid MBRs are flaky and potentially dangerous! If you decide not\n"
+        << "to use one, just hit the Enter key at the below prompt and your MBR\n"
+        << "partition table will be untouched.\n\n\a";
 
    // Now get the numbers of up to three partitions to add to the
    // hybrid MBR....
-   printf("Type from one to three GPT partition numbers, separated by spaces, to be\n"
-         "added to the hybrid MBR, in sequence: ");
+   cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
+        << "added to the hybrid MBR, in sequence: ";
    junk = fgets(line, 255, stdin);
    numParts = sscanf(line, "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
 
@@ -1776,13 +1776,13 @@ void GPTData::MakeHybrid(void) {
       // alone....
       protectiveMBR.EmptyMBR(0);
       protectiveMBR.SetDiskSize(diskSize);
-      printf("Place EFI GPT (0xEE) partition first in MBR (good for GRUB)? ");
+      cout << "Place EFI GPT (0xEE) partition first in MBR (good for GRUB)? ";
       eeFirst = GetYN();
    } // if
 
    for (i = 0; i < numParts; i++) {
       j = partNums[i] - 1;
-      printf("\nCreating entry for partition #%d\n", j + 1);
+      cout << "\nCreating entry for partition #" << j + 1 << "\n";
       if (eeFirst == 'Y')
          mbrNum = i + 1;
       else
@@ -1811,13 +1811,13 @@ void GPTData::MakeHybrid(void) {
       for (i = 0; i < 4; i++) {
          if (protectiveMBR.GetType(i) == 0x00) { // unused entry....
             if (fillItUp == 'M') {
-               printf("\nUnused partition space(s) found. Use one to protect more partitions? ");
+               cout << "\nUnused partition space(s) found. Use one to protect more partitions? ";
                fillItUp = GetYN();
                typeCode = 0x00; // use this to flag a need to get type code
             } // if
             if (fillItUp == 'Y') {
                while ((typeCode <= 0) || (typeCode > 255)) {
-                  printf("Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ");
+                  cout << "Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ";
                   // Comment on above: Mac OS treats disks with more than one
                   // 0xEE MBR partition as MBR disks, not as GPT disks.
                   junk = fgets(line, 255, stdin);
@@ -1852,9 +1852,9 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
    // that fills the allocated sectors
    i = blockSize / GPT_SIZE;
    if ((numEntries % i) != 0) {
-      printf("Adjusting GPT size from %lu ", (unsigned long) numEntries);
+      cout << "Adjusting GPT size from " << numEntries << " to ";
       numEntries = ((numEntries / i) + 1) * i;
-      printf("to %lu to fill the sector\n", (unsigned long) numEntries);
+      cout << numEntries << " to fill the sector\n";
    } // if
 
    // Do the work only if the # of partitions is changing. Along with being
@@ -1869,9 +1869,10 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
          if (partitions != NULL) { // existing partitions; copy them over
             GetPartRange(&i, &high);
             if (numEntries < (high + 1)) { // Highest entry too high for new #
-               printf("The highest-numbered partition is %lu, which is greater than the requested\n"
-                     "partition table size of %d; cannot resize. Perhaps sorting will help.\n",
-                     (unsigned long) (high + 1), numEntries);
+               cout << "The highest-numbered partition is " << high + 1
+                    << ", which is greater than the requested\n"
+                    << "partition table size of " << numEntries
+                    << "; cannot resize. Perhaps sorting will help.\n";
                allOK = 0;
             } else { // go ahead with copy
                if (numEntries < mainHeader.numParts)
@@ -1896,7 +1897,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
          if (diskSize > 0)
             CheckGPTSize();
       } else { // Bad memory allocation
-         fprintf(stderr, "Error allocating memory for partition table!\n");
+         cerr << "Error allocating memory for partition table!\n";
          allOK = 0;
       } // if/else
    } // if/else
@@ -1930,7 +1931,7 @@ int GPTData::DeletePartition(uint32_t partNum) {
       // Now delete the GPT partition
       partitions[partNum].BlankPartition();
    } else {
-      fprintf(stderr, "Partition number %d out of range!\n", partNum + 1);
+      cerr << "Partition number " << partNum + 1 << " out of range!\n";
       retval = 0;
    } // if/else
    return retval;
@@ -2001,7 +2002,8 @@ int GPTData::ClearGPTData(void) {
    int goOn = 1, i;
 
    // Set up the partition table....
-   free(partitions);
+   if (partitions != NULL)
+      free(partitions);
    partitions = NULL;
    SetGPTSize(NUM_GPT_ENTRIES);
 
@@ -2051,11 +2053,12 @@ void GPTData::MoveSecondHeaderToEnd() {
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
 } // GPTData::FixSecondHeaderLocation()
 
-int GPTData::SetName(uint32_t partNum, char* theName) {
+int GPTData::SetName(uint32_t partNum, string theName) {
    int retval = 1;
-   if (!IsFreePartNum(partNum))
-      partitions[partNum].SetName((unsigned char*) theName);
-   else retval = 0;
+
+   if (!IsFreePartNum(partNum)) {
+      partitions[partNum].SetName(theName);
+   } else retval = 0;
 
    return retval;
 } // GPTData::SetName
@@ -2117,7 +2120,6 @@ int GPTData::Align(uint64_t* sector) {
       // Check to see that every sector between the earlier one and the
       // requested one is clear, and that it's not too early....
       if (earlier >= mainHeader.firstUsableLBA) {
-//         printf("earlier is %llu, first usable is %llu\n", earlier, mainHeader.firstUsableLBA);
          sectorOK = 1;
          testSector = earlier;
          do {
@@ -2125,7 +2127,6 @@ int GPTData::Align(uint64_t* sector) {
          } while ((sectorOK == 1) && (testSector < *sector));
          if (sectorOK == 1) {
             *sector = earlier;
-//            printf("Moved sector earlier.\n");
          } // if
       } // if firstUsableLBA check
 
@@ -2138,22 +2139,21 @@ int GPTData::Align(uint64_t* sector) {
          } while ((sectorOK == 1) && (testSector > *sector));
          if (sectorOK == 1) {
             *sector = later;
-//            printf("Moved sector later\n");
          } // if
       } // if
 
       // If sector was changed successfully, inform the user of this fact.
       // Otherwise, notify the user that it couldn't be done....
       if (sectorOK == 1) {
-         printf("Information: Moved requested sector from %llu to %llu for\n"
-                "alignment purposes.\n",
-                (unsigned long long) original, (unsigned long long) *sector);
+         cout << "Information: Moved requested sector from " << original << " to "
+              << *sector << " for\nalignment purposes.\n";
          if (!beQuiet)
-            printf("Use 'l' on the experts' menu to adjust alignment\n");
+            cout << "Use 'l' on the experts' menu to adjust alignment\n";
       } else {
-         printf("Information: Sector not aligned on %d-sector boundary and could not be moved.\n"
-                "If you're using a Western Digital Advanced Format or similar disk with\n"
-                "underlying 4096-byte sectors, performance may suffer.\n", sectorAlignment);
+         cout << "Information: Sector not aligned on " << sectorAlignment
+              << "-sector boundary and could not be moved.\n"
+              << "If you're using a Western Digital Advanced Format or similar disk with\n"
+              << "underlying 4096-byte sectors, performance may suffer.\n";
          retval = 0;
       } // if/else
    } // if
@@ -2408,8 +2408,8 @@ void GPTData::ReversePartitionBytes() {
    // if the function is called out of order. Unfortunately, it'll also
    // mismatch if there's data corruption.
    if ((mainHeader.signature != GPT_SIGNATURE) && (IsLittleEndian() == 0)) {
-      printf("GPT signature mismatch in GPTData::ReversePartitionBytes(). This indicates\n"
-            "data corruption or a misplaced call to this function.\n");
+      cerr << "GPT signature mismatch in GPTData::ReversePartitionBytes(). This indicates\n"
+           << "data corruption or a misplaced call to this function.\n";
    } // if signature mismatch....
    for (i = 0; i < mainHeader.numParts; i++) {
       partitions[i].ReversePartBytes();
@@ -2430,42 +2430,41 @@ int SizesOK(void) {
    int allOK = 1;
 
    if (sizeof(uint8_t) != 1) {
-      fprintf(stderr, "uint8_t is %lu bytes, should be 1 byte; aborting!\n", sizeof(uint8_t));
+      cerr << "uint8_t is " << sizeof(uint8_t) << " bytes, should be 1 byte; aborting!\n";
       allOK = 0;
    } // if
    if (sizeof(uint16_t) != 2) {
-      fprintf(stderr, "uint16_t is %lu bytes, should be 2 bytes; aborting!\n", sizeof(uint16_t));
+      cerr << "uint16_t is " << sizeof(uint16_t) << " bytes, should be 2 bytes; aborting!\n";
       allOK = 0;
    } // if
    if (sizeof(uint32_t) != 4) {
-      fprintf(stderr, "uint32_t is %lu bytes, should be 4 bytes; aborting!\n", sizeof(uint32_t));
+      cerr << "uint32_t is " << sizeof(uint32_t) << " bytes, should be 4 bytes; aborting!\n";
       allOK = 0;
    } // if
    if (sizeof(uint64_t) != 8) {
-      fprintf(stderr, "uint64_t is %lu bytes, should be 8 bytes; aborting!\n", sizeof(uint64_t));
+      cerr << "uint64_t is " << sizeof(uint64_t) << " bytes, should be 8 bytes; aborting!\n";
       allOK = 0;
    } // if
    if (sizeof(struct MBRRecord) != 16) {
-      fprintf(stderr, "MBRRecord is %lu bytes, should be 16 bytes; aborting!\n", sizeof(MBRRecord));
+      cerr << "MBRRecord is " << sizeof(MBRRecord) << " bytes, should be 16 bytes; aborting!\n";
       allOK = 0;
    } // if
    if (sizeof(struct TempMBR) != 512) {
-      fprintf(stderr, "TempMBR is %lu bytes, should be 512 bytes; aborting!\n", sizeof(TempMBR));
+      cerr << "TempMBR is " <<  sizeof(TempMBR) << " bytes, should be 512 bytes; aborting!\n";
       allOK = 0;
    } // if
    if (sizeof(struct GPTHeader) != 512) {
-      fprintf(stderr, "GPTHeader is %lu bytes, should be 512 bytes; aborting!\n", sizeof(GPTHeader));
+      cerr << "GPTHeader is " << sizeof(GPTHeader) << " bytes, should be 512 bytes; aborting!\n";
       allOK = 0;
    } // if
    if (sizeof(GPTPart) != 128) {
-      fprintf(stderr, "GPTPart is %lu bytes, should be 128 bytes; aborting!\n", sizeof(GPTPart));
+      cerr << "GPTPart is " << sizeof(GPTPart) << " bytes, should be 128 bytes; aborting!\n";
       allOK = 0;
    } // if
-// Determine endianness; set allOK = 0 if running on big-endian hardware
+   // Determine endianness; warn user if running on big-endian (PowerPC, etc.) hardware
    if (IsLittleEndian() == 0) {
-      fprintf(stderr, "\aRunning on big-endian hardware. Big-endian support is new and poorly"
-            " tested!\nBeware!\n");
-      // allOK = 0;
+      cerr << "\aRunning on big-endian hardware. Big-endian support is new and poorly"
+            " tested!\n";
    } // if
    return (allOK);
 } // SizesOK()

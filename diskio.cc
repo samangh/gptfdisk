@@ -114,11 +114,11 @@ int DiskIO::FindAlignment(void) {
    int err = -2, errnum = 0, result = 8, physicalSectorSize = 4096;
    uint64_t diskSize;
 
-   printf("Entering FindAlignment()\n");
+   cout << "Entering FindAlignment()\n";
 #if defined (__linux__) && defined (BLKPBSZGET)
    err = ioctl(fd, BLKPBSZGET, &physicalSectorSize);
-   printf("In FindAlignment(), physicalSectorSize = %d, err = %d\n", physicalSectorSize, err);
-//   printf("Tried to get hardware alignment; err is %d, sector size is %d\n", err, physicalSectorSize);
+   cout << "In FindAlignment(), physicalSectorSize = " << physicalSectorSize
+        << ", err = " << err << "\n";
 #else
    err = -1;
 #endif

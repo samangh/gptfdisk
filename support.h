@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 
 #ifndef __GPTSUPPORT
 #define __GPTSUPPORT
@@ -35,6 +35,9 @@
 #define APM_SIGNATURE1 UINT64_C(0x00004D5000000000)
 #define APM_SIGNATURE2 UINT64_C(0x0000535400000000)
 
+// Maximum line length ignored on some input functions
+#define MAX_IGNORED 999
+
 /**************************
  * Some GPT constants.... *
  **************************/
@@ -58,11 +61,11 @@ struct GUIDData {
 
 static char theFile[255];
 
-int GetNumber(int low, int high, int def, const char prompt[]);
+int GetNumber(int low, int high, int def, const string & prompt);
 char GetYN(void);
-uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]);
-char* BytesToSI(uint64_t size, char theValue[]);
-char* GUIDToStr(struct GUIDData theGUID, char* theString);
+uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & prompt);
+string BytesToSI(uint64_t size);
+string GUIDToStr(struct GUIDData theGUID);
 GUIDData GetGUID(void);
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue

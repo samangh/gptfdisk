@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 #include "support.h"
 
 #ifndef __PARTITION_TYPES
@@ -39,7 +39,7 @@ public:
                const char* name, int toDisplay = 1);
    void ShowTypes(void);
    int Valid(uint16_t);
-   char* GUIDToName(struct GUIDData typeCode, char typeName[]);
+   string GUIDToName(struct GUIDData typeCode);
    struct GUIDData IDToGUID(uint16_t ID);
    uint16_t GUIDToID(struct GUIDData);
 };

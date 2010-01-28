@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.2-pre1"
+#define GPTFDISK_VERSION "0.6.2-pre2"
 
 using namespace std;
 
@@ -59,7 +59,7 @@ protected:
    GPTPart *partitions;
    struct GPTHeader secondHeader;
    MBRData protectiveMBR;
-   char device[256]; // device filename
+   string device; // device filename
    DiskIO myDisk;
    uint32_t blockSize; // device block size
    uint64_t diskSize; // size of device, in blocks
@@ -78,7 +78,7 @@ protected:
 public:
    // Basic necessary functions....
    GPTData(void);
-   GPTData(char* deviceFilename);
+   GPTData(string deviceFilename);
    ~GPTData(void);
 
    // Verify (or update) data integrity
@@ -93,15 +93,15 @@ public:
    int FindOverlaps(void);
 
    // Load or save data from/to disk
-   int LoadMBR(char* f) {return protectiveMBR.ReadMBRData(f);}
+   int LoadMBR(string f) {return protectiveMBR.ReadMBRData(f);}
    void PartitionScan(void);
-   int LoadPartitions(char* deviceFilename);
+   int LoadPartitions(string deviceFilename);
    int ForceLoadGPTData(void);
    int LoadMainTable(void);
    int LoadSecondTableAsMain(void);
    int SaveGPTData(int quiet = 0);
-   int SaveGPTBackup(char* filename);
-   int LoadGPTBackup(char* filename);
+   int SaveGPTBackup(string filename);
+   int LoadGPTBackup(string filename);
 
    // Display data....
    void ShowAPMState(void);
@@ -137,7 +137,7 @@ public:
    void SortGPT(void);
    int ClearGPTData(void);
    void MoveSecondHeaderToEnd();
-   int SetName(uint32_t partNum, char* theName = NULL);
+   int SetName(uint32_t partNum, string theName = "");
    void SetDiskGUID(GUIDData newGUID);
    int SetPartitionGUID(uint32_t pn, GUIDData theGUID);
    int ChangePartType(uint32_t pn, uint16_t hexCode);

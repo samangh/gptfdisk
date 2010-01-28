@@ -9,18 +9,20 @@
 
 //#include <iostream>
 #include <stdio.h>
-#include <string.h>
 #include <getopt.h>
+#include <string.h>
+#include <string>
+#include <iostream>
 #include "mbr.h"
 #include "gpt.h"
 #include "support.h"
 
 // Function prototypes....
-void MainMenu(char* filename, struct GPTData* theGPT);
+void MainMenu(string filename, struct GPTData* theGPT);
 void ShowCommands(void);
-void ExpertsMenu(char* filename, struct GPTData* theGPT);
+void ExpertsMenu(string filename, struct GPTData* theGPT);
 void ShowExpertCommands(void);
-void RecoveryMenu(char* filename, struct GPTData* theGPT);
+void RecoveryMenu(string filename, struct GPTData* theGPT);
 void ShowRecoveryCommands(void);
 
 int main(int argc, char* argv[]) {
@@ -28,7 +30,7 @@ int main(int argc, char* argv[]) {
    int doMore = 1;
    char* device = NULL;
 
-   printf("GPT fdisk (gdisk) version %s\n\n", GPTFDISK_VERSION);
+   cout << "GPT fdisk (gdisk) version " << GPTFDISK_VERSION << "\n\n";
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {
@@ -44,22 +46,22 @@ int main(int argc, char* argv[]) {
          } else if (strcmp(argv[2], "-l") == 0) {
             device = argv[1];
          } else { // 3 arguments, but none is "-l"
-            fprintf(stderr, "Usage: %s [-l] device_file\n", argv[0]);
+            cerr << "Usage: " << argv[0] << " [-l] device_file\n";
          } // if/elseif/else
          if (device != NULL) {
             theGPT.JustLooking();
-            doMore = theGPT.LoadPartitions(device);
+            doMore = theGPT.LoadPartitions((string) device);
             if (doMore) theGPT.DisplayGPTData();
          } // if
       } // if
    } else {
-      fprintf(stderr, "Usage: %s [-l] device_file\n", argv[0]);
+      cerr << "Usage: " << argv[0] << " [-l] device_file\n";
    } // if/else
 } // main
 
 // Accept a command and execute it. Returns only when the user
 // wants to exit (such as after a 'w' or 'q' command).
-void MainMenu(char* filename, struct GPTData* theGPT) {
+void MainMenu(string filename, struct GPTData* theGPT) {
    char command, line[255], buFile[255];
    char* junk;
    int goOn = 1;
@@ -67,12 +69,14 @@ void MainMenu(char* filename, struct GPTData* theGPT) {
    uint32_t temp1, temp2;
 
    do {
-      printf("\nCommand (? for help): ");
+      cout << "\nCommand (? for help): ";
       junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &command);
       switch (command) {
+         case '\n':
+            break;
          case 'b': case 'B':
-            printf("Enter backup filename to save: ");
+            cout << "Enter backup filename to save: ";
             junk = fgets(line, 255, stdin);
             sscanf(line, "%s", (char*) &buFile);
             theGPT->SaveGPTBackup(buFile);
@@ -81,7 +85,7 @@ void MainMenu(char* filename, struct GPTData* theGPT) {
             if (theGPT->GetPartRange(&temp1, &temp2) > 0)
                theGPT->SetName(theGPT->GetPartNum());
             else
-               printf("No partitions\n");
+               cout << "No partitions\n";
             break;
          case 'd': case 'D':
             theGPT->DeletePartition();
@@ -96,8 +100,8 @@ void MainMenu(char* filename, struct GPTData* theGPT) {
             theGPT->CreatePartition();
             break;
          case 'o': case 'O':
-            printf("This option deletes all partitions and creates a new "
-                  "protective MBR.\nProceed? ");
+            cout << "This option deletes all partitions and creates a new protective MBR.\n"
+                 << "Proceed? ";
             if (GetYN() == 'Y') {
                theGPT->ClearGPTData();
                theGPT->MakeProtectiveMBR();
@@ -115,7 +119,7 @@ void MainMenu(char* filename, struct GPTData* theGPT) {
             break;
          case 's': case 'S':
             theGPT->SortGPT();
-            printf("You may need to edit /etc/fstab and/or your boot loader configuration!\n");
+            cout << "You may need to edit /etc/fstab and/or your boot loader configuration!\n";
             break;
          case 't': case 'T':
             theGPT->ChangePartType();
@@ -139,27 +143,27 @@ void MainMenu(char* filename, struct GPTData* theGPT) {
 } // MainMenu()
 
 void ShowCommands(void) {
-   printf("b\tback up GPT data to a file\n");
-   printf("c\tchange a partition's name\n");
-   printf("d\tdelete a partition\n");
-   printf("i\tshow detailed information on a partition\n");
-   printf("l\tlist known partition types\n");
-   printf("n\tadd a new partition\n");
-   printf("o\tcreate a new empty GUID partition table (GPT)\n");
-   printf("p\tprint the partition table\n");
-   printf("q\tquit without saving changes\n");
-   printf("r\trecovery and transformation options (experts only)\n");
-   printf("s\tsort partitions\n");
-   printf("t\tchange a partition's type code\n");
-   printf("v\tverify disk\n");
-   printf("w\twrite table to disk and exit\n");
-   printf("x\textra functionality (experts only)\n");
-   printf("?\tprint this menu\n");
+   cout << "b\tback up GPT data to a file\n";
+   cout << "c\tchange a partition's name\n";
+   cout << "d\tdelete a partition\n";
+   cout << "i\tshow detailed information on a partition\n";
+   cout << "l\tlist known partition types\n";
+   cout << "n\tadd a new partition\n";
+   cout << "o\tcreate a new empty GUID partition table (GPT)\n";
+   cout << "p\tprint the partition table\n";
+   cout << "q\tquit without saving changes\n";
+   cout << "r\trecovery and transformation options (experts only)\n";
+   cout << "s\tsort partitions\n";
+   cout << "t\tchange a partition's type code\n";
+   cout << "v\tverify disk\n";
+   cout << "w\twrite table to disk and exit\n";
+   cout << "x\textra functionality (experts only)\n";
+   cout << "?\tprint this menu\n";
 } // ShowCommands()
 
 // Accept a recovery & transformation menu command. Returns only when the user
 // issues an exit command, such as 'w' or 'q'.
-void RecoveryMenu(char* filename, struct GPTData* theGPT) {
+void RecoveryMenu(string filename, struct GPTData* theGPT) {
    char command, line[255], buFile[255];
    char* junk;
    PartTypes typeHelper;
@@ -167,16 +171,18 @@ void RecoveryMenu(char* filename, struct GPTData* theGPT) {
    int goOn = 1;
 
    do {
-      printf("\nRecovery/transformation command (? for help): ");
+      cout << "\nRecovery/transformation command (? for help): ";
       junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &command);
       switch (command) {
+         case '\n':
+            break;
          case 'b': case 'B':
             theGPT->RebuildMainHeader();
             break;
          case 'c': case 'C':
-            printf("Warning! This will probably do weird things if you've converted an MBR to\n"
-                  "GPT form and haven't yet saved the GPT! Proceed? ");
+            cout << "Warning! This will probably do weird things if you've converted an MBR to\n"
+                 << "GPT form and haven't yet saved the GPT! Proceed? ";
             if (GetYN() == 'Y')
                theGPT->LoadSecondTableAsMain();
             break;
@@ -184,18 +190,18 @@ void RecoveryMenu(char* filename, struct GPTData* theGPT) {
             theGPT->RebuildSecondHeader();
             break;
          case 'e': case 'E':
-            printf("Warning! This will probably do weird things if you've converted an MBR to\n"
-                  "GPT form and haven't yet saved the GPT! Proceed? ");
+            cout << "Warning! This will probably do weird things if you've converted an MBR to\n"
+                 << "GPT form and haven't yet saved the GPT! Proceed? ";
             if (GetYN() == 'Y')
                theGPT->LoadMainTable();
             break;
          case 'f': case 'F':
-            printf("Warning! This will destroy the currently defined partitions! Proceed? ");
+            cout << "Warning! This will destroy the currently defined partitions! Proceed? ";
             if (GetYN() == 'Y') {
                if (theGPT->LoadMBR(filename) == 1) { // successful load
                   theGPT->XFormPartitions();
                } else {
-                  printf("Problem loading MBR! GPT is untouched; regenerating protective MBR!\n");
+                  cout << "Problem loading MBR! GPT is untouched; regenerating protective MBR!\n";
                   theGPT->MakeProtectiveMBR();
                } // if/else
             } // if
@@ -203,13 +209,13 @@ void RecoveryMenu(char* filename, struct GPTData* theGPT) {
          case 'g': case 'G':
             temp1 = theGPT->XFormToMBR();
             if (temp1 > 0) {
-               printf("Converted %d partitions. Finalize and exit? ", temp1);
+               cout << "Converted " << temp1 << " partitions. Finalize and exit? ";
                if (GetYN() == 'Y') {
                   if (theGPT->DestroyGPT(0) > 0)
                      goOn = 0;
                } else {
                   theGPT->MakeProtectiveMBR();
-                  printf("Note: New protective MBR created.\n");
+                  cout << "Note: New protective MBR created.\n";
                } // if/else
             } // if
             break;
@@ -220,7 +226,7 @@ void RecoveryMenu(char* filename, struct GPTData* theGPT) {
             theGPT->ShowDetails();
             break;
          case 'l': case 'L':
-            printf("Enter backup filename to load: ");
+            cout << "Enter backup filename to load: ";
             junk = fgets(line, 255, stdin);
             sscanf(line, "%s", (char*) &buFile);
             theGPT->LoadGPTBackup(buFile);
@@ -261,29 +267,29 @@ void RecoveryMenu(char* filename, struct GPTData* theGPT) {
 } // RecoveryMenu()
 
 void ShowRecoveryCommands(void) {
-   printf("b\tuse backup GPT header (rebuilding main)\n");
-   printf("c\tload backup partition table from disk (rebuilding main)\n");
-   printf("d\tuse main GPT header (rebuilding backup)\n");
-   printf("e\tload main partition table from disk (rebuilding backup)\n");
-   printf("f\tload MBR and build fresh GPT from it\n");
-   printf("g\tconvert GPT into MBR and exit\n");
-   printf("h\tmake hybrid MBR\n");
-   printf("i\tshow detailed information on a partition\n");
-   printf("l\tload partition data from a backup file\n");
-   printf("m\treturn to main menu\n");
-   printf("o\tprint protective MBR data\n");
-   printf("p\tprint the partition table\n");
-   printf("q\tquit without saving changes\n");
-   printf("t\ttransform BSD disklabel partition\n");
-   printf("v\tverify disk\n");
-   printf("w\twrite table to disk and exit\n");
-   printf("x\textra functionality (experts only)\n");
-   printf("?\tprint this menu\n");
+   cout << "b\tuse backup GPT header (rebuilding main)\n";
+   cout << "c\tload backup partition table from disk (rebuilding main)\n";
+   cout << "d\tuse main GPT header (rebuilding backup)\n";
+   cout << "e\tload main partition table from disk (rebuilding backup)\n";
+   cout << "f\tload MBR and build fresh GPT from it\n";
+   cout << "g\tconvert GPT into MBR and exit\n";
+   cout << "h\tmake hybrid MBR\n";
+   cout << "i\tshow detailed information on a partition\n";
+   cout << "l\tload partition data from a backup file\n";
+   cout << "m\treturn to main menu\n";
+   cout << "o\tprint protective MBR data\n";
+   cout << "p\tprint the partition table\n";
+   cout << "q\tquit without saving changes\n";
+   cout << "t\ttransform BSD disklabel partition\n";
+   cout << "v\tverify disk\n";
+   cout << "w\twrite table to disk and exit\n";
+   cout << "x\textra functionality (experts only)\n";
+   cout << "?\tprint this menu\n";
 } // ShowRecoveryCommands()
 
 // Accept an experts' menu command. Returns only after the user
 // selects an exit command, such as 'w' or 'q'.
-void ExpertsMenu(char* filename, struct GPTData* theGPT) {
+void ExpertsMenu(string filename, struct GPTData* theGPT) {
    char command, line[255];
    char* junk;
    PartTypes typeHelper;
@@ -292,40 +298,43 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
    int goOn = 1;
 
    do {
-      printf("\nExpert command (? for help): ");
+      cout << "\nExpert command (? for help): ";
       junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &command);
       switch (command) {
+         case '\n':
+            break;
          case 'a': case 'A':
             if (theGPT->GetPartRange(&temp1, &temp2) > 0)
                theGPT->SetAttributes(theGPT->GetPartNum());
            else
-               printf("No partitions\n");
+               cout << "No partitions\n";
             break;
          case 'c': case 'C':
             if (theGPT->GetPartRange(&temp1, &temp2) > 0) {
                pn = theGPT->GetPartNum();
-               printf("Enter the partition's new unique GUID:\n");
+               cout << "Enter the partition's new unique GUID:\n";
                theGPT->SetPartitionGUID(pn, GetGUID());
-            } else printf("No partitions\n");
+            } else cout << "No partitions\n";
             break;
          case 'd': case 'D':
-            printf("Partitions will begin on %d-sector boundaries.\n",
-                   theGPT->GetAlignment());
+            cout << "Partitions will begin on " << theGPT->GetAlignment()
+                 << "-sector boundaries.\n";
             break;
          case 'e': case 'E':
-            printf("Relocating backup data structures to the end of the disk\n");
+            cout << "Relocating backup data structures to the end of the disk\n";
             theGPT->MoveSecondHeaderToEnd();
             break;
          case 'g': case 'G':
-            printf("Enter the disk's unique GUID:\n");
+            cout << "Enter the disk's unique GUID:\n";
             theGPT->SetDiskGUID(GetGUID());
             break;
          case 'i': case 'I':
             theGPT->ShowDetails();
             break;
          case 'l': case 'L':
-            temp1 = GetNumber(1, 128, 8, "Enter the sector alignment value (1-128, default = 8): ");
+            temp1 = GetNumber(1, 128, 8, (string)
+                              "Enter the sector alignment value (1-128, default = 8): ");
             theGPT->SetAlignment(temp1);
             break;
          case 'm': case 'M':
@@ -372,22 +381,22 @@ void ExpertsMenu(char* filename, struct GPTData* theGPT) {
 } // ExpertsMenu()
 
 void ShowExpertCommands(void) {
-   printf("a\tset attributes\n");
-   printf("c\tchange partition GUID\n");
-   printf("d\tdisplay the sector alignment value\n");
-   printf("e\trelocate backup data structures to the end of the disk\n");
-   printf("g\tchange disk GUID\n");
-   printf("i\tshow detailed information on a partition\n");
-   printf("l\tset the sector alignment value\n");
-   printf("m\treturn to main menu\n");
-   printf("n\tcreate a new protective MBR\n");
-   printf("o\tprint protective MBR data\n");
-   printf("p\tprint the partition table\n");
-   printf("q\tquit without saving changes\n");
-   printf("r\trecovery and transformation options (experts only)\n");
-   printf("s\tresize partition table\n");
-   printf("v\tverify disk\n");
-   printf("w\twrite table to disk and exit\n");
-   printf("z\tzap (destroy) GPT data structures and exit\n");
-   printf("?\tprint this menu\n");
+   cout << "a\tset attributes\n";
+   cout << "c\tchange partition GUID\n";
+   cout << "d\tdisplay the sector alignment value\n";
+   cout << "e\trelocate backup data structures to the end of the disk\n";
+   cout << "g\tchange disk GUID\n";
+   cout << "i\tshow detailed information on a partition\n";
+   cout << "l\tset the sector alignment value\n";
+   cout << "m\treturn to main menu\n";
+   cout << "n\tcreate a new protective MBR\n";
+   cout << "o\tprint protective MBR data\n";
+   cout << "p\tprint the partition table\n";
+   cout << "q\tquit without saving changes\n";
+   cout << "r\trecovery and transformation options (experts only)\n";
+   cout << "s\tresize partition table\n";
+   cout << "v\tverify disk\n";
+   cout << "w\twrite table to disk and exit\n";
+   cout << "z\tzap (destroy) GPT data structures and exit\n";
+   cout << "?\tprint this menu\n";
 } // ShowExpertCommands()

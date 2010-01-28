@@ -18,6 +18,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <iostream>
 #include "mbr.h"
 #include "support.h"
 
@@ -32,7 +33,7 @@ using namespace std;
 MBRData::MBRData(void) {
    blockSize = SECTOR_SIZE;
    diskSize = 0;
-   strcpy(device, "");
+   device = "";
    state = invalid;
    srand((unsigned int) time(NULL));
    numHeads = MAX_HEADS;
@@ -40,10 +41,10 @@ MBRData::MBRData(void) {
    EmptyMBR();
 } // MBRData default constructor
 
-MBRData::MBRData(char *filename) {
+MBRData::MBRData(string filename) {
    blockSize = SECTOR_SIZE;
    diskSize = 0;
-   strcpy(device, filename);
+   device = filename;
    state = invalid;
    numHeads = MAX_HEADS;
    numSecspTrack = MAX_SECSPERTRACK;
@@ -52,7 +53,7 @@ MBRData::MBRData(char *filename) {
    // Try to read the specified partition table, but if it fails....
    if (!ReadMBRData(filename)) {
       EmptyMBR();
-      strcpy(device, "");
+      device = "";
    } // if
 } // MBRData(char *filename) constructor
 
@@ -67,7 +68,7 @@ MBRData::~MBRData(void) {
 
 // Read data from MBR. Returns 1 if read was successful (even if the
 // data isn't a valid MBR), 0 if the read failed.
-int MBRData::ReadMBRData(char* deviceFilename) {
+int MBRData::ReadMBRData(string deviceFilename) {
    int fd, allOK = 1;
 
    if (myDisk->OpenForRead(deviceFilename)) {
@@ -77,7 +78,7 @@ int MBRData::ReadMBRData(char* deviceFilename) {
    } // if
 
    if (allOK)
-      strcpy(device, deviceFilename);
+      device = deviceFilename;
 
    return allOK;
 } // MBRData::ReadMBRData(char* deviceFilename)
@@ -101,7 +102,7 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
      if (myDisk->Read(&tempMBR, 512))
         err = 0;
    if (err) {
-      fprintf(stderr, "Problem reading disk in MBRData::ReadMBRData!\n");
+      cerr << "Problem reading disk in MBRData::ReadMBRData!\n";
    } else {
       for (i = 0; i < 440; i++)
          code[i] = tempMBR.code[i];
@@ -152,7 +153,7 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
                logicalNum = ReadLogicalPart(partitions[i].firstLBA, UINT32_C(0), 4);
                if ((logicalNum < 0) || (logicalNum >= MAX_MBR_PARTS)) {
                   allOK = 0;
-                  fprintf(stderr, "Error reading logical partitions! List may be truncated!\n");
+                  cerr << "Error reading logical partitions! List may be truncated!\n";
                } // if maxLogicals valid
             } // if primary partition is extended
          } // for primary partition loop
@@ -202,14 +203,13 @@ int MBRData::ReadLogicalPart(uint32_t extendedStart,
    // function as of GPT fdisk version 0.5.0 doesn't do so.
    if ((partNum < MAX_MBR_PARTS) && (partNum >= 0)) {
       offset = (uint64_t) (extendedStart + diskOffset);
-//      if (lseek64(fd, offset, SEEK_SET) == (off_t) -1) { // seek to EBR record
       if (myDisk->Seek(offset) == 0) { // seek to EBR record
-         fprintf(stderr, "Unable to seek to %lu! Aborting!\n", (unsigned long) offset);
+         cerr << "Unable to seek to " << offset << "! Aborting!\n";
          partNum = -1;
       }
       if (myDisk->Read(&ebr, 512) != 512) { // Load the data....
-         fprintf(stderr, "Error seeking to or reading logical partition data from %lu!\nAborting!\n",
-                 (unsigned long) offset);
+         cerr << "Error seeking to or reading logical partition data from " << offset
+              << "!\nAborting!\n";
          partNum = -1;
       } else if (IsLittleEndian() != 1) { // Reverse byte ordering of some data....
          ReverseBytes(&ebr.MBRSignature, 2);
@@ -221,8 +221,14 @@ int MBRData::ReadLogicalPart(uint32_t extendedStart,
 
       if (ebr.MBRSignature != MBR_SIGNATURE) {
          partNum = -1;
-         fprintf(stderr, "MBR signature in logical partition invalid; read 0x%04X, but should be 0x%04X\n",
-                (unsigned int) ebr.MBRSignature, (unsigned int) MBR_SIGNATURE);
+         cerr << "MBR signature in logical partition invalid; read 0x";
+         cerr.fill('0');
+         cerr.width(4);
+         cerr.setf(ios::uppercase);
+         cerr << hex << ebr.MBRSignature << ", but should be 0x";
+         cerr.width(4);
+         cerr << MBR_SIGNATURE << dec << "\n";
+         cerr.fill(' ');
       } // if
 
       // Copy over the basic data....
@@ -297,11 +303,11 @@ int MBRData::WriteMBRData(DiskIO *theDisk) {
    if (allOK && theDisk->Seek(0)) {
       if (theDisk->Write(&tempMBR, 512) != 512) {
          allOK = 0;
-         fprintf(stderr, "Warning! Error %d when saving MBR!\n", errno);
+         cerr << "Warning! Error " << errno << " when saving MBR!\n";
       } // if
    } else {
       allOK = 0;
-      fprintf(stderr, "Warning! Error %d when seeking to MBR to write it!\n", errno);
+      cerr << "Warning! Error " << errno << " when seeking to MBR to write it!\n";
    } // if/else
    theDisk->Close();
 
@@ -318,8 +324,8 @@ int MBRData::WriteMBRData(DiskIO *theDisk) {
    return allOK;
 } // MBRData::WriteMBRData(DiskIO theDisk)
 
-int MBRData::WriteMBRData(char* deviceFilename) {
-   strcpy(device, deviceFilename);
+int MBRData::WriteMBRData(string deviceFilename) {
+   device = deviceFilename;
    return WriteMBRData();
 } // MBRData::WriteMBRData(char* deviceFilename)
 
@@ -335,22 +341,34 @@ void MBRData::DisplayMBRData(void) {
    char tempStr[255];
    char bootCode;
 
-   printf("MBR disk identifier: 0x%08X\n", (unsigned int) diskSignature);
-   printf("MBR partitions:\n");
-   printf("Number\t Boot\t Start (sector)\t Length (sectors)\tType\n");
+   cout << "MBR disk identifier: 0x";
+   cout.width(8);
+   cout.fill('0');
+   cout.setf(ios::uppercase);
+   cout << hex << diskSignature << dec << "\n";
+   cout << "MBR partitions:\n";
+   cout << "Number\t Boot\t Start (sector)\t Length (sectors)\tType\n";
    for (i = 0; i < MAX_MBR_PARTS; i++) {
       if (partitions[i].lengthLBA != 0) {
          if (partitions[i].status && 0x80) // it's bootable
             bootCode = '*';
          else
             bootCode = ' ';
-         printf("%4d\t   %c\t%13lu\t%15lu \t0x%02X\n", i + 1, bootCode,
-                (unsigned long) partitions[i].firstLBA,
-                (unsigned long) partitions[i].lengthLBA, partitions[i].partitionType);
+         cout.fill(' ');
+         cout.width(4);
+         cout << i + 1 << "\t   " << bootCode << "\t";
+         cout.width(13);
+         cout << partitions[i].firstLBA << "\t";
+         cout.width(15);
+         cout << partitions[i].lengthLBA << " \t0x";
+         cout.width(2);
+         cout.fill('0');
+         cout << hex << (int) partitions[i].partitionType << dec << "\n";
       } // if
+      cout.fill(' ');
    } // for
-   printf("\nDisk size is %llu sectors ", (unsigned long long) diskSize);
-   printf("(%s)\n", BytesToSI(diskSize * (uint64_t) blockSize, tempStr));
+   cout << "\nDisk size is " << diskSize << " sectors ("
+        << BytesToSI(diskSize * (uint64_t) blockSize) << "\n";
 } // MBRData::DisplayMBRData()
 
 // Displays the state, as a word, on stdout. Used for debugging & to
@@ -358,19 +376,19 @@ void MBRData::DisplayMBRData(void) {
 void MBRData::ShowState(void) {
    switch (state) {
       case invalid:
-         printf("  MBR: not present\n");
+         cout << "  MBR: not present\n";
          break;
       case gpt:
-         printf("  MBR: protective\n");
+         cout << "  MBR: protective\n";
          break;
       case hybrid:
-         printf("  MBR: hybrid\n");
+         cout << "  MBR: hybrid\n";
          break;
       case mbr:
-         printf("  MBR: MBR only\n");
+         cout << "  MBR: MBR only\n";
          break;
       default:
-         printf("\a  MBR: unknown -- bug!\n");
+         cout << "\a  MBR: unknown -- bug!\n";
          break;
    } // switch
 } // MBRData::ShowState()
@@ -390,7 +408,7 @@ void MBRData::SetCHSGeom(uint32_t h, uint32_t s) {
       numHeads = h;
       numSecspTrack = s;
    } else {
-      printf("Warning! Attempt to set invalid CHS geometry!\n");
+      cout << "Warning! Attempt to set invalid CHS geometry!\n";
    } // if/else
 } // MBRData::SetCHSGeom()
 
@@ -807,7 +825,7 @@ GPTPart MBRData::AsGPT(int i) {
          newPart.SetType(((uint16_t) origType) * 0x0100);
          newPart.SetUniqueGUID(1);
          newPart.SetAttributes(0);
-         newPart.SetName((unsigned char*) newPart.GetNameType().c_str());
+         newPart.SetName(newPart.GetNameType());
       } // if not extended, protective, or non-existent
    } // if (origPart != NULL)
    return newPart;

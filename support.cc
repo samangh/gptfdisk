@@ -10,11 +10,13 @@
 #define __STDC_CONSTANT_MACROS
 
 #include <stdio.h>
-#include <string>
 #include <stdint.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <string>
+#include <iostream>
 #include "support.h"
 
 #include <sys/types.h>
@@ -33,26 +35,25 @@ using namespace std;
 // If user provides no input, def (default value) is returned.
 // (If def is outside of the low-high range, an explicit response
 // is required.)
-int GetNumber(int low, int high, int def, const char prompt[]) {
+int GetNumber(int low, int high, int def, const string & prompt) {
    int response, num;
    char line[255];
-   char* junk;
 
    if (low != high) { // bother only if low and high differ...
       response = low - 1; // force one loop by setting response outside range
       while ((response < low) || (response > high)) {
-         printf("%s", prompt);
-         junk = fgets(line, 255, stdin);
+         cout << prompt;
+         cin.getline(line, 255);
          num = sscanf(line, "%d", &response);
          if (num == 1) { // user provided a response
             if ((response < low) || (response > high))
-               printf("Value out of range\n");
+               cout << "Value out of range\n";
          } else { // user hit enter; return default
             response = def;
          } // if/else
       } // while
    } else { // low == high, so return this value
-      printf("Using %d\n", low);
+      cout << "Using " << low << "\n";
       response = low;
    } // else
    return (response);
@@ -62,10 +63,10 @@ int GetNumber(int low, int high, int def, const char prompt[]) {
 char GetYN(void) {
    char line[255];
    char response = '\0';
-   char* junk;
+   char *junk;
 
    while ((response != 'Y') && (response != 'N')) {
-      printf("(Y/N): ");
+      cout << "(Y/N): ";
       junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &response);
       if (response == 'y') response = 'Y';
@@ -81,18 +82,17 @@ char GetYN(void) {
 // If a "-" prefix is used, use the high value minus the user-
 // specified number of sectors (or KiB, MiB, etc.). Use the def
  //value as the default if the user just hits Enter
-uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]) {
+uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & prompt) {
    unsigned long long response;
    int num, plusFlag = 0;
    uint64_t mult = 1;
    char suffix;
    char line[255];
-   char* junk;
 
    response = low - 1; // Ensure one pass by setting a too-low initial value
    while ((response < low) || (response > high)) {
-      printf("%s", prompt);
-      junk = fgets(line, 255, stdin);
+      cout << prompt;
+      cin.getline(line, 255);
 
       // Remove leading spaces, if present
       while (line[0] == ' ')
@@ -164,65 +164,65 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, char prompt[]) 
 // Takes a size in bytes (in size) and converts this to a size in
 // SI units (KiB, MiB, GiB, TiB, or PiB), returned in C++ string
 // form
-char* BytesToSI(uint64_t size, char theValue[]) {
-   char units[8];
+string BytesToSI(uint64_t size) {
+   string units;
+   char theValue[99];
    float sizeInSI;
 
-   if (theValue != NULL) {
-      sizeInSI = (float) size;
-      strcpy (units, " bytes");
-      if (sizeInSI > 1024.0) {
-         sizeInSI /= 1024.0;
-         strcpy(units, " KiB");
-      } // if
-      if (sizeInSI > 1024.0) {
-         sizeInSI /= 1024.0;
-         strcpy(units, " MiB");
-      } // if
-      if (sizeInSI > 1024.0) {
-         sizeInSI /= 1024.0;
-         strcpy(units, " GiB");
-      } // if
-      if (sizeInSI > 1024.0) {
-         sizeInSI /= 1024.0;
-         strcpy(units, " TiB");
-      } // if
-      if (sizeInSI > 1024.0) {
-         sizeInSI /= 1024.0;
-         strcpy(units, " PiB");
-      } // if
-      if (strcmp(units, " bytes") == 0) { // in bytes, so no decimal point
-         sprintf(theValue, "%1.0f%s", sizeInSI, units);
-      } else {
-         sprintf(theValue, "%1.1f%s", sizeInSI, units);
-      } // if/else
+   theValue[0] = '\0';
+   sizeInSI = (float) size;
+   units = " bytes";
+   if (sizeInSI > 1024.0) {
+      sizeInSI /= 1024.0;
+      units = " KiB";
    } // if
+   if (sizeInSI > 1024.0) {
+      sizeInSI /= 1024.0;
+      units = " MiB";
+   } // if
+   if (sizeInSI > 1024.0) {
+      sizeInSI /= 1024.0;
+      units = " GiB";
+   } // if
+   if (sizeInSI > 1024.0) {
+      sizeInSI /= 1024.0;
+      units = " TiB";
+   } // if
+   if (sizeInSI > 1024.0) {
+      sizeInSI /= 1024.0;
+      units = " PiB";
+   } // if
+   if (units == " bytes") { // in bytes, so no decimal point
+      sprintf(theValue, "%1.0f%s", sizeInSI, units.c_str());
+   } else {
+      sprintf(theValue, "%1.1f%s", sizeInSI, units.c_str());
+   } // if/else
    return theValue;
 } // BlocksToSI()
 
 // Return a plain-text name for a partition type.
 // Convert a GUID to a string representation, suitable for display
 // to humans....
-char* GUIDToStr(struct GUIDData theGUID, char* theString) {
+string GUIDToStr(struct GUIDData theGUID) {
    unsigned long long blocks[11], block;
+   char theString[40];
 
-     if (theString != NULL) {
-      blocks[0] = (theGUID.data1 & UINT64_C(0x00000000FFFFFFFF));
-      blocks[1] = (theGUID.data1 & UINT64_C(0x0000FFFF00000000)) >> 32;
-      blocks[2] = (theGUID.data1 & UINT64_C(0xFFFF000000000000)) >> 48;
-      blocks[3] = (theGUID.data2 & UINT64_C(0x00000000000000FF));
-      blocks[4] = (theGUID.data2 & UINT64_C(0x000000000000FF00)) >> 8;
-      blocks[5] = (theGUID.data2 & UINT64_C(0x0000000000FF0000)) >> 16;
-      blocks[6] = (theGUID.data2 & UINT64_C(0x00000000FF000000)) >> 24;
-      blocks[7] = (theGUID.data2 & UINT64_C(0x000000FF00000000)) >> 32;
-      blocks[8] = (theGUID.data2 & UINT64_C(0x0000FF0000000000)) >> 40;
-      blocks[9] = (theGUID.data2 & UINT64_C(0x00FF000000000000)) >> 48;
-      blocks[10] = (theGUID.data2 & UINT64_C(0xFF00000000000000)) >> 56;
-      sprintf(theString,
-              "%08llX-%04llX-%04llX-%02llX%02llX-%02llX%02llX%02llX%02llX%02llX%02llX",
-              blocks[0], blocks[1], blocks[2], blocks[3], blocks[4], blocks[5],
-              blocks[6], blocks[7], blocks[8], blocks[9], blocks[10]);
-     } // if
+   theString[0] = '\0';;
+   blocks[0] = (theGUID.data1 & UINT64_C(0x00000000FFFFFFFF));
+   blocks[1] = (theGUID.data1 & UINT64_C(0x0000FFFF00000000)) >> 32;
+   blocks[2] = (theGUID.data1 & UINT64_C(0xFFFF000000000000)) >> 48;
+   blocks[3] = (theGUID.data2 & UINT64_C(0x00000000000000FF));
+   blocks[4] = (theGUID.data2 & UINT64_C(0x000000000000FF00)) >> 8;
+   blocks[5] = (theGUID.data2 & UINT64_C(0x0000000000FF0000)) >> 16;
+   blocks[6] = (theGUID.data2 & UINT64_C(0x00000000FF000000)) >> 24;
+   blocks[7] = (theGUID.data2 & UINT64_C(0x000000FF00000000)) >> 32;
+   blocks[8] = (theGUID.data2 & UINT64_C(0x0000FF0000000000)) >> 40;
+   blocks[9] = (theGUID.data2 & UINT64_C(0x00FF000000000000)) >> 48;
+   blocks[10] = (theGUID.data2 & UINT64_C(0xFF00000000000000)) >> 56;
+   sprintf(theString,
+            "%08llX-%04llX-%04llX-%02llX%02llX-%02llX%02llX%02llX%02llX%02llX%02llX",
+            blocks[0], blocks[1], blocks[2], blocks[3], blocks[4], blocks[5],
+            blocks[6], blocks[7], blocks[8], blocks[9], blocks[10]);
    return theString;
 } // GUIDToStr()
 
@@ -234,10 +234,10 @@ GUIDData GetGUID(void) {
    char* junk;
    GUIDData theGUID;
 
-   printf("\nA GUID is entered in five segments of from two to six bytes, with\n"
-          "dashes between segments.\n");
-   printf("Enter the entire GUID, a four-byte hexadecimal number for the first segment, or\n"
-          "'R' to generate the entire GUID randomly: ");
+   cout << "\nA GUID is entered in five segments of from two to six bytes, with\n"
+        << "dashes between segments.\n";
+   cout << "Enter the entire GUID, a four-byte hexadecimal number for the first segment, or\n"
+        << "'R' to generate the entire GUID randomly: ";
    junk = fgets(temp, 255, stdin);
 
    // If user entered 'r' or 'R', generate GUID randomly....
@@ -280,17 +280,17 @@ GUIDData GetGUID(void) {
    // entry....
    if (entered == 0) {
       sscanf(temp, "%llx", &part1);
-      printf("Enter a two-byte hexadecimal number for the second segment: ");
+      cout << "Enter a two-byte hexadecimal number for the second segment: ";
       junk = fgets(temp, 255, stdin);
       sscanf(temp, "%llx", &part2);
-      printf("Enter a two-byte hexadecimal number for the third segment: ");
+      cout << "Enter a two-byte hexadecimal number for the third segment: ";
       junk = fgets(temp, 255, stdin);
       sscanf(temp, "%llx", &part3);
       theGUID.data1 = (part3 << 48) + (part2 << 32) + part1;
-      printf("Enter a two-byte hexadecimal number for the fourth segment: ");
+      cout << "Enter a two-byte hexadecimal number for the fourth segment: ";
       junk = fgets(temp, 255, stdin);
       sscanf(temp, "%llx", &part4);
-      printf("Enter a six-byte hexadecimal number for the fifth segment: ");
+      cout << "Enter a six-byte hexadecimal number for the fifth segment: ";
       junk = fgets(temp, 255, stdin);
       sscanf(temp, "%llx", &part5);
       theGUID.data2 = ((part4 & UINT64_C(0x000000000000FF00)) >> 8) +
@@ -303,7 +303,7 @@ GUIDData GetGUID(void) {
                       ((part5 & UINT64_C(0x00000000000000FF)) << 56);
       entered = 1;
    } // if/else
-   printf("New GUID: %s\n", GUIDToStr(theGUID, temp));
+   cout << "New GUID: " << GUIDToStr(theGUID) << "\n";
    return theGUID;
 } // GetGUID()
 
@@ -324,17 +324,16 @@ int IsLittleEndian(void) {
 
 // Reverse the byte order of theValue; numBytes is number of bytes
 void ReverseBytes(void* theValue, int numBytes) {
-   char* origValue;
-   char* tempValue;
+   char* tempValue = NULL;
    int i;
 
-   origValue = (char*) theValue;
    tempValue = (char*) malloc(numBytes);
-   for (i = 0; i < numBytes; i++)
-      tempValue[i] = origValue[i];
-   for (i = 0; i < numBytes; i++)
-      origValue[i] = tempValue[numBytes - i - 1];
-   free(tempValue);
+   if (tempValue != NULL) {
+      memcpy(tempValue, theValue, numBytes);
+      for (i = 0; i < numBytes; i++)
+         ((char*) theValue)[i] = tempValue[numBytes - i - 1];
+      free(tempValue);
+   } // if
 } // ReverseBytes()
 
 // Compute (2 ^ value). Given the return type, value must be 63 or less.

@@ -13,6 +13,7 @@
 #include <string>
 #include <popt.h>
 #include <errno.h>
+#include <iostream>
 #include "mbr.h"
 #include "gpt.h"
 #include "support.h"
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
             pretend = 1;
             break;
          case 'V':
-            printf("GPT fdisk (sgdisk) version %s\n\n", GPTFDISK_VERSION);
+            cout << "GPT fdisk (sgdisk) version " << GPTFDISK_VERSION << "\n\n";
             break;
          default:
             break;
@@ -102,7 +103,7 @@ int main(int argc, char *argv[]) {
    if (device != NULL) {
       theGPT.JustLooking(); // reset as necessary
       theGPT.BeQuiet(); // Tell called functions to be less verbose & interactive
-      if (theGPT.LoadPartitions(device)) {
+      if (theGPT.LoadPartitions((string) device)) {
          if ((theGPT.WhichWasUsed() == use_mbr) || (theGPT.WhichWasUsed() == use_bsd))
             saveNonGPT = 0; // flag so we don't overwrite unless directed to do so
          while ((opt = poptGetNextOpt(poptCon)) > 0) {
@@ -117,11 +118,11 @@ int main(int argc, char *argv[]) {
                case 'c':
                   theGPT.JustLooking(0);
                   partNum = (int) GetInt(partName, 1) - 1;
-                  if (theGPT.SetName(partNum, (char*) GetString(partName, 2).c_str())) {
+                  if (theGPT.SetName(partNum, GetString(partName, 2))) {
                      saveData = 1;
                   } else {
-                     fprintf(stderr, "Unable set set partition %d's name to '%s'!\n",
-                             partNum + 1, GetString(partName, 2).c_str());
+                     cerr << "Unable set set partition " << partNum + 1
+                          << "'s name to '" << GetString(partName, 2) << "'!\n";
                      neverSaveData = 1;
                   } // if/else
                   free(partName);
@@ -129,7 +130,7 @@ int main(int argc, char *argv[]) {
                case 'd':
                   theGPT.JustLooking(0);
                   if (theGPT.DeletePartition(deletePartNum - 1) == 0) {
-                     fprintf(stderr, "Error %d deleting partition!\n", errno);
+                     cerr << "Error " << errno << " deleting partition!\n";
                      neverSaveData = 1;
                   } else saveData = 1;
                   break;
@@ -139,10 +140,10 @@ int main(int argc, char *argv[]) {
                   saveData = 1;
                   break;
                case 'E':
-                  printf("%llu\n", (unsigned long long) theGPT.FindLastAvailable(theGPT.FindFirstInLargest()));
+                  cout << theGPT.FindLastAvailable(theGPT.FindFirstInLargest()) << "\n";
                   break;
                case 'f':
-                  printf("%llu\n", (unsigned long long) theGPT.FindFirstInLargest());
+                  cout << theGPT.FindFirstInLargest() << "\n";
                   break;
                case 'g':
                   theGPT.JustLooking(0);
@@ -153,12 +154,12 @@ int main(int argc, char *argv[]) {
                   theGPT.ShowPartDetails(infoPartNum - 1);
                   break;
                case 'l':
-                  if (theGPT.LoadGPTBackup(backupFile) == 1)
+                  if (theGPT.LoadGPTBackup((string) backupFile) == 1)
                      saveData = 1;
                   else {
                      saveData = 0;
                      neverSaveData = 1;
-                     fprintf(stderr, "Error loading backup file!\n");
+                     cerr << "Error loading backup file!\n";
                   } // else
                   free(backupFile);
                   break;
@@ -172,8 +173,8 @@ int main(int argc, char *argv[]) {
                   if (theGPT.CreatePartition(partNum, startSector, endSector)) {
                      saveData = 1;
                   } else {
-                     fprintf(stderr, "Could not create partition %d from %llu to %llu!\n",
-                             partNum, startSector, endSector);
+                     cerr << "Could not create partition " << partNum << " from "
+                          << startSector << " to " << endSector << "\n";
                      neverSaveData = 1;
                   } // if/else
                   free(newPartInfo);
@@ -208,8 +209,8 @@ int main(int argc, char *argv[]) {
                   if (theGPT.ChangePartType(partNum, hexCode)) {
                      saveData = 1;
                   } else {
-                     fprintf(stderr, "Could not change partition %d's type code to %x!\n",
-                             partNum + 1, hexCode);
+                     cerr << "Could not change partition " << partNum + 1
+                          << "'s type code to " << hex << hexCode << "!\n" << dec;
                      neverSaveData = 1;
                   } // if/else
                   free(typeCode);
@@ -228,18 +229,18 @@ int main(int argc, char *argv[]) {
                   saveNonGPT = 0;
                   break;
                default:
-                  printf("Unknown option (-%c)!\n", opt);
+                  cerr << "Unknown option (-" << opt << ")!\n";
                   break;
             } // switch
          } // while
          if ((saveData) && (!neverSaveData) && (saveNonGPT) && (!pretend))
             theGPT.SaveGPTData(1);
          if (saveData && (!saveNonGPT)) {
-            printf("Non-GPT disk; not saving changes. Use -g to override.\n");
+            cout << "Non-GPT disk; not saving changes. Use -g to override.\n";
             retval = 3;
          } // if
          if (neverSaveData) {
-            printf("Error encountered; not saving changes.\n");
+            cerr << "Error encountered; not saving changes.\n";
             retval = 4;
          } // if
       } else { // if loaded OK
@@ -267,8 +268,6 @@ uint64_t GetInt(char* argument, int itemNum) {
    endPos--;
 
    sscanf(Info.substr(startPos, endPos - startPos + 1).c_str(), "%llu", &retval);
-/*   printf("In GetInt(), startPos = %d, endPos = %d, retval = %llu\n", startPos,
-          endPos, (unsigned long long) retval); */
    return retval;
 } // GetInt()
 

@@ -1,6 +1,10 @@
 0.6.2 (?/??/2010):
 ------------------
 
+- Fixed bug that caused new protective MBR to not be created when the
+  MBR was invalid and the GPT was damaged and the user opts to try to
+  use the GPT data.
+
 - Enabled default partition type code of 0700 when creating partitions
   or changing their type codes. (Type 0700, Linux/Windows data, is set if
   the user hits the Enter key alone.)

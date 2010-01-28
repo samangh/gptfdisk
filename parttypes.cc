@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <iostream>
 #include "parttypes.h"
 
 using namespace std;
@@ -236,20 +237,24 @@ int PartTypes::AddType(uint16_t mbrType, uint64_t guidData1, uint64_t guidData2,
 void PartTypes::ShowTypes(void) {
    int colCount = 1; // column count
    AType* thisType = allTypes;
-   char tempStr[20];
 
+   cout.unsetf(ios::uppercase);
    while (thisType != NULL) {
       if (thisType->display == 1) { // show it
-         strncpy(tempStr, thisType->name, 19);
-	 tempStr[19] = '\0';
-         printf("%04x %-19s  ", thisType->MBRType, tempStr);
+         cout.fill('0');
+         cout.width(4);
+         cout << hex << thisType->MBRType << " ";
+         cout.fill(' ');
+         cout.setf(ios::left);
+         cout.width(19);
+         cout << ((string) thisType->name).substr(0, 19) << "  ";
          if ((colCount % 3) == 0)
-            printf("\n");
+            cout << "\n";
          colCount++;
       } // if
       thisType = thisType->next;
    } // while
-   printf("\n");
+   cout << "\n";
 } // PartTypes::ShowTypes()
 
 // Returns 1 if code is a valid extended MBR code, 0 if it's not
@@ -267,21 +272,24 @@ int PartTypes::Valid(uint16_t code) {
 } // PartTypes::Valid()
 
 // Convert a GUID code to a name.
-char* PartTypes::GUIDToName(struct GUIDData typeCode, char typeName[]) {
+string PartTypes::GUIDToName(struct GUIDData typeCode) {
    AType* theItem = allTypes;
    int found = 0;
+   string typeName;
 
    while ((theItem != NULL) && (!found)) {
       if ((theItem->GUIDType.data1 == typeCode.data1) &&
           (theItem->GUIDType.data2 == typeCode.data2)) { // found it!
-         strcpy(typeName, theItem->name);
+//         strcpy(typeName, theItem->name);
+         typeName = theItem->name;
 	 found = 1;
       } else {
          theItem = theItem->next;
       } // if/else
    } // while
    if (!found) {
-      strcpy(typeName, (char*) "Unknown");
+      typeName = "Unknown";
+//      strcpy(typeName, (char*) "Unknown");
    } // if (!found)
    return typeName;
 } // PartTypes::GUIDToName()
@@ -310,8 +318,11 @@ struct GUIDData PartTypes::IDToGUID(uint16_t ID) {
       } // if/else
    } // while
    if (!found) {
-      printf("Exact type match not found for type code %04X; assigning type code for\n'Linux/Windows data'\n",
-             ID);
+      cout.setf(ios::uppercase);
+      cout.fill('0');
+      cout << "Exact type match not found for type code ";
+      cout.width(4);
+      cout << hex << ID << "; assigning type code for\n'Linux/Windows data'\n" << dec;
    } // if (!found)
    return theGUID;
 } // PartTypes::IDToGUID()

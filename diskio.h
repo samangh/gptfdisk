@@ -59,10 +59,8 @@ class DiskIO {
 #endif
    public:
       DiskIO(void);
-//      DiskIO(const DiskIO & orig);
       ~DiskIO(void);
 
-//      DiskIO & operator=(const DiskIO & orig);
       void MakeRealName(void);
       int OpenForRead(string filename);
       int OpenForRead(void);

@@ -69,12 +69,11 @@ class BSDData {
       uint64_t labelLastLBA;     // final sector of BSD disklabel
       uint64_t labelStart;       // BSD disklabel start point in bytes from labelFirstLBA
       BSDValidity state;
-      DiskIO *myDisk;
    public:
       BSDData(void);
       ~BSDData(void);
-      int ReadBSDData(char* deviceFilename, uint64_t startSector, uint64_t endSector);
-      void ReadBSDData(DiskIO *myDisk, uint64_t startSector, uint64_t endSector);
+      int ReadBSDData(string *deviceFilename, uint64_t startSector, uint64_t endSector);
+      int ReadBSDData(DiskIO *myDisk, uint64_t startSector, uint64_t endSector);
       void ReverseMetaBytes(void);
       void DisplayBSDData(void);
       int ShowState(void); // returns 1 if BSD disklabel detected

@@ -15,8 +15,9 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+#include <iostream>
 #include "gptpart.h"
 #include "attributes.h"
 
@@ -34,14 +35,14 @@ GPTPart::GPTPart(void) {
 GPTPart::~GPTPart(void) {
 } // destructor
 
-// Return partition's name field
+// Return partition's name field, converted to a C++ ASCII string
 string GPTPart::GetName(void) {
    string theName;
+   int i;
 
-/*   if (ref == NULL)
-      ref = (unsigned char*) malloc(NAME_SIZE * sizeof (unsigned char));
-   strcpy((char*) ref, (char*) name); */
-   theName = (const char*) name;
+   for (i = 0; i < NAME_SIZE; i += 2) {
+      theName += name[i];
+   } // for
    return theName;
 } // GPTPart::GetName()
 
@@ -53,12 +54,7 @@ uint16_t GPTPart::GetHexType(void) {
 // Return a plain-text description of the partition type (e.g., "Linux/Windows
 // data" or "Linux swap").
 string GPTPart::GetNameType(void) {
-   string temp;
-   char theName[255];
-
-   temp = typeHelper.GUIDToName(partitionType, theName);
-
-   return temp;
+   return typeHelper.GUIDToName(partitionType);
 } // GPTPart::GetNameType()
 
 // Compute and return the partition's length (or 0 if the end is incorrectly
@@ -141,50 +137,56 @@ void GPTPart::ReversePartBytes(void) {
 
 // Display summary information; does nothing if the partition is empty.
 void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
-   char sizeInSI[255];
-   int j = 0;
+   string sizeInSI;
+   int i;
 
    if (firstLBA != 0) {
-      BytesToSI(blockSize * (lastLBA - firstLBA + 1), sizeInSI);
-      printf("%4d  %14lu  %14lu", partNum + 1, (unsigned long) firstLBA,
-             (unsigned long) lastLBA);
-      printf("   %-10s  %04X  ", sizeInSI,
-             typeHelper.GUIDToID(partitionType));
-      while ((name[j] != '\0') && (j < 44)) {
-         printf("%c", name[j]);
-         j += 2;
-      } // while
-      printf("\n");
+      sizeInSI = BytesToSI(blockSize * (lastLBA - firstLBA + 1));
+      cout.width(4);
+      cout << partNum + 1 << "  ";
+      cout.width(14);
+      cout << firstLBA << "  ";
+      cout.width(14);
+      cout << lastLBA  << "   ";
+      cout << BytesToSI(blockSize * (lastLBA - firstLBA + 1)) << "   ";
+      for (i = 0; i < 9 - sizeInSI.length(); i++) cout << " ";
+      cout.fill('0');
+      cout.width(4);
+      cout.setf(ios::uppercase);
+      cout << hex << typeHelper.GUIDToID(partitionType) << "  " << dec;
+      cout.fill(' ');
+      cout.setf(ios::right);
+      cout << GetName().substr(0, 23) << "\n";
+      cout.fill(' ');
    } // if
 } // GPTPart::ShowSummary()
 
 // Show detailed partition information. Does nothing if the partition is
 // empty (as determined by firstLBA being 0).
 void GPTPart::ShowDetails(uint32_t blockSize) {
-   char temp[255];
-   int i;
    uint64_t size;
 
    if (firstLBA != 0) {
-      printf("Partition GUID code: %s ", GUIDToStr(partitionType, temp));
-      printf("(%s)\n", typeHelper.GUIDToName(partitionType, temp));
-      printf("Partition unique GUID: %s\n", GUIDToStr(uniqueGUID, temp));
+      cout << "Partition GUID code: " << GUIDToStr(partitionType);
+      cout << " (" << typeHelper.GUIDToName(partitionType) << ")\n";
+      cout << "Partition unique GUID: " << GUIDToStr(uniqueGUID) << "\n";
 
-      printf("First sector: %llu ", firstLBA);
-      printf("(at %s)\n", BytesToSI(firstLBA * blockSize, temp));
-      printf("Last sector: %llu ", (unsigned long long) lastLBA);
-      printf("(at %s)\n", BytesToSI(lastLBA * blockSize, temp));
+      cout << "First sector: " << firstLBA << " (at "
+           << BytesToSI(firstLBA * blockSize) << ")\n";
+      cout << "Last sector: " << lastLBA << " (at "
+           << BytesToSI(lastLBA * blockSize) << ")\n";
       size = (lastLBA - firstLBA + 1);
-      printf("Partition size: %llu sectors ", (unsigned long long) size);
-      printf("(%s)\n", BytesToSI(size * ((uint64_t) blockSize), temp));
-      printf("Attribute flags: %016llx\n", (unsigned long long) attributes);
-      printf("Partition name: ");
-      i = 0;
-      while ((name[i] != '\0') && (i < NAME_SIZE)) {
-         printf("%c", name[i]);
-         i += 2;
-      } // while
-      printf("\n");
+      cout << "Partition size: " << size << " sectors ("
+           << BytesToSI(size * ((uint64_t) blockSize)) << ")\n";
+      cout << "Attribute flags: ";
+      cout.fill('0');
+      cout.width(16);
+      cout << right;
+      cout << hex;
+      cout << attributes << "\n";
+      cout << left;
+      cout << dec;
+      cout << "Partition name: " << GetName() << "\n";
    }  // if
 } // GPTPart::ShowDetails()
 
@@ -194,14 +196,14 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
 
 // Change the type code on the partition.
 void GPTPart::ChangeType(void) {
-   char typeName[255], line[255];
+   char line[255];
    char* junk;
    int typeNum = 0xFFFF;
    GUIDData newType;
 
-   printf("Current type is '%s'\n", GetNameType().c_str());
+   cout << "Current type is '" << GetNameType() << "'\n";
    while ((!typeHelper.Valid(typeNum)) && (typeNum != 0)) {
-      printf("Hex code (L to show codes, 0 to enter raw code, Enter = 0700): ");
+      cout << "Hex code (L to show codes, 0 to enter raw code, Enter = 0700): ";
       junk = fgets(line, 255, stdin);
       sscanf(line, "%X", &typeNum);
       if ((line[0] == 'L') || (line[0] == 'l'))
@@ -215,25 +217,24 @@ void GPTPart::ChangeType(void) {
    else // user wants to enter the GUID directly, so do that
       newType = GetGUID();
    partitionType = newType;
-   printf("Changed type of partition to '%s'\n",
-          typeHelper.GUIDToName(partitionType, typeName));
+   cout << "Changed type of partition to '" << typeHelper.GUIDToName(partitionType) << "'\n";
 } // GPTPart::ChangeType()
 
 // Set the name for a partition to theName, or prompt for a name if
-// theName is a NULL pointer. Note that theName is a standard C-style
+// theName is empty. Note that theName is a standard C++-style ASCII
 // string, although the GUID partition definition requires a UTF-16LE
 // string. This function creates a simple-minded copy for this.
-void GPTPart::SetName(unsigned char* theName) {
+void GPTPart::SetName(string theName) {
    char newName[NAME_SIZE]; // New name
-   char* junk;
+   char *junk;
    int i;
 
    // Blank out new name string, just to be on the safe side....
    for (i = 0; i < NAME_SIZE; i++)
       newName[i] = '\0';
 
-   if (theName == NULL) { // No name specified, so get one from the user
-      printf("Enter name: ");
+   if (theName == "") { // No name specified, so get one from the user
+      cout << "Enter name: ";
       junk = fgets(newName, NAME_SIZE / 2, stdin);
 
       // Input is likely to include a newline, so remove it....
@@ -241,7 +242,7 @@ void GPTPart::SetName(unsigned char* theName) {
       if (newName[i - 1] == '\n')
          newName[i - 1] = '\0';
    } else {
-      strcpy(newName, (char*) theName);
+      strcpy(newName, theName.substr(0, NAME_SIZE / 2).c_str());
    } // if
 
    // Copy the C-style ASCII string from newName into a form that the GPT

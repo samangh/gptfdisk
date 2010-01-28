@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <iostream>
 #include "attributes.h"
 
 using namespace std;
@@ -25,14 +26,14 @@ Attributes::Attributes(void) {
    // appropriate name
    for (i = 1; i < NUM_ATR; i++) {
       sprintf(temp, "Undefined bit #%d", i);
-      strcpy(atNames[i], temp);
+      atNames[i] = temp;
    } // for
 
    // Now reset those names that are defined....
-   strcpy(atNames[0], "system partition");
-   strcpy(atNames[60], "read-only");
-   strcpy(atNames[62], "hidden");
-   strcpy(atNames[63], "do not automount");
+   atNames[0] = "system partition";
+   atNames[60] = "read-only";
+   atNames[62] = "hidden";
+   atNames[63] = "do not automount";
 } // Attributes constructor
 
 // Destructor.
@@ -43,16 +44,18 @@ Attributes::~Attributes(void) {
 void Attributes::DisplayAttributes(void) {
    int i;
 
-   printf("Attribute value is %llX. Set fields are:\n",
-          (unsigned long long) attributes);
+   cout << "Attribute value is ";
+   cout.setf(ios::uppercase);
+   cout.fill('0');
+   cout.width(16);
+   cout << hex << attributes << dec << ". Set fields are:\n";
    for (i = 0; i < NUM_ATR; i++) {
       if (((attributes >> i) % 2) == 1) { // bit is set
-/*         if (strncmp("Undefined", atNames[i], 9) != 0)
-            printf("%s\n", atNames[i]); */
-         if (strncmp("Undefined", atNames[NUM_ATR - i - 1], 9) != 0)
-            printf("%s\n", atNames[NUM_ATR - i - 1]);
+         if (atNames[NUM_ATR - i - 1].substr(0, 9) != "Undefined")
+            cout << atNames[NUM_ATR - i - 1] << "\n";
       } // if
    } // for
+   cout.fill(' ');
 } // Attributes::DisplayAttributes()
 
 // Prompt user for attribute changes
@@ -60,23 +63,22 @@ void Attributes::ChangeAttributes(void) {
    int response, i;
    uint64_t bitValue;
 
-   printf("Known attributes are:\n");
+   cout << "Known attributes are:\n";
    for (i = 0; i < NUM_ATR; i++) {
-      if (strncmp("Undefined", atNames[i], 9) != 0)
-         printf("%d - %s\n", i, atNames[i]);
+      if (atNames[i].substr(0, 9) != "Undefined")
+         cout << i << " - " << atNames[i] << "\n";
    } // for
 
    do {
-      response = GetNumber(0, 64, -1, "Toggle which attribute field (0-63, 64 to exit): ");
+      response = GetNumber(0, 64, -1, (string) "Toggle which attribute field (0-63, 64 to exit): ");
       if (response != 64) {
          bitValue = PowerOf2(NUM_ATR - response - 1); // Find the integer value of the bit
-//         bitValue = PowerOf2(response); // Find the integer value of the bit
          if ((bitValue & attributes) == bitValue) { // bit is set
             attributes -= bitValue; // so unset it
-	    printf("Have disabled the '%s' attribute.\n", atNames[response]);
+	    cout << "Have disabled the '" << atNames[response] << "' attribute.\n";
          } else { // bit is not set
             attributes += bitValue; // so set it
-	    printf("Have enabled the '%s' attribute.\n", atNames[response]);
+            cout << "Have enabled the '" << atNames[response] << "' attribute.\n";
          } // if/else
       } // if
    } while (response != 64);
