@@ -1,0 +1,96 @@
+GPT fdisk (aka gdisk)
+
+by Roderick W. Smith, rodsmith@rodsbooks.com
+
+******************************** IMPORTANT ********************************
+Most versions of Windows cannot boot from a GPT disk, and most varieties
+prior to Vista cannot read GPT disks. GPT fdisk is a partition editor for
+GPT disks, and it will *AUTOMATICALLY CONVERT* MBR disks to GPT form.
+Therefore, you should **NOT** use GPT fdisk on a Windows system unless you
+fully understand what you're doing! If you accidentally use GPT fdisk on
+your boot disk, or perhaps even on a data disk, you may find recovery to be
+very difficult!
+***************************************************************************
+
+Read the main README file for general information on the program, and read
+the gdisk.html document (the Linux man page converted to HTML format) for
+detailed use information. My GPT fdisk Web page,
+http://www.rodsbooks.com/gdisk/, provides a more tutorial introduction to
+the software.
+
+Windows Use Notes
+-----------------
+
+The Windows version of GPT fdisk was added with version 0.6.2 of the
+package. The Windows binary package includes the gdisk.exe interactive
+text-mode program file but no equivalent to the sgdisk program that's
+available with Linux, FreeBSD, and OS X builds. In theory, an sgdisk.exe
+for Windows could be built if the popt library were installed. I've not
+attempted to do this myself, though. If you care to try, check
+http://gnuwin32.sourceforge.net/packages/popt.htm for information on popt
+for Windows.
+
+To install the program, copy the gdisk.exe program file to any directory on
+your path, such as C:\Windows. Alternatively, you can change to the
+program's directory or type its complete path whenever you use it.
+
+To use the program, first launch a Command Prompt as the Administrator. To
+do this, locate the Command Prompt program icon, right-click it, and select
+"Run as Administrator." If you use a non-Administrator Command Prompt, you
+won't be able to edit hard disk partition tables, although you will be able
+to edit raw disk image files.
+
+The program requires a hard disk identifier as an option. You can specify
+this in either of two forms. The first way is as a number followed by a
+colon, as in:
+
+gdisk 0:
+
+Disks are numbered starting from 0, so the preceding command launches gdisk
+on the first disk. The second way to specify a disk device is via a
+harder-to-remember name:
+
+gdisk \\.\physicaldrive0
+
+This command is equivalent to the earlier one -- it edits the partition
+table on the first physical disk. Change the number at the end of the
+device name to change the disk edited.
+
+If you pass the "-l" option in addition to the disk identifier, the program
+displays the current partition table information and then exits. This use
+entails no risk to MBR disks, since the program never writes data back to
+the disk when used in this way.
+
+As noted above, editing the first disk with GPT fdisk is usually a Bad
+Idea. An exception would be if your system uses an Extensible Firmware
+Interface (EFI) and already boots from a GPT disk. It's safer to edit
+non-boot disks, which usually have numbers of 1 and above, but only if you
+run a version of Windows with GPT support. For more information on Windows'
+support of GPT, see Microsoft's Web page on the topic:
+
+http://www.microsoft.com/whdc/device/storage/GPT_FAQ.mspx
+
+Source Code and Compilation Issues
+----------------------------------
+
+As of version 0.6.2, I haven't been able to get the code to detect the disk
+sector size to work under Windows, so the Windows binary always assumes a
+512-byte sector size. If you use a disk with another sector size, you'll
+have to change this assumption in the source code (in diskio-windows.cc),
+use a version for another platform, or use a different partitioning tool
+altogether.
+
+I compiled gdisk.exe using MinGW (http://www.mingw.org), and in particular
+its Linux-hosted cross-compiler. I have not tested the compilability of the
+source code under more mainstream Windows compilers, or even on the
+Windows-hosted MinGW variant. MinGW was designed for porting Unix
+applications to Windows, so it's entirely possible that it will work where
+other compilers won't.
+
+Under Ubuntu Linux, the Makefile.mingw file enables compilation of the
+software. (Type "make -f Makefile.mingw" to compile the software.) If you
+try to compile using another compiler or even using MinGW under Windows or
+another Linux variety, you may need to adjust the Makefile.mingw options.
+
+If you modify GPT fdisk to get it to compile under another compiler, I
+welcome submission of patches.
