@@ -28,14 +28,14 @@ string GetString(char* Info, int itemNum);
 
 int main(int argc, char *argv[]) {
    GPTData theGPT;
-   int opt, i, numOptions = 0, saveData = 0, neverSaveData = 0;
+   int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
    int partNum = 0, deletePartNum = 0, infoPartNum = 0, bsdPartNum = 0, saveNonGPT = 1;
    int alignment = 8, retval = 0, pretend = 0;
-   uint16_t hexCode;
+   unsigned int hexCode;
    uint32_t tableSize = 128;
    uint64_t startSector, endSector;
-   char* device = NULL;
-   char *argument = NULL, *newPartInfo = NULL, *typeCode = NULL, *partName;
+   char *device = NULL;
+   char *newPartInfo = NULL, *typeCode = NULL, *partName;
    char *backupFile = NULL;
    PartTypes typeHelper;
 
@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
                case 't':
                   theGPT.JustLooking(0);
                   partNum = (int) GetInt(typeCode, 1) - 1;
-                  sscanf(GetString(typeCode, 2).c_str(), "%x", &hexCode);
+                  sscanf(GetString(typeCode, 2).c_str(), "%ux", &hexCode);
                   if (theGPT.ChangePartType(partNum, hexCode)) {
                      saveData = 1;
                   } else {
@@ -255,7 +255,7 @@ int main(int argc, char *argv[]) {
 // Extract integer data from argument string, which should be colon-delimited
 uint64_t GetInt(char* argument, int itemNum) {
    int startPos = -1, endPos = -1;
-   uint64_t retval = 0;
+   unsigned long long retval = 0;
    string Info;
 
    Info = argument;
@@ -263,7 +263,7 @@ uint64_t GetInt(char* argument, int itemNum) {
       startPos = endPos + 1;
       endPos = Info.find(':', startPos);
    }
-   if (endPos == string::npos)
+   if (endPos == (int) string::npos)
       endPos = Info.length();
    endPos--;
 
@@ -281,7 +281,7 @@ string GetString(char* argument, int itemNum) {
       startPos = endPos + 1;
       endPos = Info.find(':', startPos);
    }
-   if (endPos == string::npos)
+   if (endPos == (int) string::npos)
       endPos = Info.length();
    endPos--;
 

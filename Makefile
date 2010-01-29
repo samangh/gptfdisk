@@ -1,15 +1,12 @@
 CC=gcc
 CXX=g++
 CFLAGS=-O2 -D_FILE_OFFSET_BITS=64 -g
-CXXFLAGS=-O2 -Wuninitialized -Wreturn-type -D_FILE_OFFSET_BITS=64 -I /usr/local/include -I/opt/local/include -g
+CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -I /usr/local/include -I/opt/local/include -g
 LIB_NAMES=crc32 support gptpart mbr gpt bsd parttypes attributes diskio diskio-unix
 LIB_SRCS=$(NAMES:=.cc)
 LIB_OBJS=$(LIB_NAMES:=.o)
 LIB_HEADERS=$(LIB_NAMES:=.h)
 DEPEND= makedepend $(CFLAGS)
-
-#$(APPNAME):	$(MBR2GPT_OBJS)
-#	$(CC) $(MBR2GPT_OBJS) -o $@
 
 all:	gdisk sgdisk
 

@@ -152,7 +152,6 @@ int DiskIO::FindAlignment(void) {
 
 // The same as FindAlignment(int), but opens and closes a device by filename
 int DiskIO::FindAlignment(const string & filename) {
-   int fd;
    int retval = 1;
 
    if (!isOpen)

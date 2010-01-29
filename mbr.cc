@@ -72,7 +72,7 @@ MBRData::~MBRData(void) {
 // Read data from MBR. Returns 1 if read was successful (even if the
 // data isn't a valid MBR), 0 if the read failed.
 int MBRData::ReadMBRData(const string & deviceFilename) {
-   int fd, allOK = 1;
+   int allOK = 1;
 
    if (myDisk == NULL)
       myDisk = new DiskIO;
@@ -348,7 +348,6 @@ int MBRData::WriteMBRData(const string & deviceFilename) {
 // Show the MBR data to the user....
 void MBRData::DisplayMBRData(void) {
    int i;
-   char tempStr[255];
    char bootCode;
 
    cout << "MBR disk identifier: 0x";
@@ -378,7 +377,7 @@ void MBRData::DisplayMBRData(void) {
       cout.fill(' ');
    } // for
    cout << "\nDisk size is " << diskSize << " sectors ("
-        << BytesToSI(diskSize * (uint64_t) blockSize) << "\n";
+        << BytesToSI(diskSize * (uint64_t) blockSize) << ")\n";
 } // MBRData::DisplayMBRData()
 
 // Displays the state, as a word, on stdout. Used for debugging & to
@@ -814,7 +813,6 @@ GPTPart MBRData::AsGPT(int i) {
    GPTPart newPart;
    uint8_t origType;
    uint64_t firstSector, lastSector;
-   char tempStr[NAME_SIZE];
 
    newPart.BlankPartition();
    origPart = GetPartition(i);

@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.2-pre2"
+#define GPTFDISK_VERSION "0.6.2"
 
 using namespace std;
 
@@ -124,7 +124,7 @@ public:
    WhichToUse UseWhichPartitions(void);
    int XFormPartitions(void);
    int XFormDisklabel(int OnGptPart = -1);
-   int XFormDisklabel(BSDData* disklabel, int startPart);
+   int XFormDisklabel(BSDData* disklabel, uint32_t startPart);
    int OnePartToMBR(uint32_t gptPart, int mbrPart); // add one partition to MBR. Returns 1 if successful
    int XFormToMBR(void); // convert GPT to MBR, wiping GPT afterwards. Returns 1 if successful
    void MakeHybrid(void);
@@ -133,7 +133,7 @@ public:
    int SetGPTSize(uint32_t numEntries);
    void BlankPartitions(void);
    int DeletePartition(uint32_t partNum);
-   int CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector);
+   uint32_t CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector);
    void SortGPT(void);
    int ClearGPTData(void);
    void MoveSecondHeaderToEnd();
@@ -158,7 +158,7 @@ public:
    uint64_t FindFirstInLargest(void);
    uint64_t FindLastAvailable(uint64_t start);
    uint64_t FindLastInFree(uint64_t start);
-   uint64_t FindFreeBlocks(int *numSegments, uint64_t *largestSegment);
+   uint64_t FindFreeBlocks(uint32_t *numSegments, uint64_t *largestSegment);
    int IsFree(uint64_t sector);
    int IsFreePartNum(uint32_t partNum);
 

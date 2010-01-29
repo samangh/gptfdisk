@@ -204,7 +204,7 @@ string BytesToSI(uint64_t size) {
 // Convert a GUID to a string representation, suitable for display
 // to humans....
 string GUIDToStr(struct GUIDData theGUID) {
-   unsigned long long blocks[11], block;
+   unsigned long long blocks[11];
    char theString[40];
 
    theString[0] = '\0';;

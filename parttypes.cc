@@ -204,9 +204,9 @@ PartTypes::~PartTypes(void) {
 } // destructor
 
 // Add a single type to the linked list of types. Returns 1 if operation
-// succeeds, 0 otherwise
+// succeeds, 0 otherwise.
 int PartTypes::AddType(uint16_t mbrType, uint64_t guidData1, uint64_t guidData2,
-                       const char* n, int toDisplay) {
+                       const char * n, int toDisplay) {
    AType* tempType;
    int allOK = 1;
 
@@ -215,7 +215,7 @@ int PartTypes::AddType(uint16_t mbrType, uint64_t guidData1, uint64_t guidData2,
       tempType->MBRType = mbrType;
       tempType->GUIDType.data1 = guidData1;
       tempType->GUIDType.data2 = guidData2;
-      strncpy(tempType->name, n, PNAME_SIZE);
+      tempType->name = n;
       tempType->display = toDisplay;
       tempType->next = NULL;
       if (allTypes == NULL) { // first entry
@@ -236,7 +236,7 @@ int PartTypes::AddType(uint16_t mbrType, uint64_t guidData1, uint64_t guidData2,
 // in an ugly way.
 void PartTypes::ShowTypes(void) {
    int colCount = 1; // column count
-   int i;
+   size_t i;
    AType* thisType = allTypes;
 
    cout.unsetf(ios::uppercase);
@@ -245,10 +245,12 @@ void PartTypes::ShowTypes(void) {
          cout.fill('0');
          cout.width(4);
          cout << hex << thisType->MBRType << " ";
-         cout << ((string) thisType->name).substr(0, 19) << "  ";
-         for (i = 0; i < (19 - ((string) thisType->name).substr(0, 19).length()); i ++) cout << " ";
+         cout << thisType->name.substr(0, 20);
+         for (i = 0; i < (20 - (thisType->name.substr(0, 20).length())); i++) cout << " ";
          if ((colCount % 3) == 0)
             cout << "\n";
+         else
+            cout << "  ";
          colCount++;
       } // if
       thisType = thisType->next;
@@ -280,7 +282,6 @@ string PartTypes::GUIDToName(struct GUIDData typeCode) {
    while ((theItem != NULL) && (!found)) {
       if ((theItem->GUIDType.data1 == typeCode.data1) &&
           (theItem->GUIDType.data2 == typeCode.data2)) { // found it!
-//         strcpy(typeName, theItem->name);
          typeName = theItem->name;
 	 found = 1;
       } else {
@@ -289,7 +290,6 @@ string PartTypes::GUIDToName(struct GUIDData typeCode) {
    } // while
    if (!found) {
       typeName = "Unknown";
-//      strcpy(typeName, (char*) "Unknown");
    } // if (!found)
    return typeName;
 } // PartTypes::GUIDToName()

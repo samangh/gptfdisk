@@ -59,7 +59,7 @@ struct GUIDData {
    uint64_t data2;
 }; // struct GUIDData
 
-static char theFile[255];
+// static char theFile[255];
 
 int GetNumber(int low, int high, int def, const string & prompt);
 char GetYN(void);

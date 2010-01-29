@@ -10,9 +10,6 @@
 #ifndef __PARTITION_TYPES
 #define __PARTITION_TYPES
 
-// Set the size of the name string
-#define PNAME_SIZE 80
-
 using namespace std;
 
 // A partition type
@@ -22,7 +19,7 @@ struct AType {
    // codes required by GPT
    uint16_t MBRType;
    struct GUIDData GUIDType;
-   char name[PNAME_SIZE];
+   string name;
    int display; // 1 to show to users as available type, 0 not to
    AType* next;
 }; // struct AType
@@ -36,7 +33,7 @@ public:
    PartTypes(void);
    ~PartTypes(void);
    int AddType(uint16_t mbrType, uint64_t guidData1, uint64_t guidData2,
-               const char* name, int toDisplay = 1);
+               const char * name, int toDisplay = 1);
    void ShowTypes(void);
    int Valid(uint16_t);
    string GUIDToName(struct GUIDData typeCode);

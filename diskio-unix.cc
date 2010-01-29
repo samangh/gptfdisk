@@ -208,7 +208,7 @@ int DiskIO::Seek(uint64_t sector) {
 // size with the number of bytes read.
 // Returns the number of bytes read into buffer.
 int DiskIO::Read(void* buffer, int numBytes) {
-   int blockSize = 512, i, numBlocks, retval = 0;
+   int blockSize = 512, numBlocks, retval = 0;
    char* tempSpace;
 
    // If disk isn't open, try to open it....

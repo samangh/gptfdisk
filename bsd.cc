@@ -65,7 +65,7 @@ int BSDData::ReadBSDData(const string & device, uint64_t startSector, uint64_t e
 // file, starting with the specified sector number.
 int BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSector) {
    uint8_t buffer[4096]; // I/O buffer
-   int i, err, foundSig = 0, bigEnd = 0, allOK = 1;
+   int i, foundSig = 0, bigEnd = 0, allOK = 1;
    int relative = 0; // assume absolute partition sector numbering
    uint32_t realSig;
    uint32_t* temp32;
@@ -73,7 +73,6 @@ int BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSect
    BSDRecord* tempRecords;
    int offset[NUM_OFFSETS] = { LABEL_OFFSET1, LABEL_OFFSET2 };
 
-//   myDisk = theDisk;
    labelFirstLBA = startSector;
    labelLastLBA = endSector;
    offset[1] = theDisk->GetBlockSize();
@@ -263,7 +262,6 @@ int BSDData::GetNumParts(void) {
 GPTPart BSDData::AsGPT(int i) {
    GPTPart guid;                  // dump data in here, then return it
    uint64_t sectorOne, sectorEnd; // first & last sectors of partition
-   char tempStr[NAME_SIZE];       // temporary string for holding GPT name
    int passItOn = 1;              // Set to 0 if partition is empty or invalid
 
    guid.BlankPartition();

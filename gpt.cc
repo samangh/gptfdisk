@@ -96,9 +96,10 @@ GPTData::~GPTData(void) {
 // do *NOT* recover from these problems. Returns the total number of
 // problems identified.
 int GPTData::Verify(void) {
-   int problems = 0, numSegments, i;
-   uint64_t totalFree, largestSegment, firstSector;
-   char tempStr[255], siTotal[255], siLargest[255];
+   int problems = 0;
+   uint32_t i, numSegments;
+   uint64_t totalFree, largestSegment;
+   char siTotal[255], siLargest[255];
 
    // First, check for CRC errors in the GPT data....
    if (!mainCrcOk) {
@@ -458,7 +459,8 @@ void GPTData::RebuildSecondHeader(void) {
 // Search for hybrid MBR entries that have no corresponding GPT partition.
 // Returns number of such mismatches found
 int GPTData::FindHybridMismatches(void) {
-   int i, j, found, numFound = 0;
+   int i, found, numFound = 0;
+   uint32_t j;
    uint64_t mbrFirst, mbrLast;
 
    for (i = 0; i < 4; i++) {
@@ -493,7 +495,8 @@ int GPTData::FindHybridMismatches(void) {
 // Find overlapping partitions and warn user about them. Returns number of
 // overlapping partitions.
 int GPTData::FindOverlaps(void) {
-   int i, j, problems = 0;
+   int problems = 0;
+   uint32_t i, j;
 
    for (i = 1; i < mainHeader.numParts; i++) {
       for (j = 0; j < i; j++) {
@@ -551,8 +554,8 @@ void GPTData::PartitionScan(void) {
 
 // Read GPT data from a disk.
 int GPTData::LoadPartitions(const string & deviceFilename) {
-   int err;
-   int allOK = 1, i;
+   int err, allOK = 1;
+   uint32_t i;
    uint64_t firstBlock, lastBlock;
    BSDData bsdDisklabel;
    MBRValidity mbrState;
@@ -568,11 +571,9 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
            << "program.\n";
 #endif
       cout << "\n";
-//      justLooking = 1;
    } // if
    myDisk.Close();
 
-//   if ((fd = open(deviceFilename, O_RDONLY)) != -1) {
    if (myDisk.OpenForRead(deviceFilename)) {
       // store disk information....
       diskSize = myDisk.DiskSize(&err);
@@ -737,7 +738,7 @@ int GPTData::ForceLoadGPTData(void) {
       if ((myDisk.Seek(seekTo)) && (secondCrcOk)) {
          sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
          storage = (uint8_t*) malloc(sizeOfParts);
-         if (myDisk.Read(storage, sizeOfParts) != sizeOfParts) {
+         if (myDisk.Read(storage, sizeOfParts) != (int) sizeOfParts) {
             cerr << "Warning! Error " << errno << " reading backup partition table!\n";
          } // if
          newCRC = chksum_crc32((unsigned char*) storage,  sizeOfParts);
@@ -770,7 +771,7 @@ int GPTData::ForceLoadGPTData(void) {
 // sensible!
 // Returns 1 on success, 0 on failure. CRC errors do NOT count as failure.
 int GPTData::LoadMainTable(void) {
-   int fd, retval = 1;
+   int retval = 1;
    uint32_t newCRC, sizeOfParts;
 
    if (myDisk.OpenForRead(device)) {
@@ -782,7 +783,7 @@ int GPTData::LoadMainTable(void) {
       if (!myDisk.Seek(mainHeader.partitionEntriesLBA))
          retval = 0;
       sizeOfParts = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
-      if (myDisk.Read(partitions, sizeOfParts) != sizeOfParts) {
+      if (myDisk.Read(partitions, sizeOfParts) != (int) sizeOfParts) {
          cerr << "Warning! Error " << errno << " when loading the main partition table!\n";
          retval = 0;
       } // if
@@ -809,7 +810,7 @@ int GPTData::LoadSecondTableAsMain(void) {
       if (retval == 1) {
          SetGPTSize(secondHeader.numParts);
          sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
-         if (myDisk.Read(partitions, sizeOfParts) != sizeOfParts) {
+         if (myDisk.Read(partitions, sizeOfParts) != (int) sizeOfParts) {
             cerr << "Warning! Read error " << errno << "! Misbehavior now likely!\n";
             retval = 0;
          } // if
@@ -836,7 +837,7 @@ int GPTData::LoadSecondTableAsMain(void) {
 // write, 0 if there was a problem.
 int GPTData::SaveGPTData(int quiet) {
    int allOK = 1;
-   char answer, line[256];
+   char answer;
    uint64_t secondTable;
    uint32_t numParts;
    uint64_t offset;
@@ -1128,7 +1129,7 @@ int GPTData::LoadGPTBackup(const string & filename) {
          // Load main partition table, and record whether its CRC
          // matches the stored value
          sizeOfParts = numParts * sizeOfEntries;
-         if (backupFile.Read(partitions, sizeOfParts) != sizeOfParts) {
+         if (backupFile.Read(partitions, sizeOfParts) != (int) sizeOfParts) {
             cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
          } // if
 
@@ -1184,8 +1185,7 @@ void GPTData::ShowGPTState(void) {
 
 // Display the basic GPT data
 void GPTData::DisplayGPTData(void) {
-   int i;
-//   char tempStr[255];
+   uint32_t i;
    uint64_t temp, totalFree;
 
    cout << "Disk " << device << ": " << diskSize << " sectors, "
@@ -1274,8 +1274,9 @@ void GPTData::ResizePartitionTable(void) {
 // Interactively create a partition
 void GPTData::CreatePartition(void) {
    uint64_t firstBlock, firstInLargest, lastBlock, sector;
+   uint32_t firstFreePart = 0;
    char prompt[255];
-   int partNum, firstFreePart = 0;
+   int partNum;
 
    // Find first free partition...
    while (partitions[firstFreePart].GetFirstLBA() != 0) {
@@ -1372,7 +1373,7 @@ void GPTData::SetAttributes(uint32_t partNum) {
 // If prompt == -1, don't ask user about proceeding and DO wipe out
 // MBR.
 int GPTData::DestroyGPT(int prompt) {
-   int fd, i, sum, tableSize;
+   int i, sum, tableSize;
    uint8_t blankSector[512], goOn = 'Y', blank = 'N';
    uint8_t* emptyTable;
 
@@ -1590,7 +1591,7 @@ int GPTData::XFormDisklabel(int i) {
    BSDData disklabel;
 
    if (GetPartRange(&low, &high) != 0) {
-      if ((i < low) || (i > high))
+      if ((i < (int) low) || (i > (int) high))
          partNum = GetPartNum();
       else
          partNum = (uint32_t) i;
@@ -1608,7 +1609,7 @@ int GPTData::XFormDisklabel(int i) {
 
       // If all is OK, read the disklabel and convert it.
       if (goOn) {
-         goOn = disklabel.ReadBSDData(device, partitions[partNum].GetFirstLBA(),
+         goOn = disklabel.ReadBSDData(&myDisk, partitions[partNum].GetFirstLBA(),
                                       partitions[partNum].GetLastLBA());
          if ((goOn) && (disklabel.IsDisklabel())) {
             numDone = XFormDisklabel(&disklabel, startPart);
@@ -1630,7 +1631,7 @@ int GPTData::XFormDisklabel(int i) {
 } // GPTData::XFormDisklable(int i)
 
 // Transform the partitions on an already-loaded BSD disklabel...
-int GPTData::XFormDisklabel(BSDData* disklabel, int startPart) {
+int GPTData::XFormDisklabel(BSDData* disklabel, uint32_t startPart) {
    int i, numDone = 0;
 
    if ((disklabel->IsDisklabel()) && (startPart >= 0) &&
@@ -1710,8 +1711,8 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
 int GPTData::XFormToMBR(void) {
    char line[255];
    char* junk;
-   int i, j, numParts, numConverted = 0;
-   uint32_t partNums[4];
+   int j, numParts, numConverted = 0;
+   uint32_t i, partNums[4];
 
    // Get the numbers of up to four partitions to add to the
    // hybrid MBR....
@@ -1737,7 +1738,7 @@ int GPTData::XFormToMBR(void) {
       } // while
    } // if/else
 
-   for (i = 0; i < numParts; i++) {
+   for (i = 0; i < (uint32_t) numParts; i++) {
       j = partNums[i] - 1;
       cout << "\nCreating entry for partition #" << j + 1 << "\n";
       numConverted += OnePartToMBR(j, i);
@@ -1937,7 +1938,7 @@ int GPTData::DeletePartition(uint32_t partNum) {
 // with another of the same name but different parameters; that one prompts
 // the user for data. This one returns 1 if the operation was successful, 0
 // if a problem was discovered.
-int GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector) {
+uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector) {
    int retval = 1; // assume there'll be no problems
 
    if (IsFreePartNum(partNum)) {
@@ -2195,7 +2196,7 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
 
 // Returns the number of defined partitions.
 uint32_t GPTData::CountParts(void) {
-   int i, counted = 0;
+   uint32_t i, counted = 0;
 
    for (i = 0; i < mainHeader.numParts; i++) {
       if (partitions[i].GetFirstLBA() > 0)
@@ -2312,13 +2313,13 @@ uint64_t GPTData::FindLastInFree(uint64_t start) {
 
 // Finds the total number of free blocks, the number of segments in which
 // they reside, and the size of the largest of those segments
-uint64_t GPTData::FindFreeBlocks(int *numSegments, uint64_t *largestSegment) {
+uint64_t GPTData::FindFreeBlocks(uint32_t *numSegments, uint64_t *largestSegment) {
    uint64_t start = UINT64_C(0); // starting point for each search
    uint64_t totalFound = UINT64_C(0); // running total
    uint64_t firstBlock; // first block in a segment
    uint64_t lastBlock; // last block in a segment
    uint64_t segmentSize; // size of segment in blocks
-   int num = 0;
+   uint32_t num = 0;
 
    *largestSegment = UINT64_C(0);
    do {

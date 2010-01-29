@@ -36,7 +36,7 @@ using namespace std;
 
 // Returns the official Windows name for a shortened version of same.
 void DiskIO::MakeRealName(void) {
-   int colonPos;
+   size_t colonPos;
 
    colonPos = userFilename.find(':', 0);
    if ((colonPos != string::npos) && (colonPos <= 3)) {
@@ -183,8 +183,6 @@ void DiskIO::DiskSync(void) {
 int DiskIO::Seek(uint64_t sector) {
    int retval = 1;
    LARGE_INTEGER seekTo;
-   uint32_t lowBits, highBits;
-   uint64_t bytePos;
 
    // If disk isn't open, try to open it....
    if (!isOpen) {
