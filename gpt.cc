@@ -239,7 +239,7 @@ int GPTData::Verify(void) {
            << largestSegment << " (" << BytesToSI(largestSegment * (uint64_t) blockSize)
            << ") in size\n";
    } else {
-      cout << "\nIdentified %d problems!\n", problems;
+      cout << "\nIdentified " << problems << " problems!\n";
    } // if/else
 
    return (problems);
@@ -497,7 +497,7 @@ int GPTData::FindOverlaps(void) {
 
    for (i = 1; i < mainHeader.numParts; i++) {
       for (j = 0; j < i; j++) {
-         if (partitions[i].DoTheyOverlap(&partitions[j])) {
+         if (partitions[i].DoTheyOverlap(partitions[j])) {
             problems++;
             cout << "\nProblem: partitions " << i + 1 << " and " << j + 1 << " overlap:\n";
             cout << "  Partition " << i + 1 << ": " << partitions[i].GetFirstLBA()
@@ -550,7 +550,7 @@ void GPTData::PartitionScan(void) {
 } // GPTData::PartitionScan()
 
 // Read GPT data from a disk.
-int GPTData::LoadPartitions(string deviceFilename) {
+int GPTData::LoadPartitions(const string & deviceFilename) {
    int err;
    int allOK = 1, i;
    uint64_t firstBlock, lastBlock;
@@ -636,7 +636,7 @@ int GPTData::LoadPartitions(string deviceFilename) {
 // succeeded, 0 if there are obvious problems....
 int GPTData::ForceLoadGPTData(void) {
    int allOK = 1, validHeaders;
-   off_t seekTo;
+   uint64_t seekTo;
    uint8_t* storage;
    uint32_t newCRC, sizeOfParts;
 
@@ -839,7 +839,7 @@ int GPTData::SaveGPTData(int quiet) {
    char answer, line[256];
    uint64_t secondTable;
    uint32_t numParts;
-   off_t offset;
+   uint64_t offset;
 
    if (device == "") {
       cerr << "Device not defined.\n";
@@ -936,7 +936,7 @@ int GPTData::SaveGPTData(int quiet) {
 
          // Now seek to near the end to write the secondary GPT....
          if (allOK) {
-            offset = (off_t) secondTable;
+            offset = (uint64_t) secondTable;
             if (myDisk.Seek(offset) != 1) {
                allOK = 0;
                cerr << "Unable to seek to end of disk! Perhaps the 'e' option on the experts' menu\n"
@@ -998,12 +998,11 @@ int GPTData::SaveGPTData(int quiet) {
 // the main GPT header, the backup GPT header, and the main partition
 // table; it discards the backup partition table, since it should be
 // identical to the main partition table on healthy disks.
-int GPTData::SaveGPTBackup(string filename) {
-   int fd, allOK = 1;
+int GPTData::SaveGPTBackup(const string & filename) {
+   int allOK = 1;
    uint32_t numParts;
    DiskIO backupFile;
 
-//   if ((fd = open(filename, O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH)) != -1) {
    if (backupFile.OpenForWrite(filename)) {
       // Reverse the byte order, if necessary....
       numParts = mainHeader.numParts;
@@ -1066,13 +1065,12 @@ int GPTData::SaveGPTBackup(string filename) {
 // does minimal error checking. It returns 1 if it completed successfully,
 // 0 if there was a problem. In the latter case, it creates a new empty
 // set of partitions.
-int GPTData::LoadGPTBackup(string filename) {
-   int fd, allOK = 1, val;
+int GPTData::LoadGPTBackup(const string & filename) {
+   int allOK = 1, val;
    uint32_t numParts, sizeOfEntries, sizeOfParts, newCRC;
    int littleEndian = 1;
    DiskIO backupFile;
 
-//   if ((fd = open(filename, O_RDONLY)) != -1) {
    if (backupFile.OpenForRead(filename)) {
       if (IsLittleEndian() == 0)
          littleEndian = 0;
@@ -1473,7 +1471,7 @@ WhichToUse GPTData::UseWhichPartitions(void) {
       cout << "\n**********************************************************************\n"
            << "Found invalid GPT and valid BSD disklabel; converting BSD disklabel\n"
            << "to GPT format.";
-      if (!justLooking) {
+      if ((!justLooking) && (!beQuiet)) {
       cout << "\a THIS OPERATON IS POTENTIALLY DESTRUCTIVE! Your first\n"
            << "BSD partition will likely be unusable. Exit by typing 'q' if you don't\n"
            << "want to convert your BSD partitions to GPT format!";
@@ -1493,10 +1491,9 @@ WhichToUse GPTData::UseWhichPartitions(void) {
          cout << "Found valid GPT with hybrid MBR; using GPT.\n";
    } // if
    if ((state == gpt_valid) && (mbrState == invalid)) {
-      cout << "\aFound valid GPT with corrupt MBR; using GPT and will create new\n"
+      cout << "\aFound valid GPT with corrupt MBR; using GPT and will write new\n"
            << "protective MBR on save.\n";
       which = use_gpt;
-      protectiveMBR.MakeProtectiveMBR();
    } // if
    if ((state == gpt_valid) && (mbrState == mbr)) {
       if (!beQuiet) {
@@ -1506,7 +1503,6 @@ WhichToUse GPTData::UseWhichPartitions(void) {
             which = use_mbr;
          } else if (answer == 2) {
             which = use_gpt;
-            protectiveMBR.MakeProtectiveMBR();
             cout << "Using GPT and creating fresh protective MBR.\n";
          } else which = use_new;
       } else which = use_abort;
@@ -1612,7 +1608,7 @@ int GPTData::XFormDisklabel(int i) {
 
       // If all is OK, read the disklabel and convert it.
       if (goOn) {
-         goOn = disklabel.ReadBSDData(&myDisk, partitions[partNum].GetFirstLBA(),
+         goOn = disklabel.ReadBSDData(device, partitions[partNum].GetFirstLBA(),
                                       partitions[partNum].GetLastLBA());
          if ((goOn) && (disklabel.IsDisklabel())) {
             numDone = XFormDisklabel(&disklabel, startPart);
@@ -2053,7 +2049,7 @@ void GPTData::MoveSecondHeaderToEnd() {
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
 } // GPTData::FixSecondHeaderLocation()
 
-int GPTData::SetName(uint32_t partNum, string theName) {
+int GPTData::SetName(uint32_t partNum, const string & theName) {
    int retval = 1;
 
    if (!IsFreePartNum(partNum)) {

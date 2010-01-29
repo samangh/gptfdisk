@@ -62,21 +62,21 @@ class GPTPart {
       string GetName(void);
 
       // Simple data assignment:
-      void SetType(struct GUIDData t) {partitionType = t;}
-      void SetType(uint16_t hex) {partitionType = typeHelper.IDToGUID(hex);}
+      void SetType(struct GUIDData t);
+      void SetType(uint16_t hex) {SetType(typeHelper.IDToGUID(hex));}
       void SetUniqueGUID(struct GUIDData u) {uniqueGUID = u;}
       void SetUniqueGUID(int zeroOrRandom);
       void SetFirstLBA(uint64_t f) {firstLBA = f;}
       void SetLastLBA(uint64_t l) {lastLBA = l;}
       void SetAttributes(uint64_t a) {attributes = a;}
-      void SetName(string n);
+      void SetName(const string & n);
 
       // Additional functions
       GPTPart & operator=(const GPTPart & orig);
       void ShowSummary(int partNum, uint32_t blockSize); // display summary information (1-line)
       void ShowDetails(uint32_t blockSize); // display detailed information (multi-line)
       void BlankPartition(void); // empty partition of data
-      int DoTheyOverlap(GPTPart* other); // returns 1 if there's overlap
+      int DoTheyOverlap(const GPTPart & other); // returns 1 if there's overlap
       void ReversePartBytes(void); // reverse byte order of all integer fields
 
       // Functions requiring user interaction

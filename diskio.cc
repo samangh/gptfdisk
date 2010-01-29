@@ -15,7 +15,7 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-#ifdef MINGW
+#ifdef _WIN32
 #include <windows.h>
 #include <winioctl.h>
 #define fstat64 fstat
@@ -52,7 +52,7 @@ DiskIO::~DiskIO(void) {
 } // destructor
 
 // Open a disk device for reading. Returns 1 on success, 0 on failure.
-int DiskIO::OpenForRead(string filename) {
+int DiskIO::OpenForRead(const string & filename) {
    int shouldOpen = 1;
 
    if (isOpen) { // file is already open
@@ -74,7 +74,7 @@ int DiskIO::OpenForRead(string filename) {
 
 // Open a disk for reading and writing by filename.
 // Returns 1 on success, 0 on failure.
-int DiskIO::OpenForWrite(string filename) {
+int DiskIO::OpenForWrite(const string & filename) {
    int retval = 0;
 
    if ((isOpen) && (openForWrite) && ((filename == realFilename) || (filename == userFilename))) {
@@ -151,7 +151,7 @@ int DiskIO::FindAlignment(void) {
 } // DiskIO::FindAlignment(int) */
 
 // The same as FindAlignment(int), but opens and closes a device by filename
-int DiskIO::FindAlignment(string filename) {
+int DiskIO::FindAlignment(const string & filename) {
    int fd;
    int retval = 1;
 

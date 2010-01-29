@@ -18,7 +18,7 @@
 #include <string>
 #include <stdint.h>
 #include <sys/types.h>
-#ifdef MINGW
+#ifdef _WIN32
 #include <windows.h>
 #include <winioctl.h>
 #else
@@ -52,7 +52,7 @@ class DiskIO {
       int isOpen;
       int openForWrite;
       uint8_t *sectorData;
-#ifdef MINGW
+#ifdef _WIN32
       HANDLE fd;
 #else
       int fd;
@@ -62,9 +62,9 @@ class DiskIO {
       ~DiskIO(void);
 
       void MakeRealName(void);
-      int OpenForRead(string filename);
+      int OpenForRead(const string & filename);
       int OpenForRead(void);
-      int OpenForWrite(string filename);
+      int OpenForWrite(const string & filename);
       int OpenForWrite(void);
       void Close();
       int Seek(uint64_t sector);
@@ -73,7 +73,7 @@ class DiskIO {
       void DiskSync(void); // resync disk caches to use new partitions
       int GetBlockSize(void);
       int FindAlignment(void);
-      int FindAlignment(string filename);
+      int FindAlignment(const string & filename);
       int IsOpen(void) {return isOpen;}
       int IsOpenForWrite(void) {return openForWrite;}
 

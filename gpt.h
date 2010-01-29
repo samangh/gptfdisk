@@ -93,15 +93,15 @@ public:
    int FindOverlaps(void);
 
    // Load or save data from/to disk
-   int LoadMBR(string f) {return protectiveMBR.ReadMBRData(f);}
+   int LoadMBR(const string & f) {return protectiveMBR.ReadMBRData(f);}
    void PartitionScan(void);
-   int LoadPartitions(string deviceFilename);
+   int LoadPartitions(const string & deviceFilename);
    int ForceLoadGPTData(void);
    int LoadMainTable(void);
    int LoadSecondTableAsMain(void);
    int SaveGPTData(int quiet = 0);
-   int SaveGPTBackup(string filename);
-   int LoadGPTBackup(string filename);
+   int SaveGPTBackup(const string & filename);
+   int LoadGPTBackup(const string & filename);
 
    // Display data....
    void ShowAPMState(void);
@@ -137,7 +137,7 @@ public:
    void SortGPT(void);
    int ClearGPTData(void);
    void MoveSecondHeaderToEnd();
-   int SetName(uint32_t partNum, string theName = "");
+   int SetName(uint32_t partNum, const string & theName = "");
    void SetDiskGUID(GUIDData newGUID);
    int SetPartitionGUID(uint32_t pn, GUIDData theGUID);
    int ChangePartType(uint32_t pn, uint16_t hexCode);
@@ -170,7 +170,7 @@ public:
    WhichToUse WhichWasUsed(void) {return whichWasUsed;}
 
    // Endianness functions
-   void ReverseHeaderBytes(struct GPTHeader* header); // for endianness
+   void ReverseHeaderBytes(struct GPTHeader* header);
    void ReversePartitionBytes(); // for endianness
 }; // class GPTData
 

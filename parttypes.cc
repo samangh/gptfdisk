@@ -236,6 +236,7 @@ int PartTypes::AddType(uint16_t mbrType, uint64_t guidData1, uint64_t guidData2,
 // in an ugly way.
 void PartTypes::ShowTypes(void) {
    int colCount = 1; // column count
+   int i;
    AType* thisType = allTypes;
 
    cout.unsetf(ios::uppercase);
@@ -244,17 +245,16 @@ void PartTypes::ShowTypes(void) {
          cout.fill('0');
          cout.width(4);
          cout << hex << thisType->MBRType << " ";
-         cout.fill(' ');
-         cout.setf(ios::left);
-         cout.width(19);
          cout << ((string) thisType->name).substr(0, 19) << "  ";
+         for (i = 0; i < (19 - ((string) thisType->name).substr(0, 19).length()); i ++) cout << " ";
          if ((colCount % 3) == 0)
             cout << "\n";
          colCount++;
       } // if
       thisType = thisType->next;
    } // while
-   cout << "\n";
+   cout.fill(' ');
+   cout << "\n" << dec;
 } // PartTypes::ShowTypes()
 
 // Returns 1 if code is a valid extended MBR code, 0 if it's not
@@ -323,6 +323,7 @@ struct GUIDData PartTypes::IDToGUID(uint16_t ID) {
       cout << "Exact type match not found for type code ";
       cout.width(4);
       cout << hex << ID << "; assigning type code for\n'Linux/Windows data'\n" << dec;
+      cout.fill(' ');
    } // if (!found)
    return theGUID;
 } // PartTypes::IDToGUID()

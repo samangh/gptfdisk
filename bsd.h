@@ -72,7 +72,7 @@ class BSDData {
    public:
       BSDData(void);
       ~BSDData(void);
-      int ReadBSDData(string *deviceFilename, uint64_t startSector, uint64_t endSector);
+      int ReadBSDData(const string & deviceFilename, uint64_t startSector, uint64_t endSector);
       int ReadBSDData(DiskIO *myDisk, uint64_t startSector, uint64_t endSector);
       void ReverseMetaBytes(void);
       void DisplayBSDData(void);

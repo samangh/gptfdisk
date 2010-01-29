@@ -43,12 +43,12 @@ BSDData::~BSDData(void) {
 // Read BSD disklabel data from the specified device filename. This function
 // just opens the device file and then calls an overloaded function to do
 // the bulk of the work. Returns 1 on success, 0 on failure.
-int BSDData::ReadBSDData(string *device, uint64_t startSector, uint64_t endSector) {
+int BSDData::ReadBSDData(const string & device, uint64_t startSector, uint64_t endSector) {
    int allOK = 1;
    DiskIO myDisk;
 
-   if (*device != "") {
-      if (myDisk.OpenForRead(*device)) {
+   if (device != "") {
+      if (myDisk.OpenForRead(device)) {
          allOK = ReadBSDData(&myDisk, startSector, endSector);
       } else {
          allOK = 0;

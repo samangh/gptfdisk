@@ -34,6 +34,17 @@ int main(int argc, char* argv[]) {
 
     if (argc == 2) { // basic usage
       if (SizesOK()) {
+#ifdef _WIN32
+         cout << "\a************************************************************************\n"
+               << "Most versions of Windows cannot boot from a GPT disk, and most varieties\n"
+               << "prior to Vista cannot read GPT disks. Therefore, you should exit now\n"
+               << "unless you understand the implications of converting MBR to GPT, editing\n"
+               << "an existing GPT disk, or creating a new GPT disk layout!\n"
+               << "************************************************************************\n\n";
+         cout << "Are you SURE you want to continue? ";
+         if (GetYN() != 'Y')
+            exit(0);
+#endif
          doMore = theGPT.LoadPartitions(argv[1]);
          if (doMore) {
             MainMenu(argv[1], &theGPT);

@@ -19,9 +19,6 @@ gdisk:	$(LIB_OBJS) gdisk.o
 sgdisk: $(LIB_OBJS) sgdisk.o
 	$(CXX) $(LIB_OBJS) sgdisk.o -L/opt/local/lib -L/usr/local/lib -lpopt -o sgdisk
 
-wipegpt:	$(LIB_OBJS) wipegpt.o
-	$(CXX) $(LIB_OBJS) wipegpt.o -o wipegpt
-
 lint:	#no pre-reqs
 	lint $(SRCS)
 

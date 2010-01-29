@@ -42,9 +42,9 @@ void DiskIO::MakeRealName(void) {
    if ((colonPos != string::npos) && (colonPos <= 3)) {
       realFilename = "\\\\.\\physicaldrive";
       realFilename += userFilename.substr(0, colonPos);
+   } else {
+      realFilename = userFilename;
    } // if/else
-   printf("Exiting DiskIO::MakeRealName(); translated '%s' ", userFilename.c_str());
-   printf("to '%s'\n", realFilename.c_str());
 } // DiskIO::MakeRealName()
 
 // Open the currently on-record file for reading
@@ -60,12 +60,11 @@ int DiskIO::OpenForRead(void) {
    } // if
 
    if (shouldOpen) {
-      printf("Opening '%s' for reading.\n", realFilename.c_str());
       fd = CreateFile(realFilename.c_str(),GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
                       NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
       if (fd == INVALID_HANDLE_VALUE) {
          CloseHandle(fd);
-         fprintf(stderr, "Problem opening %s for reading!\n", realFilename.c_str());
+         cerr << "Problem opening " << realFilename << " for reading!\n";
          realFilename = "";
          userFilename = "";
          isOpen = 0;
@@ -94,11 +93,12 @@ int DiskIO::OpenForWrite(void) {
                    FILE_ATTRIBUTE_NORMAL, NULL);
    if (fd == INVALID_HANDLE_VALUE) {
       CloseHandle(fd);
-      isOpen = 1;
-      openForWrite = 1;
-   } else {
       isOpen = 0;
       openForWrite = 0;
+      errno = GetLastError();
+   } else {
+      isOpen = 1;
+      openForWrite = 1;
    } // if/else
    return isOpen;
 } // DiskIO::OpenForWrite(void)
@@ -133,6 +133,7 @@ int DiskIO::GetBlockSize(void) {
                                    __out  LPDWORD lpTotalNumberOfClusters
                                   ); */
 //      err = GetDiskFreeSpace(realFilename.c_str(), &junk1, &blockSize, &junk2, &junk3);
+      // Above call is fubared -- returns weird values for blockSize....
       err = 1;
       blockSize = 512;
 
@@ -142,9 +143,9 @@ int DiskIO::GetBlockSize(void) {
          // file, so don't display the warning message....
          // 32-bit code returns EINVAL, I don't know why. I know I'm treading on
          // thin ice here, but it should be OK in all but very weird cases....
-         if ((errno != ENOTTY) && (errno != EINVAL)) {
-            printf("\aError %d when determining sector size! Setting sector size to %d\n",
-                   GetLastError(), SECTOR_SIZE);
+         if (errno != 267) { // 267 is returned on ordinary files
+            cerr << "\aError " << GetLastError() << " when determining sector size! "
+                 << "Setting sector size to " << SECTOR_SIZE << "\n";
          } // if
       } // if (err == -1)
    } // if (isOpen)
@@ -155,21 +156,26 @@ int DiskIO::GetBlockSize(void) {
 // Resync disk caches so the OS uses the new partition table. This code varies
 // a lot from one OS to another.
 void DiskIO::DiskSync(void) {
-   int i;
+   DWORD i;
+   GET_LENGTH_INFORMATION buf;
 
    // If disk isn't open, try to open it....
-   if (!isOpen) {
-      OpenForRead();
+   if (!openForWrite) {
+      OpenForWrite();
    } // if
 
    if (isOpen) {
-#ifndef MINGW
-      sync();
-#endif
-#ifdef MINGW
-      printf("Warning: I don't know how to sync disks in Windows! The old partition table is\n"
-            "probably still in use!\n");
-#endif
+      if (DeviceIoControl(fd, IOCTL_DISK_UPDATE_PROPERTIES, NULL, 0, &buf, sizeof(buf), &i, NULL) == 0) {
+         cout << "Disk synchronization failed! The computer may use the old partition table\n"
+              << "until you reboot or remove and re-insert the disk!\n";
+      } else {
+         cout << "Disk synchronization succeeded! The computer should now use the new\n"
+              << "partition table.\n";
+      } // if/else
+   } else {
+      cout << "Unable to open the disk for synchronization operation! The computer will\n"
+           << "continue to use the old partition table until you reboot or remove and\n"
+           << "re-insert the disk!\n";
    } // if (isOpen)
 } // DiskIO::DiskSync()
 
@@ -186,22 +192,11 @@ int DiskIO::Seek(uint64_t sector) {
    } // if
 
    if (isOpen) {
-      bytePos = sector * (uint64_t) GetBlockSize();
-      lowBits = (uint32_t) (bytePos / UINT64_C(4294967296));
-      highBits = (uint32_t) (bytePos % UINT64_C(4294967296));
-      seekTo.LowPart = lowBits;
-      seekTo.HighPart = highBits;
-//      seekTo.QuadPart = (LONGLONG) (sector * (uint64_t) GetBlockSize());
-/*      printf("In DiskIO::Seek(), sector = %llu, ", sector);
-      printf("block size = %d, ", GetBlockSize());
-      printf("seekTo.QuadPart = %lld\n", seekTo.QuadPart);
-      printf("   seekTo.LowPart = %lu, ", seekTo.LowPart);
-      printf("seekTo.HighPart = %lu\n", seekTo.HighPart); */
+      seekTo.QuadPart = sector * (uint64_t) GetBlockSize();
       retval = SetFilePointerEx(fd, seekTo, NULL, FILE_BEGIN);
       if (retval == 0) {
          errno = GetLastError();
-         fprintf(stderr, "Error when seeking to %lld! Error is %d\n",
-                 seekTo.QuadPart, errno);
+         cerr << "Error when seeking to " << seekTo.QuadPart << "! Error is " << errno << "\n";
          retval = 0;
       } // if
    } // if
@@ -235,9 +230,7 @@ int DiskIO::Read(void* buffer, int numBytes) {
       } // if/else
 
       // Read the data into temporary space, then copy it to buffer
-//      retval = read(fd, tempSpace, numBlocks * blockSize);
       ReadFile(fd, tempSpace, numBlocks * blockSize, &retval, NULL);
-      printf("In DiskIO::Read(), have read %d bytes.\n", (int) retval);
       for (i = 0; i < numBytes; i++) {
          ((char*) buffer)[i] = tempSpace[i];
       } // for
@@ -284,7 +277,6 @@ int DiskIO::Write(void* buffer, int numBytes) {
       for (i = numBytes; i < numBlocks * blockSize; i++) {
          tempSpace[i] = 0;
       } // for
-//      retval = write(fd, tempSpace, numBlocks * blockSize);
       WriteFile(fd, tempSpace, numBlocks * blockSize, &numWritten, NULL);
       retval = (int) numWritten;
 
@@ -300,8 +292,7 @@ int DiskIO::Write(void* buffer, int numBytes) {
 // Returns the size of the disk in blocks.
 uint64_t DiskIO::DiskSize(int *err) {
    uint64_t sectors = 0; // size in sectors
-   off_t bytes = 0; // size in bytes
-   struct stat64 st;
+   DWORD bytes, moreBytes; // low- and high-order bytes of file size
    GET_LENGTH_INFORMATION buf;
    DWORD i;
 
@@ -316,30 +307,18 @@ uint64_t DiskIO::DiskSize(int *err) {
       // on Linux, but I had some problems. IIRC, it ran OK on 32-bit
       // systems but not on 64-bit. Keep this in mind in case of
       // 32/64-bit issues on MacOS....
-/*      HANDLE fin;
-      fin = CreateFile(realFilename.c_str(), GENERIC_READ,
-                     FILE_SHARE_READ|FILE_SHARE_WRITE,
-                     NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL); */
       if (DeviceIoControl(fd, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &buf, sizeof(buf), &i, NULL)) {
          sectors = (uint64_t) buf.Length.QuadPart / GetBlockSize();
-//         printf("disk_get_size_win32 IOCTL_DISK_GET_LENGTH_INFO = %llu\n",
-//               (long long unsigned) sectors);
-      } else {
-         fprintf(stderr, "Couldn't determine disk size!\n");
-      }
+         *err = 0;
+      } else { // doesn't seem to be a disk device; assume it's an image file....
+         bytes = GetFileSize(fd, &moreBytes);
+         sectors = ((uint64_t) bytes + ((uint64_t) moreBytes) * UINT32_MAX) / GetBlockSize();
+         *err = 0;
+      } // if
+   } else {
+      *err = -1;
+      sectors = 0;
+   } // if/else (isOpen)
 
-/*      // The above methods have failed, so let's assume it's a regular
-      // file (a QEMU image, dd backup, or what have you) and see what
-      // fstat() gives us....
-      if ((sectors == 0) || (*err == -1)) {
-         if (fstat64(fd, &st) == 0) {
-            bytes = (off_t) st.st_size;
-            if ((bytes % UINT64_C(512)) != 0)
-               fprintf(stderr, "Warning: File size is not a multiple of 512 bytes!"
-                       " Misbehavior is likely!\n\a");
-            sectors = bytes / UINT64_C(512);
-         } // if
-      } // if */
-   } // if (isOpen)
    return sectors;
 } // DiskIO::DiskSize()

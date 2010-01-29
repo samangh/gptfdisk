@@ -2,7 +2,7 @@
 .\" May be distributed under the GNU General Public License
 .TH "GDISK" "8" "0.5.3" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
-gdisk \- Interactive GUID partition table (GPT) manipulator for Linux and Unix
+gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
 .BI "gdisk "
 [ \-l ]
@@ -453,10 +453,8 @@ mid-physical-sector, though, performance can suffer on such drives, since
 important filesystem data structures can span physical sectors on the disk.
 To minimize such problems, GPT fdisk aligns the start of partitions on the
 boundary of presumed physical sectors. You can set the number of logical
-sectors per physical sector with this option. The default is 8, except on
-Linux 2.6.32 and later, in which case it's read from the disk. A value of 8
-will result in a tiny amount of wasted disk space on older disks with true
-512-byte sectors but will otherwise be harmless.
+sectors per physical sector with this option. The default is 1 on disks
+smaller than 800GB and 8 on larger disks.
 
 .TP 
 .B m

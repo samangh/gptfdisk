@@ -38,6 +38,7 @@ MBRData::MBRData(void) {
    srand((unsigned int) time(NULL));
    numHeads = MAX_HEADS;
    numSecspTrack = MAX_SECSPERTRACK;
+   myDisk = NULL;
    EmptyMBR();
 } // MBRData default constructor
 
@@ -48,6 +49,7 @@ MBRData::MBRData(string filename) {
    state = invalid;
    numHeads = MAX_HEADS;
    numSecspTrack = MAX_SECSPERTRACK;
+   myDisk = NULL;
 
    srand((unsigned int) time(NULL));
    // Try to read the specified partition table, but if it fails....
@@ -55,9 +57,10 @@ MBRData::MBRData(string filename) {
       EmptyMBR();
       device = "";
    } // if
-} // MBRData(char *filename) constructor
+} // MBRData(string filename) constructor
 
 MBRData::~MBRData(void) {
+//   delete myDisk;
 } // MBRData destructor
 
 /**********************
@@ -68,9 +71,11 @@ MBRData::~MBRData(void) {
 
 // Read data from MBR. Returns 1 if read was successful (even if the
 // data isn't a valid MBR), 0 if the read failed.
-int MBRData::ReadMBRData(string deviceFilename) {
+int MBRData::ReadMBRData(const string & deviceFilename) {
    int fd, allOK = 1;
 
+   if (myDisk == NULL)
+      myDisk = new DiskIO;
    if (myDisk->OpenForRead(deviceFilename)) {
       ReadMBRData(myDisk);
    } else {
@@ -81,7 +86,7 @@ int MBRData::ReadMBRData(string deviceFilename) {
       device = deviceFilename;
 
    return allOK;
-} // MBRData::ReadMBRData(char* deviceFilename)
+} // MBRData::ReadMBRData(const string & deviceFilename)
 
 // Read data from MBR. If checkBlockSize == 1 (the default), the block
 // size is checked; otherwise it's set to the default (512 bytes).
@@ -93,6 +98,9 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
    int err = 1;
    TempMBR tempMBR;
 
+   if (myDisk != NULL)
+      delete myDisk;
+
    myDisk = theDisk;
 
    // Empty existing MBR data, including the logical partitions...
@@ -102,7 +110,7 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
      if (myDisk->Read(&tempMBR, 512))
         err = 0;
    if (err) {
-      cerr << "Problem reading disk in MBRData::ReadMBRData!\n";
+      cerr << "Problem reading disk in MBRData::ReadMBRData()!\n";
    } else {
       for (i = 0; i < 440; i++)
          code[i] = tempMBR.code[i];
@@ -183,7 +191,7 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
          } // for
       } // if (hybrid detection code)
    } // no initial error
-} // MBRData::ReadMBRData(int fd)
+} // MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize)
 
 // This is a recursive function to read all the logical partitions, following the
 // logical partition linked list from the disk and storing the basic data in the
@@ -252,14 +260,16 @@ int MBRData::ReadLogicalPart(uint32_t extendedStart,
 // Write the MBR data to the default defined device. Note that this writes
 // ONLY the MBR itself, not the logical partition data.
 int MBRData::WriteMBRData(void) {
-   int allOK = 1, fd;
+   int allOK = 1;
 
-   if (myDisk->OpenForWrite(device) != 0) {
-      allOK = WriteMBRData(myDisk);
-   } else {
-      allOK = 0;
-   } // if/else
-   myDisk->Close();
+   if (myDisk != NULL) {
+      if (myDisk->OpenForWrite(device) != 0) {
+         allOK = WriteMBRData(myDisk);
+      } else {
+         allOK = 0;
+      } // if/else
+      myDisk->Close();
+   } else allOK = 0;
    return allOK;
 } // MBRData::WriteMBRData(void)
 
@@ -322,12 +332,12 @@ int MBRData::WriteMBRData(DiskIO *theDisk) {
       } // for
    }// if
    return allOK;
-} // MBRData::WriteMBRData(DiskIO theDisk)
+} // MBRData::WriteMBRData(DiskIO *theDisk)
 
-int MBRData::WriteMBRData(string deviceFilename) {
+int MBRData::WriteMBRData(const string & deviceFilename) {
    device = deviceFilename;
    return WriteMBRData();
-} // MBRData::WriteMBRData(char* deviceFilename)
+} // MBRData::WriteMBRData(const string & deviceFilename)
 
 /********************************************
  *                                          *
