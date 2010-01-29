@@ -1,4 +1,4 @@
-0.6.2 (?/??/2010):
+0.6.2 (1/29/2010):
 ------------------
 
 - The change-type ('t' on main menu) option now changes the partition's
@@ -22,9 +22,6 @@
   in the headers.
 
 - Compiles using MinGW (http://www.mingw.org) to create a Windows binary.
-  The resulting Windows program is flaky and can't write to the disk,
-  though, so I'm not creating an official Windows release just yet (and
-  maybe never will).
 
 - Moved all disk I/O functions to the new DiskIO class. This helps with the
   Windows port; it uses diskio-windows.cc for Windows-specific code,
