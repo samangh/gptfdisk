@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
    GPTData theGPT;
    int doMore = 1;
    char* device = NULL;
+   PartType typeHelper; // unused, but necessary to initialize partition type linked list
 
    cout << "GPT fdisk (gdisk) version " << GPTFDISK_VERSION << "\n\n";
 
@@ -76,7 +77,7 @@ void MainMenu(string filename, struct GPTData* theGPT) {
    char command, line[255], buFile[255];
    char* junk;
    int goOn = 1;
-   PartTypes typeHelper;
+   PartType typeHelper;
    uint32_t temp1, temp2;
 
    do {
@@ -105,7 +106,7 @@ void MainMenu(string filename, struct GPTData* theGPT) {
             theGPT->ShowDetails();
             break;
          case 'l': case 'L':
-            typeHelper.ShowTypes();
+            typeHelper.ShowAllTypes();
             break;
          case 'n': case 'N':
             theGPT->CreatePartition();
@@ -177,7 +178,6 @@ void ShowCommands(void) {
 void RecoveryMenu(string filename, struct GPTData* theGPT) {
    char command, line[255], buFile[255];
    char* junk;
-   PartTypes typeHelper;
    uint32_t temp1;
    int goOn = 1;
 
@@ -303,10 +303,10 @@ void ShowRecoveryCommands(void) {
 void ExpertsMenu(string filename, struct GPTData* theGPT) {
    char command, line[255];
    char* junk;
-   PartTypes typeHelper;
    uint32_t pn;
    uint32_t temp1, temp2;
    int goOn = 1;
+   GUIDData aGUID;
 
    do {
       cout << "\nExpert command (? for help): ";
@@ -325,7 +325,7 @@ void ExpertsMenu(string filename, struct GPTData* theGPT) {
             if (theGPT->GetPartRange(&temp1, &temp2) > 0) {
                pn = theGPT->GetPartNum();
                cout << "Enter the partition's new unique GUID:\n";
-               theGPT->SetPartitionGUID(pn, GetGUID());
+               theGPT->SetPartitionGUID(pn, aGUID.GetGUIDFromUser());
             } else cout << "No partitions\n";
             break;
          case 'd': case 'D':
@@ -338,7 +338,7 @@ void ExpertsMenu(string filename, struct GPTData* theGPT) {
             break;
          case 'g': case 'G':
             cout << "Enter the disk's unique GUID:\n";
-            theGPT->SetDiskGUID(GetGUID());
+            theGPT->SetDiskGUID(aGUID.GetGUIDFromUser());
             break;
          case 'i': case 'I':
             theGPT->ShowDetails();

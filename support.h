@@ -23,11 +23,6 @@
 #include <linux/fs.h>
 #endif
 
-/* #ifdef __FreeBSD__
-#define fstat64 fstat
-#define stat64 stat
-#endif */
-
 // Set this as a default
 #define SECTOR_SIZE UINT32_C(512)
 
@@ -53,20 +48,11 @@
 
 using namespace std;
 
-// a GUID
-struct GUIDData {
-   uint64_t data1;
-   uint64_t data2;
-}; // struct GUIDData
-
-// static char theFile[255];
-
 int GetNumber(int low, int high, int def, const string & prompt);
 char GetYN(void);
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & prompt);
 string BytesToSI(uint64_t size);
-string GUIDToStr(struct GUIDData theGUID);
-GUIDData GetGUID(void);
+unsigned char StrToHex(const string & input, unsigned int position);
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
 uint64_t PowerOf2(int value);

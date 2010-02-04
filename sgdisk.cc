@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
    char *device = NULL;
    char *newPartInfo = NULL, *typeCode = NULL, *partName;
    char *backupFile = NULL;
-   PartTypes typeHelper;
+   PartType typeHelper;
 
    poptContext poptCon;
    struct poptOption theOptions[] =
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
    while ((opt = poptGetNextOpt(poptCon)) > 0) {
       switch (opt) {
          case 'L':
-            typeHelper.ShowTypes();
+            typeHelper.ShowAllTypes();
             break;
          case 'P':
             pretend = 1;

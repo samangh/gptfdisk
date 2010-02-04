@@ -173,12 +173,11 @@ int GPTData::Verify(void) {
            << secondHeader.lastUsableLBA << ")\n"
            << "The 'e' option on the experts' menu can probably fix this problem.\n";
    } // if
-   if ((mainHeader.diskGUID.data1 != secondHeader.diskGUID.data1) ||
-        (mainHeader.diskGUID.data2 != secondHeader.diskGUID.data2)) {
+   if ((mainHeader.diskGUID != secondHeader.diskGUID)) {
       problems++;
-      cout << "\nProblem: main header's disk GUID (" << GUIDToStr(mainHeader.diskGUID)
+      cout << "\nProblem: main header's disk GUID (" << mainHeader.diskGUID.AsString()
            << ") doesn't\nmatch the backup GPT header's disk GUID ("
-           << GUIDToStr(secondHeader.diskGUID) << ")\n"
+           << secondHeader.diskGUID.AsString() << ")\n"
            << "You should use the 'b' or 'd' option on the recovery & transformation menu to\n"
            << "select one or the other header.\n";
    } // if
@@ -368,8 +367,9 @@ int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
    return (oldCRC == newCRC);
 } // GPTData::CheckHeaderCRC()
 
-// Recompute all the CRCs. Must be called before saving (but after reversing
-// byte order on big-endian systems) if any changes have been made.
+// Recompute all the CRCs. Must be called before saving if any changes have
+// been made. Must be called on platform-ordered data (this function reverses
+// byte order and then undoes that reversal.)
 void GPTData::RecomputeCRCs(void) {
    uint32_t crc, hSize, trueNumParts;
    int littleEndian = 1;
@@ -377,13 +377,21 @@ void GPTData::RecomputeCRCs(void) {
    // Initialize CRC functions...
    chksum_crc32gentab();
 
+   // Save some key data from header before reversing byte order....
+   trueNumParts = mainHeader.numParts;
    hSize = mainHeader.headerSize;
-   littleEndian = IsLittleEndian();
+
+   if ((littleEndian = IsLittleEndian()) == 0) {
+      ReversePartitionBytes();
+      ReverseHeaderBytes(&mainHeader);
+      ReverseHeaderBytes(&secondHeader);
+   } // if
+/*   if ((littleEndian = IsLittleEndian()) == 0) {
+      ReverseBytes(&trueNumParts, 4);
+      ReverseBytes(&hSize, 4);
+   } // if */
 
    // Compute CRC of partition tables & store in main and secondary headers
-   trueNumParts = mainHeader.numParts;
-   if (littleEndian == 0)
-      ReverseBytes(&trueNumParts, 4); // unreverse this key piece of data....
    crc = chksum_crc32((unsigned char*) partitions, trueNumParts * GPT_SIZE);
    mainHeader.partitionEntriesCRC = crc;
    secondHeader.partitionEntriesCRC = crc;
@@ -405,6 +413,12 @@ void GPTData::RecomputeCRCs(void) {
    if (littleEndian == 0)
       ReverseBytes(&crc, 4);
    secondHeader.headerCRC = crc;
+
+   if ((littleEndian = IsLittleEndian()) == 0) {
+      ReverseHeaderBytes(&mainHeader);
+      ReverseHeaderBytes(&secondHeader);
+      ReversePartitionBytes();
+   } // if
 } // GPTData::RecomputeCRCs()
 
 // Rebuild the main GPT header, using the secondary header as a model.
@@ -421,8 +435,7 @@ void GPTData::RebuildMainHeader(void) {
    mainHeader.backupLBA = secondHeader.currentLBA;
    mainHeader.firstUsableLBA = secondHeader.firstUsableLBA;
    mainHeader.lastUsableLBA = secondHeader.lastUsableLBA;
-   mainHeader.diskGUID.data1 = secondHeader.diskGUID.data1;
-   mainHeader.diskGUID.data2 = secondHeader.diskGUID.data2;
+   mainHeader.diskGUID = secondHeader.diskGUID;
    mainHeader.partitionEntriesLBA = UINT64_C(2);
    mainHeader.numParts = secondHeader.numParts;
    mainHeader.sizeOfPartitionEntries = secondHeader.sizeOfPartitionEntries;
@@ -445,8 +458,7 @@ void GPTData::RebuildSecondHeader(void) {
    secondHeader.backupLBA = mainHeader.currentLBA;
    secondHeader.firstUsableLBA = mainHeader.firstUsableLBA;
    secondHeader.lastUsableLBA = mainHeader.lastUsableLBA;
-   secondHeader.diskGUID.data1 = mainHeader.diskGUID.data1;
-   secondHeader.diskGUID.data2 = mainHeader.diskGUID.data2;
+   secondHeader.diskGUID = mainHeader.diskGUID;
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
    secondHeader.numParts = mainHeader.numParts;
    secondHeader.sizeOfPartitionEntries = mainHeader.sizeOfPartitionEntries;
@@ -836,11 +848,13 @@ int GPTData::LoadSecondTableAsMain(void) {
 // Writes GPT (and protective MBR) to disk. Returns 1 on successful
 // write, 0 if there was a problem.
 int GPTData::SaveGPTData(int quiet) {
-   int allOK = 1;
+   int allOK = 1, littleEndian;
    char answer;
    uint64_t secondTable;
    uint32_t numParts;
    uint64_t offset;
+
+   littleEndian = IsLittleEndian();
 
    if (device == "") {
       cerr << "Device not defined.\n";
@@ -894,14 +908,17 @@ int GPTData::SaveGPTData(int quiet) {
    // big-endian systems....
    numParts = mainHeader.numParts;
    secondTable = secondHeader.partitionEntriesLBA;
-   if (IsLittleEndian() == 0) {
+/*   if (IsLittleEndian() == 0) {
       // Reverse partition bytes first, since that function requires non-reversed
       // data from the main header....
       ReversePartitionBytes();
       ReverseHeaderBytes(&mainHeader);
       ReverseHeaderBytes(&secondHeader);
-   } // if
+   } // if */
    RecomputeCRCs();
+/*   ReverseHeaderBytes(&mainHeader);
+   ReverseHeaderBytes(&secondHeader);
+   ReversePartitionBytes(); */
 
    if ((allOK) && (!quiet)) {
       cout << "\nFinal checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING\n"
@@ -922,16 +939,24 @@ int GPTData::SaveGPTData(int quiet) {
       if (allOK && myDisk.OpenForWrite(device)) {
          // Now write the main GPT header...
          if (myDisk.Seek(1) == 1) {
+            if (!littleEndian)
+               ReverseHeaderBytes(&mainHeader);
             if (myDisk.Write(&mainHeader, 512) != 512)
                allOK = 0;
+            if (!littleEndian)
+               ReverseHeaderBytes(&mainHeader);
          } else allOK = 0; // if (myDisk.Seek()...)
 
          // Now write the main partition tables...
          if (allOK) {
 	    offset = mainHeader.partitionEntriesLBA;
 	    if (myDisk.Seek(offset)) {
+               if (!littleEndian)
+                  ReversePartitionBytes();
                if (myDisk.Write(partitions, GPT_SIZE * numParts) == -1)
                   allOK = 0;
+               if (!littleEndian)
+                  ReversePartitionBytes();
             } else allOK = 0; // if (myDisk.Seek()...)
          } // if (allOK)
 
@@ -947,18 +972,26 @@ int GPTData::SaveGPTData(int quiet) {
 
          // Now write the secondary partition tables....
          if (allOK) {
+            if (!littleEndian)
+               ReversePartitionBytes();
             if (myDisk.Write(partitions, GPT_SIZE * numParts) == -1)
                allOK = 0;
-	 } // if (allOK)
+            if (!littleEndian)
+               ReversePartitionBytes();
+         } // if (allOK)
 
          // Now write the secondary GPT header...
          if (allOK) {
 	    offset = mainHeader.backupLBA;
-	    if (myDisk.Seek(offset)) {
+            if (!littleEndian)
+               ReverseHeaderBytes(&secondHeader);
+            if (myDisk.Seek(offset)) {
                if (myDisk.Write(&secondHeader, 512) == -1)
                   allOK = 0;
 	    } else allOK = 0; // if (myDisk.Seek()...)
-	 } // if (allOK)
+            if (!littleEndian)
+               ReverseHeaderBytes(&secondHeader);
+         } // if (allOK)
 
          // re-read the partition table
          if (allOK) {
@@ -982,13 +1015,13 @@ int GPTData::SaveGPTData(int quiet) {
       cout << "Aborting write of new partition table.\n";
    } // if
 
-   if (IsLittleEndian() == 0) {
+/*   if (IsLittleEndian() == 0) {
       // Reverse (normalize) header bytes first, since ReversePartitionBytes()
       // requires non-reversed data in mainHeader...
       ReverseHeaderBytes(&mainHeader);
       ReverseHeaderBytes(&secondHeader);
       ReversePartitionBytes();
-   } // if
+   } // if */
 
    return (allOK);
 } // GPTData::SaveGPTData()
@@ -1005,6 +1038,12 @@ int GPTData::SaveGPTBackup(const string & filename) {
    DiskIO backupFile;
 
    if (backupFile.OpenForWrite(filename)) {
+      // Recomputing the CRCs is likely to alter them, which could be bad
+      // if the intent is to save a potentially bad GPT for later analysis;
+      // but if we don't do this, we get bogus errors when we load the
+      // backup. I'm favoring misses over false alarms....
+      RecomputeCRCs();
+
       // Reverse the byte order, if necessary....
       numParts = mainHeader.numParts;
       if (IsLittleEndian() == 0) {
@@ -1012,12 +1051,6 @@ int GPTData::SaveGPTBackup(const string & filename) {
          ReverseHeaderBytes(&mainHeader);
          ReverseHeaderBytes(&secondHeader);
       } // if
-
-      // Recomputing the CRCs is likely to alter them, which could be bad
-      // if the intent is to save a potentially bad GPT for later analysis;
-      // but if we don't do this, we get bogus errors when we load the
-      // backup. I'm favoring misses over false alarms....
-      RecomputeCRCs();
 
       // Now write the protective MBR...
       protectiveMBR.WriteMBRData(&backupFile);
@@ -1191,7 +1224,7 @@ void GPTData::DisplayGPTData(void) {
    cout << "Disk " << device << ": " << diskSize << " sectors, "
         << BytesToSI(diskSize * blockSize) << "\n";
    cout << "Logical sector size: " << blockSize << " bytes\n";
-   cout << "Disk identifier (GUID): " << GUIDToStr(mainHeader.diskGUID) << "\n";
+   cout << "Disk identifier (GUID): " << mainHeader.diskGUID.AsString() << "\n";
    cout << "Partition table holds up to " << mainHeader.numParts << " entries\n";
    cout << "First usable sector is " << mainHeader.firstUsableLBA
         << ", last usable sector is " << mainHeader.lastUsableLBA << "\n";
@@ -1320,7 +1353,7 @@ void GPTData::CreatePartition(void) {
 
       firstFreePart = CreatePartition(partNum, firstBlock, lastBlock);
       partitions[partNum].ChangeType();
-      partitions[partNum].SetName(partitions[partNum].GetNameType());
+      partitions[partNum].SetDefaultDescription();
    } else {
       cout << "No free sectors available\n";
    } // if/else
@@ -1551,7 +1584,6 @@ WhichToUse GPTData::UseWhichPartitions(void) {
 int GPTData::XFormPartitions(void) {
    int i, numToConvert;
    uint8_t origType;
-   struct newGUID;
 
    // Clear out old data & prepare basics....
    ClearGPTData();
@@ -1567,7 +1599,7 @@ int GPTData::XFormPartitions(void) {
       // don't waste CPU time trying to convert extended, hybrid protective, or
       // null (non-existent) partitions
       if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) &&
-           (origType != 0x00) && (origType != 0xEE))
+          (origType != 0x00) && (origType != 0xEE))
          partitions[i] = protectiveMBR.AsGPT(i);
    } // for
 
@@ -1583,6 +1615,7 @@ int GPTData::XFormPartitions(void) {
 
 // Transforms BSD disklabel on the specified partition (numbered from 0).
 // If an invalid partition number is given, the program prompts for one.
+// (Default for i is -1; called without an option, it therefore prompts.)
 // Returns the number of new partitions created.
 int GPTData::XFormDisklabel(int i) {
    uint32_t low, high, partNum, startPart;
@@ -1635,7 +1668,7 @@ int GPTData::XFormDisklabel(BSDData* disklabel, uint32_t startPart) {
    int i, numDone = 0;
 
    if ((disklabel->IsDisklabel()) && (startPart >= 0) &&
-        (startPart < mainHeader.numParts)) {
+       (startPart < mainHeader.numParts)) {
       for (i = 0; i < disklabel->GetNumParts(); i++) {
          partitions[i + startPart] = disklabel->AsGPT(i);
          if (partitions[i + startPart].GetFirstLBA() != UINT64_C(0))
@@ -1682,7 +1715,7 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
       do {
          cout << "Enter an MBR hex code (default " << hex;
          cout.width(2);
-         cout << typeHelper.GUIDToID(partitions[gptPart].GetType()) / 256 << "): ";
+         cout << partitions[gptPart].GetHexType() / 0x0100 << "): ";
          junk = fgets(line, 255, stdin);
          if (line[0] == '\n')
             typeCode = partitions[gptPart].GetHexType() / 256;
@@ -1948,7 +1981,7 @@ uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64
             partitions[partNum].SetFirstLBA(startSector);
             partitions[partNum].SetLastLBA(endSector);
             partitions[partNum].SetType(0x0700);
-            partitions[partNum].SetUniqueGUID(1);
+            partitions[partNum].RandomizeUniqueGUID();
          } else retval = 0; // if free space until endSector
       } else retval = 0; // if startSector is free
    } else retval = 0; // if legal partition number
@@ -2021,9 +2054,7 @@ int GPTData::ClearGPTData(void) {
    mainHeader.lastUsableLBA = diskSize - mainHeader.firstUsableLBA;
 
    // Set a unique GUID for the disk, based on random numbers
-   // rand() is only 32 bits, so multiply together to fill a 64-bit value
-   mainHeader.diskGUID.data1 = (uint64_t) rand() * (uint64_t) rand();
-   mainHeader.diskGUID.data2 = (uint64_t) rand() * (uint64_t) rand();
+   mainHeader.diskGUID.Randomize();
 
    // Copy main header to backup header
    RebuildSecondHeader();
@@ -2392,8 +2423,7 @@ void GPTData::ReverseHeaderBytes(struct GPTHeader* header) {
    ReverseBytes(&header->sizeOfPartitionEntries, 4);
    ReverseBytes(&header->partitionEntriesCRC, 4);
    ReverseBytes(&header->reserved2, GPT_RESERVED);
-   ReverseBytes(&header->diskGUID.data1, 8);
-   ReverseBytes(&header->diskGUID.data2, 8);
+//   header->diskGUID.ReverseGUIDBytes();
 } // GPTData::ReverseHeaderBytes()
 
 // IMPORTANT NOTE: This function requires non-reversed mainHeader
@@ -2456,6 +2486,14 @@ int SizesOK(void) {
    } // if
    if (sizeof(GPTPart) != 128) {
       cerr << "GPTPart is " << sizeof(GPTPart) << " bytes, should be 128 bytes; aborting!\n";
+      allOK = 0;
+   } // if
+   if (sizeof(GUIDData) != 16) {
+      cerr << "GUIDData is " << sizeof(GUIDData) << " bytes, should be 16 bytes; aborting!\n";
+      allOK = 0;
+   } // if
+   if (sizeof(PartType) != 16) {
+      cerr << "PartType is " << sizeof(GUIDData) << " bytes, should be 16 bytes; aborting!\n";
       allOK = 0;
    } // if
    // Determine endianness; warn user if running on big-endian (PowerPC, etc.) hardware

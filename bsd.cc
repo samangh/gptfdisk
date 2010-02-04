@@ -291,7 +291,7 @@ GPTPart BSDData::AsGPT(int i) {
       guid.SetFirstLBA(sectorOne);
       guid.SetLastLBA(sectorEnd);
       // Now set a random unique GUID for the partition....
-      guid.SetUniqueGUID(1);
+      guid.RandomizeUniqueGUID();
       // ... zero out the attributes and name fields....
       guid.SetAttributes(UINT64_C(0));
       // Most BSD disklabel type codes seem to be archaic or rare.
@@ -321,7 +321,7 @@ GPTPart BSDData::AsGPT(int i) {
             guid.SetType(0x0700); break;
       } // switch
       // Set the partition name to the name of the type code....
-      guid.SetName(guid.GetNameType());
+      guid.SetName(guid.GetTypeName());
    } // if
    return guid;
 } // BSDData::AsGPT()

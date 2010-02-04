@@ -200,112 +200,19 @@ string BytesToSI(uint64_t size) {
    return theValue;
 } // BlocksToSI()
 
-// Return a plain-text name for a partition type.
-// Convert a GUID to a string representation, suitable for display
-// to humans....
-string GUIDToStr(struct GUIDData theGUID) {
-   unsigned long long blocks[11];
-   char theString[40];
+// Converts two consecutive characters in the input string into a
+// number, interpreting the string as a hexadecimal number, starting
+// at the specified position.
+unsigned char StrToHex(const string & input, unsigned int position) {
+   unsigned char retval = 0x00;
+   unsigned int temp;
 
-   theString[0] = '\0';;
-   blocks[0] = (theGUID.data1 & UINT64_C(0x00000000FFFFFFFF));
-   blocks[1] = (theGUID.data1 & UINT64_C(0x0000FFFF00000000)) >> 32;
-   blocks[2] = (theGUID.data1 & UINT64_C(0xFFFF000000000000)) >> 48;
-   blocks[3] = (theGUID.data2 & UINT64_C(0x00000000000000FF));
-   blocks[4] = (theGUID.data2 & UINT64_C(0x000000000000FF00)) >> 8;
-   blocks[5] = (theGUID.data2 & UINT64_C(0x0000000000FF0000)) >> 16;
-   blocks[6] = (theGUID.data2 & UINT64_C(0x00000000FF000000)) >> 24;
-   blocks[7] = (theGUID.data2 & UINT64_C(0x000000FF00000000)) >> 32;
-   blocks[8] = (theGUID.data2 & UINT64_C(0x0000FF0000000000)) >> 40;
-   blocks[9] = (theGUID.data2 & UINT64_C(0x00FF000000000000)) >> 48;
-   blocks[10] = (theGUID.data2 & UINT64_C(0xFF00000000000000)) >> 56;
-   sprintf(theString,
-            "%08llX-%04llX-%04llX-%02llX%02llX-%02llX%02llX%02llX%02llX%02llX%02llX",
-            blocks[0], blocks[1], blocks[2], blocks[3], blocks[4], blocks[5],
-            blocks[6], blocks[7], blocks[8], blocks[9], blocks[10]);
-   return theString;
-} // GUIDToStr()
-
-// Get a GUID from the user
-GUIDData GetGUID(void) {
-   unsigned long long part1, part2, part3, part4, part5;
-   int entered = 0;
-   char temp[255], temp2[255];
-   char* junk;
-   GUIDData theGUID;
-
-   cout << "\nA GUID is entered in five segments of from two to six bytes, with\n"
-        << "dashes between segments.\n";
-   cout << "Enter the entire GUID, a four-byte hexadecimal number for the first segment, or\n"
-        << "'R' to generate the entire GUID randomly: ";
-   junk = fgets(temp, 255, stdin);
-
-   // If user entered 'r' or 'R', generate GUID randomly....
-   if ((temp[0] == 'r') || (temp[0] == 'R')) {
-      theGUID.data1 = (uint64_t) rand() * (uint64_t) rand();
-      theGUID.data2 = (uint64_t) rand() * (uint64_t) rand();
-      entered = 1;
-   } // if user entered 'R' or 'r'
-
-   // If string length is right for whole entry, try to parse it....
-   if ((strlen(temp) == 37) && (entered == 0)) {
-      strncpy(temp2, &temp[0], 8);
-      temp2[8] = '\0';
-      sscanf(temp2, "%llx", &part1);
-      strncpy(temp2, &temp[9], 4);
-      temp2[4] = '\0';
-      sscanf(temp2, "%llx", &part2);
-      strncpy(temp2, &temp[14], 4);
-      temp2[4] = '\0';
-      sscanf(temp2, "%llx", &part3);
-      theGUID.data1 = (part3 << 48) + (part2 << 32) + part1;
-      strncpy(temp2, &temp[19], 4);
-      temp2[4] = '\0';
-      sscanf(temp2, "%llx", &part4);
-      strncpy(temp2, &temp[24], 12);
-      temp2[12] = '\0';
-      sscanf(temp2, "%llx", &part5);
-      theGUID.data2 = ((part4 & UINT64_C(0x000000000000FF00)) >> 8) +
-                      ((part4 & UINT64_C(0x00000000000000FF)) << 8) +
-                      ((part5 & UINT64_C(0x0000FF0000000000)) >> 24) +
-                      ((part5 & UINT64_C(0x000000FF00000000)) >> 8) +
-                      ((part5 & UINT64_C(0x00000000FF000000)) << 8) +
-                      ((part5 & UINT64_C(0x0000000000FF0000)) << 24) +
-                      ((part5 & UINT64_C(0x000000000000FF00)) << 40) +
-                      ((part5 & UINT64_C(0x00000000000000FF)) << 56);
-      entered = 1;
+   if (input.length() >= (position + 2)) {
+      sscanf(input.substr(position, 2).c_str(), "%x", &temp);
+      retval = (unsigned char) temp;
    } // if
-
-   // If neither of the above methods of entry was used, use prompted
-   // entry....
-   if (entered == 0) {
-      sscanf(temp, "%llx", &part1);
-      cout << "Enter a two-byte hexadecimal number for the second segment: ";
-      junk = fgets(temp, 255, stdin);
-      sscanf(temp, "%llx", &part2);
-      cout << "Enter a two-byte hexadecimal number for the third segment: ";
-      junk = fgets(temp, 255, stdin);
-      sscanf(temp, "%llx", &part3);
-      theGUID.data1 = (part3 << 48) + (part2 << 32) + part1;
-      cout << "Enter a two-byte hexadecimal number for the fourth segment: ";
-      junk = fgets(temp, 255, stdin);
-      sscanf(temp, "%llx", &part4);
-      cout << "Enter a six-byte hexadecimal number for the fifth segment: ";
-      junk = fgets(temp, 255, stdin);
-      sscanf(temp, "%llx", &part5);
-      theGUID.data2 = ((part4 & UINT64_C(0x000000000000FF00)) >> 8) +
-                      ((part4 & UINT64_C(0x00000000000000FF)) << 8) +
-                      ((part5 & UINT64_C(0x0000FF0000000000)) >> 24) +
-                      ((part5 & UINT64_C(0x000000FF00000000)) >> 8) +
-                      ((part5 & UINT64_C(0x00000000FF000000)) << 8) +
-                      ((part5 & UINT64_C(0x0000000000FF0000)) << 24) +
-                      ((part5 & UINT64_C(0x000000000000FF00)) << 40) +
-                      ((part5 & UINT64_C(0x00000000000000FF)) << 56);
-      entered = 1;
-   } // if/else
-   cout << "New GUID: " << GUIDToStr(theGUID) << "\n";
-   return theGUID;
-} // GetGUID()
+   return retval;
+} // StrToHex()
 
 // Return 1 if the CPU architecture is little endian, 0 if it's big endian....
 int IsLittleEndian(void) {

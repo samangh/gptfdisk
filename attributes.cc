@@ -30,7 +30,7 @@ Attributes::Attributes(void) {
    } // for
 
    // Now reset those names that are defined....
-   atNames[0] = "system partition";
+   atNames[0] = "system partition"; // required for computer to operate
    atNames[60] = "read-only";
    atNames[62] = "hidden";
    atNames[63] = "do not automount";

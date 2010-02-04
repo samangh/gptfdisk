@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.2"
+#define GPTFDISK_VERSION "0.6.3"
 
 using namespace std;
 
@@ -44,7 +44,7 @@ struct GPTHeader {
    uint64_t backupLBA;
    uint64_t firstUsableLBA;
    uint64_t lastUsableLBA;
-   struct GUIDData diskGUID;
+   GUIDData diskGUID;
    uint64_t partitionEntriesLBA;
    uint32_t numParts;
    uint32_t sizeOfPartitionEntries;
@@ -72,7 +72,6 @@ protected:
    int apmFound; // set to 1 if APM detected
    int bsdFound; // set to 1 if BSD disklabel detected in MBR
    int sectorAlignment; // Start & end partitions at multiples of sectorAlignment
-   PartTypes typeHelper;
    int beQuiet;
    WhichToUse whichWasUsed;
 public:

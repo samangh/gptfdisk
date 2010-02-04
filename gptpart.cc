@@ -23,8 +23,6 @@
 
 using namespace std;
 
-PartTypes GPTPart::typeHelper;
-
 GPTPart::GPTPart(void) {
    int i;
 
@@ -37,13 +35,13 @@ GPTPart::~GPTPart(void) {
 
 // Return the gdisk-specific two-byte hex code for the partition
 uint16_t GPTPart::GetHexType(void) {
-   return typeHelper.GUIDToID(partitionType);
+   return partitionType.GetHexType();
 } // GPTPart::GetHexType()
 
 // Return a plain-text description of the partition type (e.g., "Linux/Windows
 // data" or "Linux swap").
-string GPTPart::GetNameType(void) {
-   return typeHelper.GUIDToName(partitionType);
+string GPTPart::GetTypeName(void) {
+   return partitionType.TypeName();
 } // GPTPart::GetNameType()
 
 // Compute and return the partition's length (or 0 if the end is incorrectly
@@ -56,7 +54,7 @@ uint64_t GPTPart::GetLengthLBA(void) {
 } // GPTPart::GetLengthLBA()
 
 // Return partition's name field, converted to a C++ ASCII string
-string GPTPart::GetName(void) {
+string GPTPart::GetDescription(void) {
    string theName;
    int i;
 
@@ -66,31 +64,17 @@ string GPTPart::GetName(void) {
          theName += name[i];
    } // for
    return theName;
-} // GPTPart::GetName()
+} // GPTPart::GetDescription()
 
 // Set the type code to the specified one. Also changes the partition
 // name *IF* the current name is the generic one for the current partition
 // type.
-void GPTPart::SetType(struct GUIDData t) {
-   if (GetName() == typeHelper.GUIDToName(partitionType)) {
-      SetName(typeHelper.GUIDToName(t));
+void GPTPart::SetType(PartType t) {
+   if (GetDescription() == partitionType.TypeName()) {
+      SetName(t.TypeName());
    } // if
    partitionType = t;
 } // GPTPart::SetType()
-
-// Sets the unique GUID to a value of 0 or a random value,
-// depending on the parameter: 0 = 0, anything else = random
-void GPTPart::SetUniqueGUID(int zeroOrRandom) {
-   if (zeroOrRandom == 0) {
-      uniqueGUID.data1 = 0;
-      uniqueGUID.data2 = 0;
-   } else {
-      // rand() is only 32 bits on 32-bit systems, so multiply together to
-      // fill a 64-bit value.
-      uniqueGUID.data1 = (uint64_t) rand() * (uint64_t) rand();
-      uniqueGUID.data2 = (uint64_t) rand() * (uint64_t) rand();
-   }
-} // GPTPart::SetUniqueGUID()
 
 // Set the name for a partition to theName, or prompt for a name if
 // theName is empty. Note that theName is a standard C++-style ASCII
@@ -111,8 +95,9 @@ void GPTPart::SetName(const string & theName) {
 
       // Input is likely to include a newline, so remove it....
       i = strlen(newName);
-      if (newName[i - 1] == '\n')
-         newName[i - 1] = '\0';
+      if ((i > 0) && (i <= NAME_SIZE))
+         if (newName[i - 1] == '\n')
+            newName[i - 1] = '\0';
    } else {
       strcpy(newName, theName.substr(0, NAME_SIZE / 2).c_str());
    } // if
@@ -127,6 +112,12 @@ void GPTPart::SetName(const string & theName) {
       } // if/else
    } // for
 } // GPTPart::SetName()
+
+// Set the name for the partition based on the current GUID partition type
+// code's associated name
+void GPTPart::SetDefaultDescription(void) {
+   SetName(partitionType.TypeName());
+} // GPTPart::SetDefaultDescription()
 
 GPTPart & GPTPart::operator=(const GPTPart & orig) {
    int i;
@@ -159,10 +150,9 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout.fill('0');
       cout.width(4);
       cout.setf(ios::uppercase);
-      cout << hex << typeHelper.GUIDToID(partitionType) << "  " << dec;
+      cout << hex << partitionType.GetHexType() << "  " << dec;
       cout.fill(' ');
-//      cout.setf(ios::right);
-      cout << GetName().substr(0, 23) << "\n";
+      cout << GetDescription().substr(0, 23) << "\n";
       cout.fill(' ');
    } // if
 } // GPTPart::ShowSummary()
@@ -173,9 +163,9 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
    uint64_t size;
 
    if (firstLBA != 0) {
-      cout << "Partition GUID code: " << GUIDToStr(partitionType);
-      cout << " (" << typeHelper.GUIDToName(partitionType) << ")\n";
-      cout << "Partition unique GUID: " << GUIDToStr(uniqueGUID) << "\n";
+      cout << "Partition GUID code: " << partitionType.AsString();
+      cout << " (" << partitionType.TypeName() << ")\n";
+      cout << "Partition unique GUID: " << uniqueGUID.AsString() << "\n";
 
       cout << "First sector: " << firstLBA << " (at "
             << BytesToSI(firstLBA * blockSize) << ")\n";
@@ -190,7 +180,7 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
       cout << hex;
       cout << attributes << "\n";
       cout << dec;
-      cout << "Partition name: " << GetName() << "\n";
+      cout << "Partition name: " << GetDescription() << "\n";
       cout.fill(' ');
    }  // if
 } // GPTPart::ShowDetails()
@@ -198,12 +188,9 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
 // Blank (delete) a single partition
 void GPTPart::BlankPartition(void) {
    int j;
-   GUIDData zeroGUID;
 
-   zeroGUID.data1 = 0;
-   zeroGUID.data2 = 0;
-   uniqueGUID = zeroGUID;
-   partitionType = zeroGUID;
+   uniqueGUID.Zero();
+   partitionType.Zero();
    firstLBA = 0;
    lastLBA = 0;
    attributes = 0;
@@ -228,10 +215,8 @@ int GPTPart::DoTheyOverlap(const GPTPart & other) {
 
 // Reverse the bytes of integral data types; used on big-endian systems.
 void GPTPart::ReversePartBytes(void) {
-   ReverseBytes(&partitionType.data1, 8);
-   ReverseBytes(&partitionType.data2, 8);
-   ReverseBytes(&uniqueGUID.data1, 8);
-   ReverseBytes(&uniqueGUID.data2, 8);
+//   partitionType.ReverseGUIDBytes();
+//   uniqueGUID.ReverseGUIDBytes();
    ReverseBytes(&firstLBA, 8);
    ReverseBytes(&lastLBA, 8);
    ReverseBytes(&attributes, 8);
@@ -241,30 +226,34 @@ void GPTPart::ReversePartBytes(void) {
  * Functions requiring user interaction *
  ****************************************/
 
-// Change the type code on the partition.
+// Change the type code on the partition. Also changes the name if the original
+// name is the generic one for the partition type.
 void GPTPart::ChangeType(void) {
    char line[255];
    char* junk;
-   int typeNum = 0xFFFF;
-   GUIDData newType;
+   unsigned int typeNum = 0xFFFF, changeName = 0;
 
-   cout << "Current type is '" << GetNameType() << "'\n";
-   while ((!typeHelper.Valid(typeNum)) && (typeNum != 0)) {
+   if (GetDescription() == GetTypeName())
+      changeName = 1;
+   cout << "Current type is '" << GetTypeName() << "'\n";
+   while ((!partitionType.Valid(typeNum)) && (typeNum != 0)) {
       cout << "Hex code (L to show codes, 0 to enter raw code, Enter = 0700): ";
       junk = fgets(line, 255, stdin);
       sscanf(line, "%X", &typeNum);
       if ((line[0] == 'L') || (line[0] == 'l'))
-         typeHelper.ShowTypes();
+         partitionType.ShowAllTypes();
       if (line[0] == '\n') {
          typeNum = 0x0700;
       } // if
    } // while
    if (typeNum != 0) // user entered a code, so convert it
-      newType = typeHelper.IDToGUID((uint16_t) typeNum);
+      partitionType = typeNum;
    else // user wants to enter the GUID directly, so do that
-      newType = GetGUID();
-   SetType(newType);
-   cout << "Changed type of partition to '" << typeHelper.GUIDToName(partitionType) << "'\n";
+      partitionType.GetGUIDFromUser();
+   cout << "Changed type of partition to '" << partitionType.TypeName() << "'\n";
+   if (changeName) {
+      SetDefaultDescription();
+   } // if
 } // GPTPart::ChangeType()
 
 /***********************************

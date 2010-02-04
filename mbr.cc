@@ -39,6 +39,7 @@ MBRData::MBRData(void) {
    numHeads = MAX_HEADS;
    numSecspTrack = MAX_SECSPERTRACK;
    myDisk = NULL;
+   canDeleteMyDisk = 0;
    EmptyMBR();
 } // MBRData default constructor
 
@@ -50,6 +51,7 @@ MBRData::MBRData(string filename) {
    numHeads = MAX_HEADS;
    numSecspTrack = MAX_SECSPERTRACK;
    myDisk = NULL;
+   canDeleteMyDisk = 0;
 
    srand((unsigned int) time(NULL));
    // Try to read the specified partition table, but if it fails....
@@ -59,8 +61,12 @@ MBRData::MBRData(string filename) {
    } // if
 } // MBRData(string filename) constructor
 
+// Free space used by myDisk only if that's OK -- sometimes it will be
+// copied from an outside source, in which case that source should handle
+// it!
 MBRData::~MBRData(void) {
-//   delete myDisk;
+   if (canDeleteMyDisk)
+      delete myDisk;
 } // MBRData destructor
 
 /**********************
@@ -74,8 +80,10 @@ MBRData::~MBRData(void) {
 int MBRData::ReadMBRData(const string & deviceFilename) {
    int allOK = 1;
 
-   if (myDisk == NULL)
+   if (myDisk == NULL) {
       myDisk = new DiskIO;
+      canDeleteMyDisk = 1;
+   } // if
    if (myDisk->OpenForRead(deviceFilename)) {
       ReadMBRData(myDisk);
    } else {
@@ -98,8 +106,10 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
    int err = 1;
    TempMBR tempMBR;
 
-   if (myDisk != NULL)
+   if ((myDisk != NULL) && (canDeleteMyDisk)) {
       delete myDisk;
+      canDeleteMyDisk = 0;
+   } // if
 
    myDisk = theDisk;
 
@@ -831,9 +841,9 @@ GPTPart MBRData::AsGPT(int i) {
          if (lastSector > 0) lastSector--;
          newPart.SetLastLBA(lastSector);
          newPart.SetType(((uint16_t) origType) * 0x0100);
-         newPart.SetUniqueGUID(1);
+         newPart.RandomizeUniqueGUID();
          newPart.SetAttributes(0);
-         newPart.SetName(newPart.GetNameType());
+         newPart.SetName(newPart.GetTypeName());
       } // if not extended, protective, or non-existent
    } // if (origPart != NULL)
    return newPart;

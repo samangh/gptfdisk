@@ -16,9 +16,9 @@
 
 using namespace std;
 
-int PartTypes::numInstances = 0;
-AType* PartTypes::allTypes = NULL;
-AType* PartTypes::lastType = NULL;
+int PartType::numInstances = 0;
+AType* PartType::allTypes = NULL;
+AType* PartType::lastType = NULL;
 
 // Constructor. Its main task is to initialize the data list, but only
 // if this is the first instance, since it's a static linked list.
@@ -31,166 +31,28 @@ AType* PartTypes::lastType = NULL;
 // by typing "L" at the main gdisk menu.
 // See http://www.win.tue.nl/~aeb/partitions/partition_types-1.html
 // for a list of MBR partition type codes.
-PartTypes::PartTypes(void) {
-
+PartType::PartType(void) : GUIDData() {
    numInstances++;
    if (numInstances == 1) {
-
-      // Start with the "unused entry," which should normally appear only
-      // on empty partition table entries....
-      AddType(0x0000, UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000),
-              "Unused entry", 0);
-
-      // DOS/Windows partition types, which confusingly Linux also uses in GPT
-      AddType(0x0100, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // FAT-12
-      AddType(0x0400, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // FAT-16 < 32M
-      AddType(0x0600, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // FAT-16
-      AddType(0x0700, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 1); // NTFS (or could be HPFS)
-      AddType(0x0b00, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // FAT-32
-      AddType(0x0c00, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // FAT-32 LBA
-      AddType(0x0c01, UINT64_C(0x4DB80B5CE3C9E316), UINT64_C(0xAE1502F02DF97D81),
-              "Microsoft Reserved"); // Microsoft reserved
-      AddType(0x0e00, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // FAT-16 LBA
-      AddType(0x1100, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // Hidden FAT-12
-      AddType(0x1400, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // Hidden FAT-16 < 32M
-      AddType(0x1600, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // Hidden FAT-16
-      AddType(0x1700, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // Hidden NTFS (or could be HPFS)
-      AddType(0x1b00, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // Hidden FAT-32
-      AddType(0x1c00, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // Hidden FAT-32 LBA
-      AddType(0x1e00, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // Hidden FAT-16 LBA
-      AddType(0x2700, UINT64_C(0x4D4006D1DE94BBA4), UINT64_C(0xACD67901D5BF6AA1),
-              "Windows RE"); // Windows RE
-      AddType(0x4200, UINT64_C(0x4F621431Af9B60A0), UINT64_C(0xAD694A71113368BC),
-              "Windows LDM data"); // Logical disk manager
-      AddType(0x4201, UINT64_C(0x42E07E8F5808C8AA), UINT64_C(0xB3CF3404E9E1D285),
-              "Windows LDM metadata"); // Logical disk manager
-
-      // Linux-specific partition types....
-      AddType(0x8200, UINT64_C(0x43C4A4AB0657FD6D), UINT64_C(0x4F4F4BC83309E584),
-              "Linux swap"); // Linux swap (or could be Solaris)
-      AddType(0x8300, UINT64_C(0x4433B9E5EBD0A0A2), UINT64_C(0xC79926B7B668C087),
-              "Linux/Windows data", 0); // Linux native
-      AddType(0x8301, UINT64_C(0x60C000078DA63339), UINT64_C(0x080923C83A0836C4),
-              "Linux Reserved"); // Linux reserved
-      AddType(0x8e00, UINT64_C(0x44C2F507E6D6D379), UINT64_C(0x28F93D2A8F233CA2),
-              "Linux LVM"); // Linux LVM
-
-      // FreeBSD partition types....
-      // Note: Rather than extract FreeBSD disklabel data, convert FreeBSD
-      // partitions in-place, and let FreeBSD sort out the details....
-      AddType(0xa500, UINT64_C(0x11D66ECF516E7CB4), UINT64_C(0x2B71092D0200F88F),
-              "FreeBSD disklabel"); // FreeBSD disklabel
-      AddType(0xa501, UINT64_C(0x11DC7F4183BD6B9D), UINT64_C(0x0F4FB86015000BBE),
-              "FreeBSD boot"); // FreeBSD boot
-      AddType(0xa502, UINT64_C(0x11D66ECF516E7CB5), UINT64_C(0x2B71092D0200F88F),
-              "FreeBSD swap"); // FreeBSD swap
-      AddType(0xa503, UINT64_C(0x11D66ECF516E7CB6), UINT64_C(0x2B71092D0200F88F),
-              "FreeBSD UFS"); // FreeBSD UFS
-      AddType(0xa504, UINT64_C(0x11D66ECF516E7CBA), UINT64_C(0x2B71092D0200F88F),
-              "FreeBSD ZFS"); // FreeBSD ZFS
-      AddType(0xa505, UINT64_C(0x11D66ECF516E7CB8), UINT64_C(0x2B71092D0200F88F),
-              "FreeBSD Vinum/RAID"); // FreeBSD Vinum
-
-      // A MacOS partition type, separated from others by NetBSD partition types...
-      AddType(0xa800, UINT64_C(0x11AA000055465300), UINT64_C(0xACEC4365300011AA),
-              "Apple UFS"); // MacOS X
-
-      // NetBSD partition types. Note that the main entry sets it up as a
-      // FreeBSD disklabel. I'm not 100% certain this is the correct behavior.
-      AddType(0xa900, UINT64_C(0x11D66ECF516E7CB4), UINT64_C(0x2B71092D0200F88F),
-              "FreeBSD disklabel", 0); // NetBSD disklabel
-      AddType(0xa901, UINT64_C(0x11DCB10E49F48D32), UINT64_C(0x489687D119009BB9),
-              "NetBSD swap");
-      AddType(0xa902, UINT64_C(0x11DCB10E49F48D5A), UINT64_C(0x489687D119009BB9),
-              "NetBSD FFS");
-      AddType(0xa903, UINT64_C(0x11DCB10E49F48D82), UINT64_C(0x489687D119009BB9),
-              "NetBSD LFS");
-      AddType(0xa903, UINT64_C(0x11DCB10E49F48DAA), UINT64_C(0x489687D119009BB9),
-              "NetBSD RAID");
-      AddType(0xa904, UINT64_C(0x11DCB10F2DB519C4), UINT64_C(0x489687D119009BB9),
-              "NetBSD concatenated");
-      AddType(0xa905, UINT64_C(0x11DCB10F2DB519EC), UINT64_C(0x489687D119009BB9),
-              "NetBSD encrypted");
-
-      // MacOS partition types (See also 0xa800, above)....
-      AddType(0xab00, UINT64_C(0x11AA0000426F6F74), UINT64_C(0xACEC4365300011AA),
-              "Apple boot"); // MacOS X
-      AddType(0xaf00, UINT64_C(0x11AA000048465300), UINT64_C(0xACEC4365300011AA),
-              "Apple HFS/HFS+"); // MacOS X
-      AddType(0xaf01, UINT64_C(0x11AA000052414944), UINT64_C(0xACEC4365300011AA),
-              "Apple RAID"); // MacOS X
-      AddType(0xaf02, UINT64_C(0x11AA5F4F52414944), UINT64_C(0xACEC4365300011AA),
-              "Apple RAID offline"); // MacOS X
-      AddType(0xaf03, UINT64_C(0x11AA6C004C616265), UINT64_C(0xACEC4365300011AA),
-              "Apple label"); // MacOS X
-      AddType(0xaf04, UINT64_C(0x11AA76655265636F), UINT64_C(0xACEC4365300011AA),
-              "AppleTV recovery"); // MacOS X
-
-      // Solaris partition types (one of which is shared with MacOS)
-      AddType(0xbe00, UINT64_C(0x11B21DD26A82CB45), UINT64_C(0x316673200008A699),
-              "Solaris boot"); // Solaris boot
-      AddType(0xbf00, UINT64_C(0x11B21DD26a85CF4D), UINT64_C(0x316673200008A699),
-              "Solaris root"); // Solaris root
-      AddType(0xbf01, UINT64_C(0x11B21DD26A898CC3), UINT64_C(0x316673200008A699),
-              "Solaris /usr & Mac ZFS"); // MacOS X & Solaris
-      AddType(0xbf02, UINT64_C(0x11B21DD26A87C46F), UINT64_C(0x316673200008A699),
-              "Solaris swap");
-      AddType(0xbf03, UINT64_C(0x11B21DD26A8B642B), UINT64_C(0x316673200008A699),
-              "Solaris backup");
-      AddType(0xbf04, UINT64_C(0x11B21DD26A8EF2E9), UINT64_C(0x316673200008A699),
-              "Solaris /var");
-      AddType(0xbf05, UINT64_C(0x11B21DD26A90BA39), UINT64_C(0x316673200008A699),
-              "Solaris /home");
-      AddType(0xbf05, UINT64_C(0x11B21DD26A9283A5), UINT64_C(0x316673200008A699),
-              "Solaris EFI_ALTSCTR");
-      AddType(0xbf06, UINT64_C(0x11B21DD26A945A3B), UINT64_C(0x316673200008A699),
-              "Solaris Reserved 1");
-      AddType(0xbf07, UINT64_C(0x11B21DD26A9630D1), UINT64_C(0x316673200008A699),
-              "Solaris Reserved 2");
-      AddType(0xbf08, UINT64_C(0x11B21DD26A980767), UINT64_C(0x316673200008A699),
-              "Solaris Reserved 3");
-      AddType(0xbf09, UINT64_C(0x11B21DD26A96237F), UINT64_C(0x316673200008A699),
-              "Solaris Reserved 4");
-      AddType(0xbf0a, UINT64_C(0x11B21DD26A8D2AC7), UINT64_C(0x316673200008A699),
-              "Solaris Reserved 5");
-
-      // I can find no MBR equivalents for these, but they're on the
-      // Wikipedia page for GPT, so here we go....
-      AddType(0xc001, UINT64_C(0x11D33AEB75894C1E), UINT64_C(0x000000A0037BC1B7),
-              "HP-UX data");
-      AddType(0xc002, UINT64_C(0x11D632E3E2A1E728), UINT64_C(0x000000A0037B82A6),
-              "HP-UX service");
-
-      // EFI system and related partitions
-      AddType(0xEF00, UINT64_C(0x11d2f81fc12a7328), UINT64_C(0x3bc93ec9a0004bba),
-              "EFI System"); // EFI System (parted marks Linux boot
-                             // partitions like this)
-      AddType(0xEF01, UINT64_C(0x11d333e7024dee41), UINT64_C(0x9FF381C70800699d),
-              "MBR partition scheme"); // Used to nest an MBR table on a GPT disk
-      AddType(0xEF02, UINT64_C(0x6E6F644921686148), UINT64_C(0x4946456465654E74),
-              "BIOS boot partition"); //
-
-      // A straggler Linux partition type....
-      AddType(0xfd00, UINT64_C(0x4D3B05FCA19D880F), UINT64_C(0x1E91840F3F7406A0),
-              "Linux RAID"); // Linux RAID
+      AddAllTypes();
    } // if
 } // default constructor
 
-PartTypes::~PartTypes(void) {
+PartType::PartType(const PartType & orig) : GUIDData(orig) {
+   numInstances++;
+   if (numInstances == 1) { // should never happen; just being paranoid
+      AddAllTypes();
+   } // if
+} // PartType copy constructor
+
+PartType::PartType(const GUIDData & orig) : GUIDData(orig) {
+   numInstances++;
+   if (numInstances == 1) {
+      AddAllTypes();
+   } // if
+} // PartType copy constructor
+
+PartType::~PartType(void) {
    AType* tempType;
 
    numInstances--;
@@ -203,19 +65,117 @@ PartTypes::~PartTypes(void) {
    } // if
 } // destructor
 
+// Add all partition type codes to the internal linked-list structure.
+// Used by constructors.
+void PartType::AddAllTypes(void) {
+   // Start with the "unused entry," which should normally appear only
+   // on empty partition table entries....
+   AddType(0x0000, "00000000-0000-0000-0000-000000000000", "Unused entry", 0);
+
+   // DOS/Windows partition types, which confusingly Linux also uses in GPT
+   AddType(0x0100, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-12
+   AddType(0x0400, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-16 < 32M
+   AddType(0x0600, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-16
+   AddType(0x0700, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 1); // NTFS (or HPFS)
+   AddType(0x0b00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-32
+   AddType(0x0c00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-32 LBA
+   AddType(0x0c01, "E3C9E316-0B5C-4DB8-817D-F92DF00215AE", "Microsoft reserved");
+   AddType(0x0e00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-16 LBA
+   AddType(0x1100, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-12
+   AddType(0x1400, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-16 < 32M
+   AddType(0x1600, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-16
+   AddType(0x1700, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden NTFS (or HPFS)
+   AddType(0x1b00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-32
+   AddType(0x1c00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-32 LBA
+   AddType(0x1e00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-16 LBA
+   AddType(0x2700, "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC", "Windows RE");
+   AddType(0x4200, "AF9B60A0-1431-4F62-BC68-3311714A69AD", "Windows LDM data"); // Logical disk manager
+   AddType(0x4201, "5808C8AA-7E8F-42E0-85D2-E1E90434CFB3", "Windows LDM metadata"); // Logical disk manager
+
+   // An oddball IBM filesystem....
+   AddType(0x7501, "37AFFC90-EF7D-4E96-91C3-2D7AE055B174", "IBM GPFS"); // General Parallel File System (GPFS)
+
+   // Linux-specific partition types....
+   AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris)
+   AddType(0x8300, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Linux native
+   AddType(0x8301, "8DA63339-0007-60C0-C436-083AC8230908", "Linux reserved");
+   AddType(0x8e00, "E6D6D379-F507-44C2-A23C-238F2A3DF928", "Linux LVM");
+
+   // FreeBSD partition types....
+   // Note: Rather than extract FreeBSD disklabel data, convert FreeBSD
+   // partitions in-place, and let FreeBSD sort out the details....
+   AddType(0xa500, "516E7CB4-6ECF-11D6-8FF8-00022D09712B", "FreeBSD Disklabel");
+   AddType(0xa501, "83BD6B9D-7F41-11DC-BE0B-001560B84F0F", "FreeBSD boot");
+   AddType(0xa502, "516E7CB5-6ECF-11D6-8FF8-00022D09712B", "FreeBSD swap");
+   AddType(0xa503, "516E7CB6-6ECF-11D6-8FF8-00022D09712B", "FreeBSD UFS");
+   AddType(0xa504, "516E7CBA-6ECF-11D6-8FF8-00022D09712B", "FreeBSD ZFS");
+   AddType(0xa505, "516E7CB8-6ECF-11D6-8FF8-00022D09712B", "FreeBSD Vinum/RAID");
+
+   // A MacOS partition type, separated from others by NetBSD partition types...
+   AddType(0xa800, "55465300-0000-11AA-AA11-00306543ECAC", "Apple UFS"); // Mac OS X
+
+   // NetBSD partition types. Note that the main entry sets it up as a
+   // FreeBSD disklabel. I'm not 100% certain this is the correct behavior.
+   AddType(0xa900, "516E7CB4-6ECF-11D6-8FF8-00022D09712B", "FreeBSD disklabel", 0); // NetBSD disklabel
+   AddType(0xa901, "49F48D32-B10E-11DC-B99B-0019D1879648", "NetBSD swap");
+   AddType(0xa902, "49F48D5A-B10E-11DC-B99B-0019D1879648", "NetBSD FFS");
+   AddType(0xa903, "49F48D82-B10E-11DC-B99B-0019D1879648", "NetBSD LFS");
+   AddType(0xa904, "2DB519C4-B10F-11DC-B99B-0019D1879648", "NetBSD concatenated");
+   AddType(0xa905, "2DB519EC-B10F-11DC-B99B-0019D1879648", "NetBSD encrypted");
+   AddType(0xa906, "49F48DAA-B10E-11DC-B99B-0019D1879648", "NetBSD RAID");
+
+   // Mac OS partition types (See also 0xa800, above)....
+   AddType(0xab00, "426F6F74-0000-11AA-AA11-00306543ECAC", "Apple boot");
+   AddType(0xaf00, "48465300-0000-11AA-AA11-00306543ECAC", "Apple HFS/HFS+");
+   AddType(0xaf01, "52414944-0000-11AA-AA11-00306543ECAC", "Apple RAID");
+   AddType(0xaf02, "52414944-5F4F-11AA-AA11-00306543ECAC", "Apple RAID offline");
+   AddType(0xaf03, "4C616265-6C00-11AA-AA11-00306543ECAC", "Apple label");
+   AddType(0xaf04, "5265636F-7665-11AA-AA11-00306543ECAC", "AppleTV recovery");
+
+   // Solaris partition types (one of which is shared with MacOS)
+   AddType(0xbe00, "6A82CB45-1DD2-11B2-99A6-080020736631", "Solaris boot");
+   AddType(0xbf00, "6A85CF4D-1DD2-11B2-99A6-080020736631", "Solaris root");
+   AddType(0xbf01, "6A898CC3-1DD2-11B2-99A6-080020736631", "Solaris /usr & Mac ZFS"); // Solaris/MacOS
+   AddType(0xbf02, "6A87C46F-1DD2-11B2-99A6-080020736631", "Solaris swap");
+   AddType(0xbf03, "6A8B642B-1DD2-11B2-99A6-080020736631", "Solaris backup");
+   AddType(0xbf04, "6A8EF2E9-1DD2-11B2-99A6-080020736631", "Solaris /var");
+   AddType(0xbf05, "6A90BA39-1DD2-11B2-99A6-080020736631", "Solaris /home");
+   AddType(0xbf06, "6A9283A5-1DD2-11B2-99A6-080020736631", "Solaris alternate sector");
+   AddType(0xbf07, "6A945A3B-1DD2-11B2-99A6-080020736631", "Solaris Reserved 1");
+   AddType(0xbf08, "6A9630D1-1DD2-11B2-99A6-080020736631", "Solaris Reserved 2");
+   AddType(0xbf09, "6A980767-1DD2-11B2-99A6-080020736631", "Solaris Reserved 3");
+   AddType(0xbf0a, "6A96237F-1DD2-11B2-99A6-080020736631", "Solaris Reserved 4");
+   AddType(0xbf0b, "6A8D2AC7-1DD2-11B2-99A6-080020736631", "Solaris Reserved 5");
+
+   // I can find no MBR equivalents for these, but they're on the
+   // Wikipedia page for GPT, so here we go....
+   AddType(0xc001, "75894C1E-3AEB-11D3-B7C1-7B03A0000000", "HP-UX data");
+   AddType(0xc002, "E2A1E728-32E3-11D6-A682-7B03A0000000", "HP-UX service");
+
+   // EFI system and related partitions
+   AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted marks Linux boot partitions as this
+   AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
+   AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Boot loader
+
+   // A straggler Linux partition type....
+   AddType(0xfd00, "A19D880F-05FC-4D3B-A006-743F0F84911E", "Linux RAID");
+
+   // Note: DO NOT use the 0xffff code; that's reserved to indicate an
+   // unknown type code.
+} // PartType::AddAllTypes()
+
 // Add a single type to the linked list of types. Returns 1 if operation
 // succeeds, 0 otherwise.
-int PartTypes::AddType(uint16_t mbrType, uint64_t guidData1, uint64_t guidData2,
-                       const char * n, int toDisplay) {
+int PartType::AddType(uint16_t mbrType, const char * guidData, const char * name,
+                      int toDisplay) {
    AType* tempType;
    int allOK = 1;
 
    tempType = new AType;
    if (tempType != NULL) {
       tempType->MBRType = mbrType;
-      tempType->GUIDType.data1 = guidData1;
-      tempType->GUIDType.data2 = guidData2;
-      tempType->name = n;
+      tempType->GUIDType = guidData;
+      tempType->name = name;
       tempType->display = toDisplay;
       tempType->next = NULL;
       if (allTypes == NULL) { // first entry
@@ -228,13 +188,85 @@ int PartTypes::AddType(uint16_t mbrType, uint64_t guidData1, uint64_t guidData2,
       allOK = 0;
    } // if/else
    return allOK;
-} // PartTypes::AddType()
+} // GUID::AddType(const char* variant)
+
+// Assign a GUID based on my custom 2-byte (16-bit) MBR hex ID variant
+GUIDData & PartType::operator=(uint16_t ID) {
+   AType* theItem = allTypes;
+   int found = 0;
+
+   // Assign a default value....
+   GUIDData::operator=("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"); // 0700, Linux/Windows data
+
+   // Now search the type list for a match to the ID....
+   while ((theItem != NULL) && (!found)) {
+      if (theItem->MBRType == ID)  { // found it!
+         GUIDData::operator=(theItem->GUIDType);
+         found = 1;
+      } else {
+         theItem = theItem->next;
+      } // if/else
+   } // while
+   if (!found) {
+      cout.setf(ios::uppercase);
+      cout.fill('0');
+      cout << "Exact type match not found for type code ";
+      cout.width(4);
+      cout << hex << ID << "; assigning type code for\n'Linux/Windows data'\n" << dec;
+      cout.fill(' ');
+   } // if (!found)
+   return *this;
+} // PartType::operator=(uint16_t ID)
+
+// Return the English description of the partition type (e.g., "Linux/Windows data")
+string PartType::TypeName(void) {
+   AType* theItem = allTypes;
+   int found = 0;
+   string typeName;
+
+   while ((theItem != NULL) && (!found)) {
+      if (theItem->GUIDType == *this) { // found it!
+         typeName = theItem->name;
+         found = 1;
+      } else {
+         theItem = theItem->next;
+      } // if/else
+   } // while
+   if (!found) {
+      typeName = "Unknown";
+   } // if (!found)
+   return typeName;
+} // PartType::TypeName()
+
+// Return the custom GPT fdisk 2-byte (16-bit) hex code for this GUID partition type
+// Note that this function ignores entries for which the display variable
+// is set to 0. This enables control of which values get returned when
+// there are multiple possibilities, but opens the algorithm up to the
+// potential for problems should the data in the list be bad.
+uint16_t PartType::GetHexType() {
+   AType* theItem = allTypes;
+   int found = 0;
+   uint16_t theID = 0xFFFF;
+
+   while ((theItem != NULL) && (!found)) {
+      if ((theItem->GUIDType == *this) && (theItem->display == 1)) { // found it!
+         theID = theItem->MBRType;
+         found = 1;
+      } else {
+         theItem = theItem->next;
+      } // if/else
+   } // while
+   if (!found) {
+      theID = 0xFFFF;
+   } // if (!found)
+   return theID;
+} // PartType::GetHex()
 
 // Displays the available types and my extended MBR codes for same....
 // Note: This function assumes an 80-column display. On wider displays,
 // it stops at under 80 columns; on narrower displays, lines will wrap
 // in an ugly way.
-void PartTypes::ShowTypes(void) {
+void PartType::ShowAllTypes(void) {
    int colCount = 1; // column count
    size_t i;
    AType* thisType = allTypes;
@@ -257,10 +289,10 @@ void PartTypes::ShowTypes(void) {
    } // while
    cout.fill(' ');
    cout << "\n" << dec;
-} // PartTypes::ShowTypes()
+} // PartType::ShowTypes()
 
 // Returns 1 if code is a valid extended MBR code, 0 if it's not
-int PartTypes::Valid(uint16_t code) {
+int PartType::Valid(uint16_t code) {
    AType* thisType = allTypes;
    int found = 0;
 
@@ -271,85 +303,4 @@ int PartTypes::Valid(uint16_t code) {
       thisType = thisType->next;
    } // while
    return found;
-} // PartTypes::Valid()
-
-// Convert a GUID code to a name.
-string PartTypes::GUIDToName(struct GUIDData typeCode) {
-   AType* theItem = allTypes;
-   int found = 0;
-   string typeName;
-
-   while ((theItem != NULL) && (!found)) {
-      if ((theItem->GUIDType.data1 == typeCode.data1) &&
-          (theItem->GUIDType.data2 == typeCode.data2)) { // found it!
-         typeName = theItem->name;
-	 found = 1;
-      } else {
-         theItem = theItem->next;
-      } // if/else
-   } // while
-   if (!found) {
-      typeName = "Unknown";
-   } // if (!found)
-   return typeName;
-} // PartTypes::GUIDToName()
-
-// This function takes a variant of the MBR partition type code and
-// converts it to a GUID type code
-struct GUIDData PartTypes::IDToGUID(uint16_t ID) {
-   AType* theItem = allTypes;
-   int found = 0;
-   struct GUIDData theGUID;
-
-   // Start by assigning a default GUID for the return value. Done
-   // "raw" to avoid the necessity for a recursive call and the
-   // remote possibility of an infinite recursive loop that this
-   // approach would present....
-   theGUID.data1 = UINT64_C(0x4433B9E5EBD0A0A2);
-   theGUID.data2 = UINT64_C(0xC79926B7B668C087);
-
-   // Now search the type list for a match to the ID....
-   while ((theItem != NULL) && (!found)) {
-      if (theItem->MBRType == ID)  { // found it!
-         theGUID = theItem->GUIDType;
-	 found = 1;
-      } else {
-         theItem = theItem->next;
-      } // if/else
-   } // while
-   if (!found) {
-      cout.setf(ios::uppercase);
-      cout.fill('0');
-      cout << "Exact type match not found for type code ";
-      cout.width(4);
-      cout << hex << ID << "; assigning type code for\n'Linux/Windows data'\n" << dec;
-      cout.fill(' ');
-   } // if (!found)
-   return theGUID;
-} // PartTypes::IDToGUID()
-
-// Convert a GUID to a 16-bit variant of the MBR ID number.
-// Note that this function ignores entries for which the display variable
-// is set to 0. This enables control of which values get returned when
-// there are multiple possibilities, but opens the algorithm up to the
-// potential for problems should the data in the list be bad.
-uint16_t PartTypes::GUIDToID(struct GUIDData typeCode) {
-   AType* theItem = allTypes;
-   int found = 0;
-   uint16_t theID = 0xFFFF;
-
-   while ((theItem != NULL) && (!found)) {
-      if ((theItem->GUIDType.data1 == typeCode.data1) &&
-          (theItem->GUIDType.data2 == typeCode.data2) &&
-          (theItem->display == 1)) { // found it!
-         theID = theItem->MBRType;
-	 found = 1;
-      } else {
-         theItem = theItem->next;
-      } // if/else
-   } // while
-   if (!found) {
-      theID = 0xFFFF;
-   } // if (!found)
-   return theID;
-} // PartTypes::GUIDToID()
+} // PartType::Valid()

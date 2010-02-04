@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include "support.h"
 #include "parttypes.h"
+#include "guid.h"
 
 using namespace std;
 
@@ -38,38 +39,37 @@ class GPTPart {
       // adjusting the data-load operation in GPTData::LoadMainTable() and
       // GPTData::LoadSecondTableAsMain() and then removing the GPTPart
       // size check in SizesOK() (in gpt.cc file).
-      struct GUIDData partitionType;
-      struct GUIDData uniqueGUID;
+      PartType partitionType;
+      GUIDData uniqueGUID;
       uint64_t firstLBA;
       uint64_t lastLBA;
       uint64_t attributes;
       unsigned char name[NAME_SIZE];
-
-      static PartTypes typeHelper;
    public:
       GPTPart(void);
       ~GPTPart(void);
 
       // Simple data retrieval:
-      struct GUIDData GetType(void) {return partitionType;}
+      PartType & GetType(void) {return partitionType;}
       uint16_t GetHexType(void);
-      string GetNameType(void);
-      struct GUIDData GetUniqueGUID(void) {return uniqueGUID;}
+      string GetTypeName(void);
+      GUIDData GetUniqueGUID(void) {return uniqueGUID;}
       uint64_t GetFirstLBA(void) {return firstLBA;}
       uint64_t GetLastLBA(void) {return lastLBA;}
       uint64_t GetLengthLBA(void);
       uint64_t GetAttributes(void) {return attributes;}
-      string GetName(void);
+      string GetDescription(void);
 
       // Simple data assignment:
-      void SetType(struct GUIDData t);
-      void SetType(uint16_t hex) {SetType(typeHelper.IDToGUID(hex));}
-      void SetUniqueGUID(struct GUIDData u) {uniqueGUID = u;}
-      void SetUniqueGUID(int zeroOrRandom);
+      void SetType(PartType t);
+      void SetType(uint16_t hex) {partitionType = hex;}
+      void SetUniqueGUID(GUIDData u) {uniqueGUID = u;}
+      void RandomizeUniqueGUID(void) {uniqueGUID.Randomize();}
       void SetFirstLBA(uint64_t f) {firstLBA = f;}
       void SetLastLBA(uint64_t l) {lastLBA = l;}
       void SetAttributes(uint64_t a) {attributes = a;}
       void SetName(const string & n);
+      void SetDefaultDescription(void);
 
       // Additional functions
       GPTPart & operator=(const GPTPart & orig);

@@ -71,6 +71,7 @@ protected:
    uint64_t numHeads; // number of heads, in CHS scheme
    uint64_t numSecspTrack; // number of sectors per track, in CHS scheme
    DiskIO* myDisk;
+   int canDeleteMyDisk;
    string device;
    MBRValidity state;
    struct MBRRecord* GetPartition(int i); // Return primary or logical partition

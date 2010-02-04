@@ -1,3 +1,30 @@
+0.6.3 (2/3/2010):
+------------------
+
+- Fixed serious data corruption bug on big-endian (PowerPC and similar)
+  systems.
+
+- Changed several GPT fdisk Solaris type codes to correct a duplicate
+
+- Corrected error in GPT fdisk type codes for NetBSD LFS and NetBSD RAID;
+  they were identical, but I've now changed NetBSD RAID to A906, which
+  is unique.
+
+- Added GUID for IBM General Parallel File System (GPFS) partition type
+  code. Somewhat arbitrarily set it to use the 7501 number (MBR code 0x75
+  is used by IBM PC/IX, so it's at least the right company, by my loose
+  numbering rules....).
+
+- Improved GUID generation. Prior versions generated completely random
+  numbers for GUIDs. This works, but is technically a violation of the
+  spec. Unix versions now employ libuuid to generate GUIDs in a more
+  correct way. The Windows version still generates random numbers, though.
+
+- Turned PartTypes class into a derived class of GUIDData, and renamed
+  it to PartType.
+
+- Created new GUIDData class, to replace the original GUIDData struct.
+
 0.6.2 (1/29/2010):
 ------------------
 
