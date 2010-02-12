@@ -184,6 +184,7 @@ void DiskIO::DiskSync(void) {
 } // DiskIO::DiskSync()
 
 // Seek to the specified sector. Returns 1 on success, 0 on failure.
+// Note that seeking beyond the end of the file is NOT detected as a failure!
 int DiskIO::Seek(uint64_t sector) {
    int retval = 1;
    off_t seekTo, sought;
@@ -208,7 +209,7 @@ int DiskIO::Seek(uint64_t sector) {
 // size with the number of bytes read.
 // Returns the number of bytes read into buffer.
 int DiskIO::Read(void* buffer, int numBytes) {
-   int blockSize = 512, numBlocks, retval = 0;
+   int blockSize, numBlocks, retval = 0;
    char* tempSpace;
 
    // If disk isn't open, try to open it....
@@ -221,11 +222,12 @@ int DiskIO::Read(void* buffer, int numBytes) {
       blockSize = GetBlockSize();
       if (numBytes <= blockSize) {
          numBlocks = 1;
-         tempSpace = (char*) malloc(blockSize);
+         tempSpace = new char [blockSize];
       } else {
          numBlocks = numBytes / blockSize;
-         if ((numBytes % blockSize) != 0) numBlocks++;
-         tempSpace = (char*) malloc(numBlocks * blockSize);
+         if ((numBytes % blockSize) != 0)
+            numBlocks++;
+         tempSpace = new char [numBlocks * blockSize];
       } // if/else
 
       // Read the data into temporary space, then copy it to buffer
@@ -236,7 +238,7 @@ int DiskIO::Read(void* buffer, int numBytes) {
       if (((numBlocks * blockSize) != numBytes) && (retval > 0))
          retval = numBytes;
 
-      free(tempSpace);
+      delete[] tempSpace;
    } // if (isOpen)
    return retval;
 } // DiskIO::Read()
@@ -259,17 +261,14 @@ int DiskIO::Write(void* buffer, int numBytes) {
       blockSize = GetBlockSize();
       if (numBytes <= blockSize) {
          numBlocks = 1;
-         tempSpace = (char*) malloc(blockSize);
+         tempSpace = new char [blockSize];
       } else {
          numBlocks = numBytes / blockSize;
          if ((numBytes % blockSize) != 0) numBlocks++;
-         tempSpace = (char*) malloc(numBlocks * blockSize);
+         tempSpace = new char [numBlocks * blockSize];
       } // if/else
 
       // Copy the data to my own buffer, then write it
-/*      for (i = 0; i < numBytes; i++) {
-         tempSpace[i] = ((char*) buffer)[i];
-      } // for */
       memcpy(tempSpace, buffer, numBytes);
       for (i = numBytes; i < numBlocks * blockSize; i++) {
          tempSpace[i] = 0;
@@ -280,7 +279,7 @@ int DiskIO::Write(void* buffer, int numBytes) {
       if (((numBlocks * blockSize) != numBytes) && (retval > 0))
          retval = numBytes;
 
-      free(tempSpace);
+      delete[] tempSpace;
    } // if (isOpen)
    return retval;
 } // DiskIO:Write()

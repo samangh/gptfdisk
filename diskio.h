@@ -51,7 +51,6 @@ class DiskIO {
       string realFilename;
       int isOpen;
       int openForWrite;
-      uint8_t *sectorData;
 #ifdef _WIN32
       HANDLE fd;
 #else
@@ -76,6 +75,7 @@ class DiskIO {
       int FindAlignment(const string & filename);
       int IsOpen(void) {return isOpen;}
       int IsOpenForWrite(void) {return openForWrite;}
+      string GetName(void) {return realFilename;}
 
       uint64_t DiskSize(int* err);
 }; // struct GPTPart

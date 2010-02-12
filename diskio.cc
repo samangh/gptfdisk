@@ -43,12 +43,10 @@ DiskIO::DiskIO(void) {
    realFilename = "";
    isOpen = 0;
    openForWrite = 0;
-   sectorData = NULL;
 } // constructor
 
 DiskIO::~DiskIO(void) {
    Close();
-   free(sectorData);
 } // destructor
 
 // Open a disk device for reading. Returns 1 on success, 0 on failure.

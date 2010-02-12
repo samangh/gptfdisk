@@ -82,7 +82,7 @@ GPTData::GPTData(string filename) {
 
 // Destructor
 GPTData::~GPTData(void) {
-   free(partitions);
+   delete[] partitions;
 } // GPTData destructor
 
 /*********************************************************************
@@ -342,8 +342,8 @@ int GPTData::CheckHeaderValidity(void) {
 } // GPTData::CheckHeaderValidity()
 
 // Check the header CRC to see if it's OK...
-// Note: Must be called BEFORE byte-order reversal on big-endian
-// systems!
+// Note: Must be called with header in LITTLE-ENDIAN
+// (x86, x86-64, etc.) byte order.
 int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
    uint32_t oldCRC, newCRC, hSize;
 
@@ -648,53 +648,22 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
 // Loads the GPT, as much as possible. Returns 1 if this seems to have
 // succeeded, 0 if there are obvious problems....
 int GPTData::ForceLoadGPTData(void) {
-   int allOK = 1, validHeaders;
-   uint64_t seekTo;
-   uint8_t* storage;
-   uint32_t newCRC, sizeOfParts;
+   int allOK, validHeaders, loadedTable = 1;
 
-   // Seek to and read the main GPT header
-   if (myDisk.Seek(1)) {
-      if (myDisk.Read(&mainHeader, 512) != 512) { // read main GPT header
-         cerr << "Warning! Error " << errno << " reading main GPT header!\n";
-      } // if read not OK
-   } else allOK = 0; // if/else seek OK
-   mainCrcOk = CheckHeaderCRC(&mainHeader);
-   if (IsLittleEndian() == 0) // big-endian system; adjust header byte order....
-      ReverseHeaderBytes(&mainHeader);
+   allOK = LoadHeader(&mainHeader, myDisk, 1, &mainCrcOk);
 
-   // Load backup header, check its CRC, and store the results of the
-   // check for future reference. Load backup header using pointer in main
-   // header if possible; but if main header has a CRC error, or if it
-   // points to beyond the end of the disk, load the last sector of the
-   // disk instead.
-   if (mainCrcOk) {
-      if (mainHeader.backupLBA < diskSize) {
-         seekTo = mainHeader.backupLBA;
-      } else {
-         seekTo = diskSize - UINT64_C(1);
+   if (mainCrcOk && (mainHeader.backupLBA < diskSize)) {
+      allOK = LoadHeader(&secondHeader, myDisk, mainHeader.backupLBA, &secondCrcOk) && allOK;
+   } else {
+      if (mainHeader.backupLBA >= diskSize)
          cout << "Warning! Disk size is smaller than the main header indicates! Loading\n"
               << "secondary header from the last sector of the disk! You should use 'v' to\n"
               << "verify disk integrity, and perhaps options on the experts' menu to repair\n"
               << "the disk.\n";
-      } // else
-   } else {
-      seekTo = diskSize - UINT64_C(1);
-   } // if/else (mainCrcOk)
-
-   if (myDisk.Seek(seekTo)) {
-      if (myDisk.Read(&secondHeader, 512) != 512) { // read secondary GPT header
-         cerr << "Warning! Error " << errno << " reading secondary GPT header!\n";
-      } // if
-      secondCrcOk = CheckHeaderCRC(&secondHeader);
-      if (IsLittleEndian() == 0) // big-endian system; adjust header byte order....
-         ReverseHeaderBytes(&secondHeader);
-   } else {
-      allOK = 0;
+      allOK = LoadHeader(&secondHeader, myDisk, diskSize - UINT64_C(1), &secondCrcOk) && allOK;
+   } // if/else
+   if (!allOK)
       state = gpt_invalid;
-      cerr << "Unable to seek to secondary GPT header at sector "
-           << (diskSize - (UINT64_C(1))) << "!\n";
-   } // if/else lseek
 
    // Return valid headers code: 0 = both headers bad; 1 = main header
    // good, backup bad; 2 = backup header good, main header bad;
@@ -734,37 +703,32 @@ int GPTData::ForceLoadGPTData(void) {
       } else { // bad main header CRC and backup header CRC is OK
          state = gpt_corrupt;
          if (LoadSecondTableAsMain()) {
+            loadedTable = 2;
             cerr << "\aWarning: Invalid CRC on main header data; loaded backup partition table.\n";
          } else { // backup table bad, bad main header CRC, but try main table in desperation....
             if (LoadMainTable() == 0) {
                allOK = 0;
+               loadedTable = 0;
                cerr << "\a\aWarning! Unable to load either main or backup partition table!\n";
             } // if
          } // if/else (LoadSecondTableAsMain())
       } // if/else (load partition table)
 
-      // Load backup partition table into temporary storage to check
-      // its CRC and store the results, then discard this temporary
-      // storage, since we don't use it in any but recovery operations
-      seekTo = secondHeader.partitionEntriesLBA;
-      if ((myDisk.Seek(seekTo)) && (secondCrcOk)) {
-         sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
-         storage = (uint8_t*) malloc(sizeOfParts);
-         if (myDisk.Read(storage, sizeOfParts) != (int) sizeOfParts) {
-            cerr << "Warning! Error " << errno << " reading backup partition table!\n";
-         } // if
-         newCRC = chksum_crc32((unsigned char*) storage,  sizeOfParts);
-         free(storage);
-         secondPartsCrcOk = (newCRC == secondHeader.partitionEntriesCRC);
-      } // if
+      if (loadedTable == 1)
+         secondPartsCrcOk = CheckTable(&secondHeader);
+      else if (loadedTable == 2)
+         mainPartsCrcOk = CheckTable(&mainHeader);
+      else
+         mainPartsCrcOk = secondPartsCrcOk = 0;
 
       // Problem with main partition table; if backup is OK, use it instead....
       if (secondPartsCrcOk && secondCrcOk && !mainPartsCrcOk) {
          state = gpt_corrupt;
          allOK = allOK && LoadSecondTableAsMain();
+         mainPartsCrcOk = 0; // LoadSecondTableAsMain() resets this, so re-flag as bad
          cerr << "\aWarning! Main partition table CRC mismatch! Loaded backup "
               << "partition table\ninstead of main partition table!\n\n";
-      } // if
+      } // if */
 
       // Check for valid CRCs and warn if there are problems
       if ((mainCrcOk == 0) || (secondCrcOk == 0) || (mainPartsCrcOk == 0) ||
@@ -783,28 +747,7 @@ int GPTData::ForceLoadGPTData(void) {
 // sensible!
 // Returns 1 on success, 0 on failure. CRC errors do NOT count as failure.
 int GPTData::LoadMainTable(void) {
-   int retval = 1;
-   uint32_t newCRC, sizeOfParts;
-
-   if (myDisk.OpenForRead(device)) {
-      // Set internal data structures for number of partitions on the disk
-      SetGPTSize(mainHeader.numParts);
-
-      // Load main partition table, and record whether its CRC
-      // matches the stored value
-      if (!myDisk.Seek(mainHeader.partitionEntriesLBA))
-         retval = 0;
-      sizeOfParts = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
-      if (myDisk.Read(partitions, sizeOfParts) != (int) sizeOfParts) {
-         cerr << "Warning! Error " << errno << " when loading the main partition table!\n";
-         retval = 0;
-      } // if
-      newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
-      mainPartsCrcOk = (newCRC == mainHeader.partitionEntriesCRC);
-      if (IsLittleEndian() == 0)
-         ReversePartitionBytes();
-   } else retval = 0; // if open for read....
-   return retval;
+   return LoadPartitionTable(mainHeader, myDisk);
 } // GPTData::LoadMainTable()
 
 // Load the second (backup) partition table as the primary partition
@@ -812,47 +755,103 @@ int GPTData::LoadMainTable(void) {
 // partition table is damaged.
 // Returns 1 on success, 0 on failure. CRC errors do NOT count as failure.
 int GPTData::LoadSecondTableAsMain(void) {
-   uint64_t seekTo;
-   uint32_t sizeOfParts, newCRC;
-   int retval = 1;
+   return LoadPartitionTable(secondHeader, myDisk);
+} // GPTData::LoadSecondTableAsMain()
 
-   if (myDisk.OpenForRead(device)) {
-      seekTo = secondHeader.partitionEntriesLBA;
-      retval = myDisk.Seek(seekTo);
+// Load a single GPT header (main or backup) from the specified disk device and
+// sector. Applies byte-order corrections on big-endian platforms. Sets crcOk
+// value appropriately.
+// Returns 1 on success, 0 on failure. Note that CRC errors do NOT qualify as
+// failure.
+int GPTData::LoadHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector, int *crcOk) {
+   int allOK = 1;
+
+   disk.Seek(sector);
+   if (disk.Read(header, 512) != 512) {
+      cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
+      allOK = 0;
+   } // if
+   *crcOk = CheckHeaderCRC(header);
+
+      // Reverse byte order, if necessary
+   if (IsLittleEndian() == 0) {
+      ReverseHeaderBytes(header);
+   } // if
+   return allOK;
+} // GPTData::LoadHeader
+
+// Load a partition table (either main or secondary) from the specified disk,
+// using header as a reference for what to load. If sector != 0 (the default
+// is 0), loads from the specified sector; otherwise loads from the sector
+// indicated in header.
+// Returns 1 on success, 0 on failure. CRC errors do NOT count as failure.
+int GPTData::LoadPartitionTable(const struct GPTHeader & header, DiskIO & disk, uint64_t sector) {
+   uint32_t sizeOfParts, newCRC;
+   int retval;
+
+   if (disk.OpenForRead()) {
+      if (sector == 0) {
+         retval = disk.Seek(header.partitionEntriesLBA);
+      } else {
+         retval = disk.Seek(sector);
+      } // if/else
       if (retval == 1) {
-         SetGPTSize(secondHeader.numParts);
-         sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
-         if (myDisk.Read(partitions, sizeOfParts) != (int) sizeOfParts) {
+         SetGPTSize(header.numParts);
+         sizeOfParts = header.numParts * header.sizeOfPartitionEntries;
+         if (disk.Read(partitions, sizeOfParts) != (int) sizeOfParts) {
             cerr << "Warning! Read error " << errno << "! Misbehavior now likely!\n";
             retval = 0;
          } // if
          newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
-         secondPartsCrcOk = (newCRC == secondHeader.partitionEntriesCRC);
-         mainPartsCrcOk = secondPartsCrcOk;
+         mainPartsCrcOk = secondPartsCrcOk = (newCRC == header.partitionEntriesCRC);
          if (IsLittleEndian() == 0)
             ReversePartitionBytes();
-         if (!secondPartsCrcOk) {
-            cout << "Caution! After loading backup partitions, the CRC still doesn't check out!\n";
+         if (!mainPartsCrcOk) {
+            cout << "Caution! After loading partitions, the CRC doesn't check out!\n";
          } // if
       } else {
-         cerr << "Error! Couldn't seek to backup partition table!\n";
+         cerr << "Error! Couldn't seek to partition table!\n";
       } // if/else
    } else {
       cerr << "Error! Couldn't open device " << device
-           << " when recovering backup partition table!\n";
+           << " when reading partition table!\n";
       retval = 0;
    } // if/else
    return retval;
-} // GPTData::LoadSecondTableAsMain()
+} // GPTData::LoadPartitionsTable()
+
+// Check the partition table pointed to by header, but don't keep it
+// around.
+// Returns 1 if the CRC is OK, 0 if not or if there was a read error.
+int GPTData::CheckTable(struct GPTHeader *header) {
+   uint32_t sizeOfParts, newCRC;
+   uint8_t *storage;
+   int newCrcOk = 0;
+
+   // Load backup partition table into temporary storage to check
+   // its CRC and store the results, then discard this temporary
+   // storage, since we don't use it in any but recovery operations
+   if (myDisk.Seek(header->partitionEntriesLBA)) {
+      sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
+      storage = new uint8_t[sizeOfParts];
+      if (myDisk.Read(storage, sizeOfParts) != (int) sizeOfParts) {
+         cerr << "Warning! Error " << errno << " reading backup partition table!\n";
+      } else {
+         newCRC = chksum_crc32((unsigned char*) storage,  sizeOfParts);
+         newCrcOk = (newCRC == header->partitionEntriesCRC);
+      } // if/else
+      delete[] storage;
+   } // if
+   return newCrcOk;
+} // GPTData::CheckTable()
 
 // Writes GPT (and protective MBR) to disk. Returns 1 on successful
 // write, 0 if there was a problem.
 int GPTData::SaveGPTData(int quiet) {
    int allOK = 1, littleEndian;
    char answer;
-   uint64_t secondTable;
+//   uint64_t secondTable;
    uint32_t numParts;
-   uint64_t offset;
 
    littleEndian = IsLittleEndian();
 
@@ -907,18 +906,8 @@ int GPTData::SaveGPTData(int quiet) {
    // Pull out some data that's needed before doing byte-order reversal on
    // big-endian systems....
    numParts = mainHeader.numParts;
-   secondTable = secondHeader.partitionEntriesLBA;
-/*   if (IsLittleEndian() == 0) {
-      // Reverse partition bytes first, since that function requires non-reversed
-      // data from the main header....
-      ReversePartitionBytes();
-      ReverseHeaderBytes(&mainHeader);
-      ReverseHeaderBytes(&secondHeader);
-   } // if */
+
    RecomputeCRCs();
-/*   ReverseHeaderBytes(&mainHeader);
-   ReverseHeaderBytes(&secondHeader);
-   ReversePartitionBytes(); */
 
    if ((allOK) && (!quiet)) {
       cout << "\nFinal checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING\n"
@@ -938,59 +927,22 @@ int GPTData::SaveGPTData(int quiet) {
 
       if (allOK && myDisk.OpenForWrite(device)) {
          // Now write the main GPT header...
-         if (myDisk.Seek(1) == 1) {
-            if (!littleEndian)
-               ReverseHeaderBytes(&mainHeader);
-            if (myDisk.Write(&mainHeader, 512) != 512)
-               allOK = 0;
-            if (!littleEndian)
-               ReverseHeaderBytes(&mainHeader);
-         } else allOK = 0; // if (myDisk.Seek()...)
+         allOK = SaveHeader(&mainHeader, myDisk, 1);
 
          // Now write the main partition tables...
          if (allOK) {
-	    offset = mainHeader.partitionEntriesLBA;
-	    if (myDisk.Seek(offset)) {
-               if (!littleEndian)
-                  ReversePartitionBytes();
-               if (myDisk.Write(partitions, GPT_SIZE * numParts) == -1)
-                  allOK = 0;
-               if (!littleEndian)
-                  ReversePartitionBytes();
-            } else allOK = 0; // if (myDisk.Seek()...)
+            allOK = SavePartitionTable(myDisk, mainHeader.partitionEntriesLBA);
          } // if (allOK)
 
          // Now seek to near the end to write the secondary GPT....
-         if (allOK) {
-            offset = (uint64_t) secondTable;
-            if (myDisk.Seek(offset) != 1) {
-               allOK = 0;
-               cerr << "Unable to seek to end of disk! Perhaps the 'e' option on the experts' menu\n"
-                    << "will resolve this problem.\n";
-            } // if
-         } // if
-
-         // Now write the secondary partition tables....
-         if (allOK) {
-            if (!littleEndian)
-               ReversePartitionBytes();
-            if (myDisk.Write(partitions, GPT_SIZE * numParts) == -1)
-               allOK = 0;
-            if (!littleEndian)
-               ReversePartitionBytes();
-         } // if (allOK)
+         allOK = SavePartitionTable(myDisk, secondHeader.partitionEntriesLBA);
+         if (!allOK)
+            cerr << "Unable to save backup partition table! Perhaps the 'e' option on the experts'\n"
+                 << "menu will resolve this problem.\n";
 
          // Now write the secondary GPT header...
          if (allOK) {
-	    offset = mainHeader.backupLBA;
-            if (!littleEndian)
-               ReverseHeaderBytes(&secondHeader);
-            if (myDisk.Seek(offset)) {
-               if (myDisk.Write(&secondHeader, 512) == -1)
-                  allOK = 0;
-	    } else allOK = 0; // if (myDisk.Seek()...)
-            if (!littleEndian)
-               ReverseHeaderBytes(&secondHeader);
+            allOK = SaveHeader(&secondHeader, myDisk, mainHeader.backupLBA);
          } // if (allOK)
 
          // re-read the partition table
@@ -1015,14 +967,6 @@ int GPTData::SaveGPTData(int quiet) {
       cout << "Aborting write of new partition table.\n";
    } // if
 
-/*   if (IsLittleEndian() == 0) {
-      // Reverse (normalize) header bytes first, since ReversePartitionBytes()
-      // requires non-reversed data in mainHeader...
-      ReverseHeaderBytes(&mainHeader);
-      ReverseHeaderBytes(&secondHeader);
-      ReversePartitionBytes();
-   } // if */
-
    return (allOK);
 } // GPTData::SaveGPTData()
 
@@ -1034,7 +978,6 @@ int GPTData::SaveGPTData(int quiet) {
 // identical to the main partition table on healthy disks.
 int GPTData::SaveGPTBackup(const string & filename) {
    int allOK = 1;
-   uint32_t numParts;
    DiskIO backupFile;
 
    if (backupFile.OpenForWrite(filename)) {
@@ -1044,35 +987,19 @@ int GPTData::SaveGPTBackup(const string & filename) {
       // backup. I'm favoring misses over false alarms....
       RecomputeCRCs();
 
-      // Reverse the byte order, if necessary....
-      numParts = mainHeader.numParts;
-      if (IsLittleEndian() == 0) {
-         ReversePartitionBytes();
-         ReverseHeaderBytes(&mainHeader);
-         ReverseHeaderBytes(&secondHeader);
-      } // if
-
-      // Now write the protective MBR...
       protectiveMBR.WriteMBRData(&backupFile);
 
-      // Now write the main GPT header...
-      if (allOK)
+      if (allOK) {
          // MBR write closed disk, so re-open and seek to end....
          backupFile.OpenForWrite();
-         backupFile.Seek(1);
-         if (backupFile.Write(&mainHeader, 512) == -1)
-            allOK = 0;
+         allOK = SaveHeader(&mainHeader, backupFile, 1);
+      } // if (allOK)
 
-      // Now write the secondary GPT header...
       if (allOK)
-         if (backupFile.Write(&secondHeader, 512) == -1)
-            allOK = 0;
+         allOK = SaveHeader(&secondHeader, backupFile, 2);
 
-      // Now write the main partition tables...
-      if (allOK) {
-         if (backupFile.Write(partitions, GPT_SIZE * numParts) == -1)
-            allOK = 0;
-      } // if
+      if (allOK)
+         allOK = SavePartitionTable(backupFile, 3);
 
       if (allOK) { // writes completed OK
          cout << "The operation has completed successfully.\n";
@@ -1081,13 +1008,6 @@ int GPTData::SaveGPTBackup(const string & filename) {
               << "It may not be usable!\n";
       } // if/else
       backupFile.Close();
-
-      // Now reverse the byte-order reversal, if necessary....
-      if (IsLittleEndian() == 0) {
-         ReverseHeaderBytes(&mainHeader);
-         ReverseHeaderBytes(&secondHeader);
-         ReversePartitionBytes();
-      } // if
    } else {
       cerr << "Unable to open file " << filename << " for writing! Aborting!\n";
       allOK = 0;
@@ -1095,14 +1015,54 @@ int GPTData::SaveGPTBackup(const string & filename) {
    return allOK;
 } // GPTData::SaveGPTBackup()
 
+// Write a GPT header (main or backup) to the specified sector. Used by both
+// the SaveGPTData() and SaveGPTBackup() functions.
+// Should be passed an architecture-appropriate header (DO NOT call
+// ReverseHeaderBytes() on the header before calling this function)
+// Returns 1 on success, 0 on failure
+int GPTData::SaveHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector) {
+   int littleEndian, allOK = 1;
+
+   littleEndian = IsLittleEndian();
+   if (!littleEndian)
+      ReverseHeaderBytes(header);
+   if (disk.Seek(sector)) {
+      if (disk.Write(header, 512) == -1)
+         allOK = 0;
+   } else allOK = 0; // if (disk.Seek()...)
+   if (!littleEndian)
+      ReverseHeaderBytes(header);
+   return allOK;
+} // GPTData::SaveHeader()
+
+// Save the partitions to the specified sector. Used by both the SaveGPTData()
+// and SaveGPTBackup() functions.
+// Should be passed an architecture-appropriate header (DO NOT call
+// ReverseHeaderBytes() on the header before calling this function)
+// Returns 1 on success, 0 on failure
+int GPTData::SavePartitionTable(DiskIO & disk, uint64_t sector) {
+   int littleEndian, allOK = 1;
+
+   littleEndian = IsLittleEndian();
+   if (disk.Seek(sector)) {
+      if (!littleEndian)
+         ReversePartitionBytes();
+      if (disk.Write(partitions, mainHeader.sizeOfPartitionEntries * mainHeader.numParts) == -1)
+         allOK = 0;
+      if (!littleEndian)
+         ReversePartitionBytes();
+   } else allOK = 0; // if (myDisk.Seek()...)
+   return allOK;
+} // GPTData::SavePartitionTable()
+
 // Load GPT data from a backup file created by SaveGPTBackup(). This function
 // does minimal error checking. It returns 1 if it completed successfully,
 // 0 if there was a problem. In the latter case, it creates a new empty
 // set of partitions.
 int GPTData::LoadGPTBackup(const string & filename) {
-   int allOK = 1, val;
-   uint32_t numParts, sizeOfEntries, sizeOfParts, newCRC;
-   int littleEndian = 1;
+   int allOK = 1, val, err;
+   uint32_t numParts, sizeOfEntries;
+   int littleEndian = 1, shortBackup = 0;
    DiskIO backupFile;
 
    if (backupFile.OpenForRead(filename)) {
@@ -1112,29 +1072,20 @@ int GPTData::LoadGPTBackup(const string & filename) {
       // Let the MBRData class load the saved MBR...
       protectiveMBR.ReadMBRData(&backupFile, 0); // 0 = don't check block size
 
-      // Load the main GPT header, check its vaility, and set the GPT
-      // size based on the data
-      if (backupFile.Read(&mainHeader, 512) != 512) {
-         cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
-      } // if
-      mainCrcOk = CheckHeaderCRC(&mainHeader);
+      LoadHeader(&mainHeader, backupFile, 1, &mainCrcOk);
 
-      // Reverse byte order, if necessary
-      if (littleEndian == 0) {
-         ReverseHeaderBytes(&mainHeader);
-      } // if
-
-      // Load the backup GPT header in much the same way as the main
-      // GPT header....
-      if (backupFile.Read(&secondHeader, 512) != 512) {
-         cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
-      } // if
-      secondCrcOk = CheckHeaderCRC(&secondHeader);
-
-      // Reverse byte order, if necessary
-      if (littleEndian == 0) {
-         ReverseHeaderBytes(&secondHeader);
-      } // if
+      // Check backup file size and rebuild second header if file is right
+      // size to be direct dd copy of MBR, main header, and main partition
+      // table; if other size, treat it like a GPT fdisk-generated backup
+      // file
+      shortBackup = ((backupFile.DiskSize(&err) * backupFile.GetBlockSize()) ==
+                     (mainHeader.numParts * mainHeader.sizeOfPartitionEntries) + 1024);
+      if (shortBackup) {
+         RebuildSecondHeader();
+         secondCrcOk = mainCrcOk;
+      } else {
+         LoadHeader(&secondHeader, backupFile, 2, &secondCrcOk);
+      } // if/else
 
       // Return valid headers code: 0 = both headers bad; 1 = main header
       // good, backup bad; 2 = backup header good, main header bad;
@@ -1152,27 +1103,15 @@ int GPTData::LoadGPTBackup(const string & filename) {
 
          SetGPTSize(numParts);
 
-         // If current disk size doesn't match that of backup....
          if (secondHeader.currentLBA != diskSize - UINT64_C(1)) {
             cout << "Warning! Current disk size doesn't match that of the backup!\n"
                  << "Adjusting sizes to match, but subsequent problems are possible!\n";
             MoveSecondHeaderToEnd();
          } // if
 
-         // Load main partition table, and record whether its CRC
-         // matches the stored value
-         sizeOfParts = numParts * sizeOfEntries;
-         if (backupFile.Read(partitions, sizeOfParts) != (int) sizeOfParts) {
-            cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
-         } // if
-
-         newCRC = chksum_crc32((unsigned char*) partitions, sizeOfParts);
-         mainPartsCrcOk = (newCRC == mainHeader.partitionEntriesCRC);
-         secondPartsCrcOk = (newCRC == secondHeader.partitionEntriesCRC);
-         // Reverse byte order, if necessary
-         if (littleEndian == 0) {
-            ReversePartitionBytes();
-         } // if
+         if (!LoadPartitionTable(mainHeader, backupFile, (uint64_t) (3 - shortBackup)))
+            cerr << "Warning! Read error " << errno
+                 << " loading partition table; strange behavior now likely!\n";
 
       } else {
          allOK = 0;
@@ -1318,7 +1257,7 @@ void GPTData::CreatePartition(void) {
 
    if (((firstBlock = FindFirstAvailable()) != 0) &&
          (firstFreePart < mainHeader.numParts)) {
-      lastBlock = FindLastAvailable(firstBlock);
+      lastBlock = FindLastAvailable();
       firstInLargest = FindFirstInLargest();
 
       // Get partition number....
@@ -1430,7 +1369,7 @@ int GPTData::DestroyGPT(int prompt) {
          } // if
          myDisk.Seek(mainHeader.partitionEntriesLBA); // seek to partition table
          tableSize = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
-         emptyTable = (uint8_t*) malloc(tableSize);
+         emptyTable = new uint8_t[tableSize];
          for (i = 0; i < tableSize; i++)
             emptyTable[i] = 0;
          sum = myDisk.Write(emptyTable, tableSize);
@@ -1466,6 +1405,7 @@ int GPTData::DestroyGPT(int prompt) {
          myDisk.Close();
          cout << "GPT data structures destroyed! You may now partition the disk using fdisk or\n"
               << "other utilities. Program will now terminate.\n";
+         delete[] emptyTable;
       } else {
          cerr << "Problem opening " << device << " for writing! Program will now terminate.\n";
       } // if/else (fd != -1)
@@ -1894,7 +1834,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
    // data.
    if ((numEntries != mainHeader.numParts) || (numEntries != secondHeader.numParts)
        || (partitions == NULL)) {
-      newParts = (GPTPart*) calloc(numEntries, sizeof (GPTPart));
+      newParts = new GPTPart [numEntries * sizeof (GPTPart)];
       if (newParts != NULL) {
          if (partitions != NULL) { // existing partitions; copy them over
             GetPartRange(&i, &high);
@@ -1914,7 +1854,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
                } // for
                trash = partitions;
                partitions = newParts;
-               free(trash);
+               delete[] trash;
             } // if
          } else { // No existing partition table; just create it
             partitions = newParts;
@@ -2033,7 +1973,7 @@ int GPTData::ClearGPTData(void) {
 
    // Set up the partition table....
    if (partitions != NULL)
-      free(partitions);
+      delete[] partitions;
    partitions = NULL;
    SetGPTSize(NUM_GPT_ENTRIES);
 
@@ -2297,10 +2237,9 @@ uint64_t GPTData::FindFirstInLargest(void) {
    return selectedSegment;
 } // GPTData::FindFirstInLargest()
 
-// Find the last available block on the disk at or after the start
-// block. Returns 0 if there are no available partitions after
-// (or including) start.
-uint64_t GPTData::FindLastAvailable(uint64_t start) {
+// Find the last available block on the disk.
+// Returns 0 if there are no available partitions
+uint64_t GPTData::FindLastAvailable(void) {
    uint64_t last;
    uint32_t i;
    int lastMoved = 0;

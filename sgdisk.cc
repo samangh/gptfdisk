@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
                   saveData = 1;
                   break;
                case 'E':
-                  cout << theGPT.FindLastAvailable(theGPT.FindFirstInLargest()) << "\n";
+                  cout << theGPT.FindLastInFree(theGPT.FindFirstInLargest()) << "\n";
                   break;
                case 'f':
                   cout << theGPT.FindFirstInLargest() << "\n";
@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
                case 't':
                   theGPT.JustLooking(0);
                   partNum = (int) GetInt(typeCode, 1) - 1;
-                  sscanf(GetString(typeCode, 2).c_str(), "%ux", &hexCode);
+                  sscanf(GetString(typeCode, 2).c_str(), "%x", &hexCode);
                   if (theGPT.ChangePartType(partNum, hexCode)) {
                      saveData = 1;
                   } else {

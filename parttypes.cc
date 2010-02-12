@@ -104,7 +104,7 @@ void PartType::AddAllTypes(void) {
    // FreeBSD partition types....
    // Note: Rather than extract FreeBSD disklabel data, convert FreeBSD
    // partitions in-place, and let FreeBSD sort out the details....
-   AddType(0xa500, "516E7CB4-6ECF-11D6-8FF8-00022D09712B", "FreeBSD Disklabel");
+   AddType(0xa500, "516E7CB4-6ECF-11D6-8FF8-00022D09712B", "FreeBSD disklabel");
    AddType(0xa501, "83BD6B9D-7F41-11DC-BE0B-001560B84F0F", "FreeBSD boot");
    AddType(0xa502, "516E7CB5-6ECF-11D6-8FF8-00022D09712B", "FreeBSD swap");
    AddType(0xa503, "516E7CB6-6ECF-11D6-8FF8-00022D09712B", "FreeBSD UFS");
@@ -191,7 +191,7 @@ int PartType::AddType(uint16_t mbrType, const char * guidData, const char * name
 } // GUID::AddType(const char* variant)
 
 // Assign a GUID based on my custom 2-byte (16-bit) MBR hex ID variant
-GUIDData & PartType::operator=(uint16_t ID) {
+PartType & PartType::operator=(uint16_t ID) {
    AType* theItem = allTypes;
    int found = 0;
 

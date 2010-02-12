@@ -19,7 +19,7 @@
 #include <winioctl.h>
 #define fstat64 fstat
 #define stat64 stat
-#define S_IRGRP 0
+//#define S_IRGRP 0
 #define S_IROTH 0
 #include <stdio.h>
 #include <string>
@@ -64,7 +64,9 @@ int DiskIO::OpenForRead(void) {
                       NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
       if (fd == INVALID_HANDLE_VALUE) {
          CloseHandle(fd);
-         cerr << "Problem opening " << realFilename << " for reading!\n";
+         cerr << "Problem opening ";
+         cerr << realFilename;
+         cerr << " for reading!\n";
          realFilename = "";
          userFilename = "";
          isOpen = 0;
@@ -220,11 +222,12 @@ int DiskIO::Read(void* buffer, int numBytes) {
       blockSize = GetBlockSize();
       if (numBytes <= blockSize) {
          numBlocks = 1;
-         tempSpace = (char*) malloc(blockSize);
+         tempSpace = new char [blockSize];
       } else {
          numBlocks = numBytes / blockSize;
-         if ((numBytes % blockSize) != 0) numBlocks++;
-         tempSpace = (char*) malloc(numBlocks * blockSize);
+         if ((numBytes % blockSize) != 0)
+            numBlocks++;
+         tempSpace = new char [numBlocks * blockSize];
       } // if/else
 
       // Read the data into temporary space, then copy it to buffer
@@ -237,7 +240,7 @@ int DiskIO::Read(void* buffer, int numBytes) {
       if (((numBlocks * blockSize) != numBytes) && (retval > 0))
          retval = numBytes;
 
-      free(tempSpace);
+      delete[] tempSpace;
    } // if (isOpen)
    return retval;
 } // DiskIO::Read()
@@ -261,11 +264,11 @@ int DiskIO::Write(void* buffer, int numBytes) {
       blockSize = GetBlockSize();
       if (numBytes <= blockSize) {
          numBlocks = 1;
-         tempSpace = (char*) malloc(blockSize);
+         tempSpace = new char [blockSize];
       } else {
          numBlocks = numBytes / blockSize;
          if ((numBytes % blockSize) != 0) numBlocks++;
-         tempSpace = (char*) malloc(numBlocks * blockSize);
+         tempSpace = new char [numBlocks * blockSize];
       } // if/else
 
       // Copy the data to my own buffer, then write it
@@ -282,7 +285,7 @@ int DiskIO::Write(void* buffer, int numBytes) {
       if (((numBlocks * blockSize) != numBytes) && (retval > 0))
          retval = numBytes;
 
-      free(tempSpace);
+      delete[] tempSpace;
    } // if (isOpen)
    return retval;
 } // DiskIO:Write()

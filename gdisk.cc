@@ -29,7 +29,6 @@ int main(int argc, char* argv[]) {
    GPTData theGPT;
    int doMore = 1;
    char* device = NULL;
-   PartType typeHelper; // unused, but necessary to initialize partition type linked list
 
    cout << "GPT fdisk (gdisk) version " << GPTFDISK_VERSION << "\n\n";
 

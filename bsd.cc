@@ -37,7 +37,7 @@ BSDData::BSDData(void) {
 } // default constructor
 
 BSDData::~BSDData(void) {
-   free(partitions);
+   delete[] partitions;
 } // destructor
 
 // Read BSD disklabel data from the specified device filename. This function
@@ -132,7 +132,7 @@ int BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSect
 
    // If the state is good, go ahead and load the main partition data....
    if (state == bsd) {
-      partitions = (struct BSDRecord*) malloc(numParts * sizeof (struct BSDRecord));
+      partitions = new struct BSDRecord[numParts * sizeof(struct BSDRecord)];
       for (i = 0; i < numParts; i++) {
          // Once again, we use the buffer, but index it using a BSDRecord
          // pointer (dangerous, but effective)....

@@ -234,12 +234,12 @@ void ReverseBytes(void* theValue, int numBytes) {
    char* tempValue = NULL;
    int i;
 
-   tempValue = (char*) malloc(numBytes);
+   tempValue = new char [numBytes];
    if (tempValue != NULL) {
       memcpy(tempValue, theValue, numBytes);
       for (i = 0; i < numBytes; i++)
          ((char*) theValue)[i] = tempValue[numBytes - i - 1];
-      free(tempValue);
+      delete[] tempValue;
    } // if
 } // ReverseBytes()
 

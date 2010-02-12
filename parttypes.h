@@ -46,7 +46,7 @@ public:
    GUIDData & operator=(const char * orig) {return GUIDData::operator=(orig);}
 
    // New data assignment
-   GUIDData & operator=(uint16_t ID); // Use MBR type code time 0x0100 to assign GUID
+   PartType & operator=(uint16_t ID); // Use MBR type code times 0x0100 to assign GUID
 
    // Retrieve transformed GUID data based on type code matches
    string TypeName(void);

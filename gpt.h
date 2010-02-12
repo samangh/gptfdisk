@@ -8,7 +8,6 @@
 #include <sys/types.h>
 #include "gptpart.h"
 #include "support.h"
-#include "parttypes.h"
 #include "mbr.h"
 #include "bsd.h"
 #include "gptpart.h"
@@ -16,7 +15,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.3"
+#define GPTFDISK_VERSION "0.6.4-pre1"
 
 using namespace std;
 
@@ -74,6 +73,12 @@ protected:
    int sectorAlignment; // Start & end partitions at multiples of sectorAlignment
    int beQuiet;
    WhichToUse whichWasUsed;
+
+   int LoadHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector, int *crcOk);
+   int LoadPartitionTable(const struct GPTHeader & header, DiskIO & disk, uint64_t sector = 0);
+   int CheckTable(struct GPTHeader *header);
+   int SaveHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector);
+   int SavePartitionTable(DiskIO & disk, uint64_t sector);
 public:
    // Basic necessary functions....
    GPTData(void);
@@ -155,7 +160,7 @@ public:
    // Find information about free space
    uint64_t FindFirstAvailable(uint64_t start = 0);
    uint64_t FindFirstInLargest(void);
-   uint64_t FindLastAvailable(uint64_t start);
+   uint64_t FindLastAvailable();
    uint64_t FindLastInFree(uint64_t start);
    uint64_t FindFreeBlocks(uint32_t *numSegments, uint64_t *largestSegment);
    int IsFree(uint64_t sector);

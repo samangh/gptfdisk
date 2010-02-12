@@ -145,8 +145,9 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout << firstLBA << "  ";
       cout.width(14);
       cout << lastLBA  << "   ";
-      cout << BytesToSI(blockSize * (lastLBA - firstLBA + 1)) << "   ";
-      for (i = 0; i < 9 - (int) sizeInSI.length(); i++) cout << " ";
+      cout << BytesToSI(blockSize * (lastLBA - firstLBA + 1)) << "  ";
+      for (i = 0; i < 10 - (int) sizeInSI.length(); i++)
+         cout << " ";
       cout.fill('0');
       cout.width(4);
       cout.setf(ios::uppercase);
