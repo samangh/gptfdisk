@@ -10,7 +10,7 @@
 #define __STDC_CONSTANT_MACROS
 
 #include <stdio.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <fcntl.h>
@@ -37,7 +37,8 @@ BSDData::BSDData(void) {
 } // default constructor
 
 BSDData::~BSDData(void) {
-   delete[] partitions;
+   if (partitions != NULL)
+      delete[] partitions;
 } // destructor
 
 // Read BSD disklabel data from the specified device filename. This function
@@ -64,9 +65,10 @@ int BSDData::ReadBSDData(const string & device, uint64_t startSector, uint64_t e
 // Load the BSD disklabel data from an already-opened disk
 // file, starting with the specified sector number.
 int BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSector) {
-   uint8_t buffer[4096]; // I/O buffer
-   int i, foundSig = 0, bigEnd = 0, allOK = 1;
+   int allOK = 1;
+   int i, foundSig = 0, bigEnd = 0;
    int relative = 0; // assume absolute partition sector numbering
+   uint8_t buffer[4096]; // I/O buffer
    uint32_t realSig;
    uint32_t* temp32;
    uint16_t* temp16;
@@ -158,7 +160,7 @@ int BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSect
       // detected above, apply a correction to all partition start sectors....
       if (relative) {
          for (i = 0; i < numParts; i++) {
-            partitions[i].firstLBA += startSector;
+            partitions[i].firstLBA += (uint32_t) startSector;
          } // for
       } // if
    } // if signatures OK

@@ -10,8 +10,8 @@ DEPEND= makedepend $(CFLAGS)
 
 all:	gdisk sgdisk
 
-gdisk:	$(LIB_OBJS) gdisk.o
-	$(CXX) $(LIB_OBJS) gdisk.o -L/opt/local/lib -L/usr/local/lib -luuid -o gdisk
+gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
+	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o -L/opt/local/lib -L/usr/local/lib -luuid -o gdisk
 
 sgdisk: $(LIB_OBJS) sgdisk.o
 	$(CXX) $(LIB_OBJS) sgdisk.o -L/opt/local/lib -L/usr/local/lib -luuid -lpopt -o sgdisk

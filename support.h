@@ -2,14 +2,14 @@
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdint.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <stdlib.h>
 #include <string>
 
 #ifndef __GPTSUPPORT
 #define __GPTSUPPORT
 
-#if defined (__FreeBSD__) || defined (__APPLE__)
+#if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 // Darwin (Mac OS) only: disk IOCTLs are different, and there is no lseek64
 // This used to use __DARWIN_UNIX03 rather than __APPLE__, but __APPLE__
 // is more general. If the code fails to work on older versions of OS X/

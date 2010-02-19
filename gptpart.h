@@ -59,6 +59,7 @@ class GPTPart {
       uint64_t GetLengthLBA(void);
       uint64_t GetAttributes(void) {return attributes;}
       string GetDescription(void);
+      int IsUsed(void);
 
       // Simple data assignment:
       void SetType(PartType t);
@@ -82,8 +83,5 @@ class GPTPart {
       // Functions requiring user interaction
       void ChangeType(void); // Change the type code
 }; // struct GPTPart
-
-// A support function that doesn't quite belong in the class....
-void QuickSortGPT(GPTPart* partitions, int start, int finish);
 
 #endif

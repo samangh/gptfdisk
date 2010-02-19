@@ -25,6 +25,8 @@ using namespace std;
 
 uint64_t GetInt(char* Info, int itemNum);
 string GetString(char* Info, int itemNum);
+int BuildMBR(GPTData* theGPT, char* argument, int isHybrid);
+int CountColons(char* argument);
 
 int main(int argc, char *argv[]) {
    GPTData theGPT;
@@ -35,8 +37,8 @@ int main(int argc, char *argv[]) {
    uint32_t tableSize = 128;
    uint64_t startSector, endSector;
    char *device = NULL;
-   char *newPartInfo = NULL, *typeCode = NULL, *partName;
-   char *backupFile = NULL;
+   char *newPartInfo = NULL, *typeCode = NULL, *partName = NULL;
+   char *backupFile = NULL, *twoParts = NULL, *hybrids = NULL, *mbrParts;
    PartType typeHelper;
 
    poptContext poptCon;
@@ -50,20 +52,24 @@ int main(int argc, char *argv[]) {
       {"end-of-largest", 'E', POPT_ARG_NONE, NULL, 'E', "show end of largest free block", ""},
       {"first-in-largest", 'f', POPT_ARG_NONE, NULL, 'f', "show start of the largest free block", ""},
       {"mbrtogpt", 'g', POPT_ARG_NONE, NULL, 'g', "convert MBR to GPT", ""},
+      {"hybrid", 'h', POPT_ARG_STRING, &hybrids, 'h', "create hybrid MBR", "partnum[:partnum...]"},
       {"info", 'i', POPT_ARG_INT, &infoPartNum, 'i', "show detailed information on partition", "partnum"},
       {"load-backup", 'l', POPT_ARG_STRING, &backupFile, 'l', "load GPT backup from file", "file"},
       {"list-types", 'L', POPT_ARG_NONE, NULL, 'L', "list known partition types", ""},
+      {"gpttombr", 'm', POPT_ARG_STRING, &mbrParts, 'm', "convert GPT to MBR", "partnum[:partnum...]"},
       {"new", 'n', POPT_ARG_STRING, &newPartInfo, 'n', "create new partition", "partnum:start:end"},
       {"clear", 'o', POPT_ARG_NONE, NULL, 'o', "clear partition table", ""},
       {"print", 'p', POPT_ARG_NONE, NULL, 'p', "print partition table", ""},
       {"pretend", 'P', POPT_ARG_NONE, NULL, 'P', "make changes in memory, but don't write them", ""},
+      {"transpose", 'r', POPT_ARG_STRING, &twoParts, 'r', "transpose two partitions", "partnum:partnum"},
       {"sort", 's', POPT_ARG_NONE, NULL, 's', "sort partition table entries", ""},
       {"resize-table", 'S', POPT_ARG_INT, &tableSize, 'S', "resize partition table", "numparts"},
       {"typecode", 't', POPT_ARG_STRING, &typeCode, 't', "change partition type code", "partnum:hexcode"},
       {"transform-bsd", 'T', POPT_ARG_INT, &bsdPartNum, 'T', "transform BSD disklabel partition to GPT", "partnum"},
       {"verify", 'v', POPT_ARG_NONE, NULL, 'v', "check partition table integrity", ""},
       {"version", 'V', POPT_ARG_NONE, NULL, 'V', "display version information", ""},
-      {"zap", 'z', POPT_ARG_NONE, NULL, 'z', "zap (destroy) GPT data structures", ""},
+      {"zap", 'z', POPT_ARG_NONE, NULL, 'z', "zap (destroy) GPT (but not MBR) data structures", ""},
+      {"zap-all", 'Z', POPT_ARG_NONE, NULL, 'Z', "zap (destroy) GPT and MBR data structures", ""},
       POPT_AUTOHELP { NULL, 0, 0, NULL, 0 }
    };
 
@@ -150,6 +156,11 @@ int main(int argc, char *argv[]) {
                   saveData = 1;
                   saveNonGPT = 1;
                   break;
+               case 'h':
+                  theGPT.JustLooking(0);
+                  if (BuildMBR(&theGPT, hybrids, 1) == 1)
+                     saveData = 1;
+                  break;
                case 'i':
                   theGPT.ShowPartDetails(infoPartNum - 1);
                   break;
@@ -164,6 +175,19 @@ int main(int argc, char *argv[]) {
                   free(backupFile);
                   break;
                case 'L':
+                  break;
+               case 'm':
+                  theGPT.JustLooking(0);
+                  if (BuildMBR(&theGPT, mbrParts, 0) == 1) {
+                     if (!pretend) {
+                        if (theGPT.SaveMBR())
+                           theGPT.DestroyGPT();
+                        else
+                           cerr << "Problem saving MBR!\n";
+                     } // if
+                     saveNonGPT = 0;
+                     saveData = 0;
+                  } // if
                   break;
                case 'n':
                   theGPT.JustLooking(0);
@@ -189,6 +213,16 @@ int main(int argc, char *argv[]) {
                   break;
                case 'P':
                   pretend = 1;
+                  break;
+               case 'r':
+                  theGPT.JustLooking(0);
+                  uint64_t p1, p2;
+                  p1 = GetInt(twoParts, 1) - 1;
+                  p2 = GetInt(twoParts, 2) - 1;
+                  if (theGPT.SwapPartitions((uint32_t) p1, (uint32_t) p2) == 0) {
+                     neverSaveData = 1;
+                     cerr << "Cannot swap partitions " << p1 + 1 << " and " << p2 + 1 << "\n";
+                  } else saveData = 1;
                   break;
                case 's':
                   theGPT.JustLooking(0);
@@ -217,16 +251,26 @@ int main(int argc, char *argv[]) {
                   break;
                case 'T':
                   theGPT.JustLooking(0);
-                  theGPT.XFormDisklabel(bsdPartNum);
+                  theGPT.XFormDisklabel(bsdPartNum - 1);
                   saveData = 1;
                   break;
                case 'v':
                   theGPT.Verify();
                   break;
                case 'z':
-                  if (!pretend)
-                     theGPT.DestroyGPT(-1);
+                  if (!pretend) {
+                     theGPT.DestroyGPT();
+                  } // if
                   saveNonGPT = 0;
+                  saveData = 0;
+                  break;
+               case 'Z':
+                  if (!pretend) {
+                     theGPT.DestroyGPT();
+                     theGPT.DestroyMBR();
+                  } // if
+                  saveNonGPT = 0;
+                  saveData = 0;
                   break;
                default:
                   cerr << "Unknown option (-" << opt << ")!\n";
@@ -287,3 +331,44 @@ string GetString(char* argument, int itemNum) {
 
    return Info.substr(startPos, endPos - startPos + 1);
 } // GetString()
+
+// Create a hybrid or regular MBR from GPT data structures
+int BuildMBR(GPTData* theGPT, char* argument, int isHybrid) {
+   int numParts, allOK = 1, i;
+   int gptParts[4], mbrTypes[4];
+
+   for (i = 0; i < 4; i++) {
+      gptParts[i] = MBR_EMPTY;
+      mbrTypes[i] = 0; // All 0s flags to use default type
+   } // for
+   if ((theGPT != NULL) && (argument != NULL) && ((isHybrid == 0) || (isHybrid == 1))) {
+      numParts = CountColons(argument) + 1;
+      if (numParts <= (4 - isHybrid)) {
+         if (isHybrid) {
+            gptParts[0] = MBR_EFI_GPT;
+            mbrTypes[0] = 0xEE;
+         } // if
+         for (i = 0; i < numParts; i++) {
+            gptParts[i + isHybrid] = GetInt(argument, i + 1) - 1;
+         } // for
+         if (theGPT->PartsToMBR(gptParts, mbrTypes) != numParts)
+            allOK = 0;
+      } else allOK = 0;
+   } else allOK = 0;
+   if (!allOK)
+      cerr << "Problem creating MBR!\n";
+   return allOK;
+} // BuildMBR()
+
+// Returns the number of colons in argument string
+int CountColons(char* argument) {
+   int num = 0, i = 0;
+
+   if (argument != NULL) {
+      while (argument[i] != '\0') {
+         if (argument[i++] == ':')
+            num++;
+      } // while
+   } // if
+   return num;
+} // CountColons()

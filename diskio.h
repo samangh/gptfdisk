@@ -25,7 +25,7 @@
 #include <sys/ioctl.h>
 #endif
 
-#if defined (__FreeBSD__) || defined (__APPLE__)
+#if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 #define fstat64 fstat
 #define stat64 stat
 #endif

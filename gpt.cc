@@ -10,7 +10,6 @@
 #define __STDC_CONSTANT_MACROS
 
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <fcntl.h>
@@ -99,7 +98,6 @@ int GPTData::Verify(void) {
    int problems = 0;
    uint32_t i, numSegments;
    uint64_t totalFree, largestSegment;
-   char siTotal[255], siLargest[255];
 
    // First, check for CRC errors in the GPT data....
    if (!mainCrcOk) {
@@ -231,8 +229,6 @@ int GPTData::Verify(void) {
    // problems could affect the results
    if (problems == 0) {
       totalFree = FindFreeBlocks(&numSegments, &largestSegment);
-      strcpy(siTotal, BytesToSI(totalFree * (uint64_t) blockSize).c_str());
-      strcpy(siLargest, BytesToSI(largestSegment * (uint64_t) blockSize).c_str());
       cout << "No problems found. " << totalFree << " free sectors ("
            << BytesToSI(totalFree * (uint64_t) blockSize) << ") available in "
            << numSegments << "\nsegments, the largest of which is "
@@ -386,10 +382,6 @@ void GPTData::RecomputeCRCs(void) {
       ReverseHeaderBytes(&mainHeader);
       ReverseHeaderBytes(&secondHeader);
    } // if
-/*   if ((littleEndian = IsLittleEndian()) == 0) {
-      ReverseBytes(&trueNumParts, 4);
-      ReverseBytes(&hSize, 4);
-   } // if */
 
    // Compute CRC of partition tables & store in main and secondary headers
    crc = chksum_crc32((unsigned char*) partitions, trueNumParts * GPT_SIZE);
@@ -566,10 +558,10 @@ void GPTData::PartitionScan(void) {
 
 // Read GPT data from a disk.
 int GPTData::LoadPartitions(const string & deviceFilename) {
+   BSDData bsdDisklabel;
    int err, allOK = 1;
    uint32_t i;
    uint64_t firstBlock, lastBlock;
-   BSDData bsdDisklabel;
    MBRValidity mbrState;
 
    // First, do a test to see if writing will be possible later....
@@ -577,7 +569,7 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
    if ((err == 0) && (!justLooking)) {
       cout << "\aNOTE: Write test failed with error number " << errno
            << ". It will be impossible to save\nchanges to this disk's partition table!\n";
-#ifdef __FreeBSD__
+#if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
       cout << "You may be able to enable writes by exiting this program, typing\n"
            << "'sysctl kern.geom.debugflags=16' at a shell prompt, and re-running this\n"
            << "program.\n";
@@ -604,7 +596,7 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
 //            bsdDisklabel.DisplayBSDData();
             ClearGPTData();
             protectiveMBR.MakeProtectiveMBR(1); // clear boot area (option 1)
-            XFormDisklabel(&bsdDisklabel, 0);
+            XFormDisklabel(&bsdDisklabel);
             break;
          case use_gpt:
             mbrState = protectiveMBR.GetValidity();
@@ -655,12 +647,12 @@ int GPTData::ForceLoadGPTData(void) {
    if (mainCrcOk && (mainHeader.backupLBA < diskSize)) {
       allOK = LoadHeader(&secondHeader, myDisk, mainHeader.backupLBA, &secondCrcOk) && allOK;
    } else {
-      if (mainHeader.backupLBA >= diskSize)
+      allOK = LoadHeader(&secondHeader, myDisk, diskSize - UINT64_C(1), &secondCrcOk) && allOK;
+      if (mainCrcOk && (mainHeader.backupLBA >= diskSize))
          cout << "Warning! Disk size is smaller than the main header indicates! Loading\n"
               << "secondary header from the last sector of the disk! You should use 'v' to\n"
               << "verify disk integrity, and perhaps options on the experts' menu to repair\n"
               << "the disk.\n";
-      allOK = LoadHeader(&secondHeader, myDisk, diskSize - UINT64_C(1), &secondCrcOk) && allOK;
    } // if/else
    if (!allOK)
       state = gpt_invalid;
@@ -850,7 +842,6 @@ int GPTData::CheckTable(struct GPTHeader *header) {
 int GPTData::SaveGPTData(int quiet) {
    int allOK = 1, littleEndian;
    char answer;
-//   uint64_t secondTable;
    uint32_t numParts;
 
    littleEndian = IsLittleEndian();
@@ -1129,6 +1120,91 @@ int GPTData::LoadGPTBackup(const string & filename) {
    return allOK;
 } // GPTData::LoadGPTBackup()
 
+int GPTData::SaveMBR(void) {
+   return protectiveMBR.WriteMBRData();
+} // GPTData::SaveMBR()
+
+// This function destroys the on-disk GPT structures, but NOT the on-disk
+// MBR.
+// Returns 1 if the operation succeeds, 0 if not.
+int GPTData::DestroyGPT(void) {
+   int i, sum, tableSize, allOK = 1;
+   uint8_t blankSector[512];
+   uint8_t* emptyTable;
+
+   for (i = 0; i < 512; i++) {
+      blankSector[i] = 0;
+   } // for
+
+   if (myDisk.OpenForWrite()) {
+      if (!myDisk.Seek(mainHeader.currentLBA))
+         allOK = 0;
+      if (myDisk.Write(blankSector, 512) != 512) { // blank it out
+         cerr << "Warning! GPT main header not overwritten! Error is " << errno << "\n";
+         allOK = 0;
+      } // if
+      if (!myDisk.Seek(mainHeader.partitionEntriesLBA))
+         allOK = 0;
+      tableSize = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
+      emptyTable = new uint8_t[tableSize];
+      for (i = 0; i < tableSize; i++)
+         emptyTable[i] = 0;
+      if (allOK) {
+         sum = myDisk.Write(emptyTable, tableSize);
+         if (sum != tableSize) {
+            cerr << "Warning! GPT main partition table not overwritten! Error is " << errno << "\n";
+            allOK = 0;
+         } // if write failed
+      } // if 
+      if (!myDisk.Seek(secondHeader.partitionEntriesLBA))
+         allOK = 0;
+      if (allOK) {
+         sum = myDisk.Write(emptyTable, tableSize);
+         if (sum != tableSize) {
+            cerr << "Warning! GPT backup partition table not overwritten! Error is "
+                 << errno << "\n";
+            allOK = 0;
+         } // if wrong size written
+      } // if
+      if (!myDisk.Seek(secondHeader.currentLBA))
+         allOK = 0;
+      if (allOK) {
+         if (myDisk.Write(blankSector, 512) != 512) { // blank it out
+            cerr << "Warning! GPT backup header not overwritten! Error is " << errno << "\n";
+            allOK = 0;
+         } // if
+      } // if
+      myDisk.DiskSync();
+      myDisk.Close();
+      cout << "GPT data structures destroyed! You may now partition the disk using fdisk or\n"
+           << "other utilities.\n";
+      delete[] emptyTable;
+   } else {
+      cerr << "Problem opening " << device << " for writing! Program will now terminate.\n";
+   } // if/else (fd != -1)
+   return (allOK);
+} // GPTDataTextUI::DestroyGPT()
+
+// Wipe MBR data from the disk (zero it out completely)
+// Returns 1 on success, 0 on failure.
+int GPTData::DestroyMBR(void) {
+   int allOK = 1, i;
+   uint8_t blankSector[512];
+
+   for (i = 0; i < 512; i++)
+      blankSector[i] = 0;
+
+   if (myDisk.OpenForWrite()) {
+      if (myDisk.Seek(0)) {
+         if (myDisk.Write(blankSector, 512) != 512)
+            allOK = 0;
+      } else allOK = 0;
+   } else allOK = 0;
+   if (!allOK)
+      cerr << "Warning! MBR not overwritten! Error is " << errno << "!\n";
+   return allOK;
+} // GPTData::DestroyMBR(void)
+
 // Tell user whether Apple Partition Map (APM) was discovered....
 void GPTData::ShowAPMState(void) {
    if (apmFound)
@@ -1176,20 +1252,6 @@ void GPTData::DisplayGPTData(void) {
    } // for
 } // GPTData::DisplayGPTData()
 
-// Get partition number from user and then call ShowPartDetails(partNum)
-// to show its detailed information
-void GPTData::ShowDetails(void) {
-   int partNum;
-   uint32_t low, high;
-
-   if (GetPartRange(&low, &high) > 0) {
-      partNum = GetPartNum();
-      ShowPartDetails(partNum);
-   } else {
-      cout << "No partitions\n";
-   } // if/else
-} // GPTData::ShowDetails()
-
 // Show detailed information on the specified partition
 void GPTData::ShowPartDetails(uint32_t partNum) {
    if (partitions[partNum].GetFirstLBA() != 0) {
@@ -1199,220 +1261,6 @@ void GPTData::ShowPartDetails(uint32_t partNum) {
    } // if
 } // GPTData::ShowPartDetails()
 
-/*********************************************************************
- *                                                                   *
- * Begin functions that obtain information from the users, and often *
- * do something with that information (call other functions)         *
- *                                                                   *
- *********************************************************************/
-
-// Prompts user for partition number and returns the result.
-uint32_t GPTData::GetPartNum(void) {
-   uint32_t partNum;
-   uint32_t low, high;
-   char prompt[255];
-
-   if (GetPartRange(&low, &high) > 0) {
-      sprintf(prompt, "Partition number (%d-%d): ", low + 1, high + 1);
-      partNum = GetNumber(low + 1, high + 1, low, prompt);
-   } else partNum = 1;
-   return (partNum - 1);
-} // GPTData::GetPartNum()
-
-// What it says: Resize the partition table. (Default is 128 entries.)
-void GPTData::ResizePartitionTable(void) {
-   int newSize;
-   char prompt[255];
-   uint32_t curLow, curHigh;
-
-   cout << "Current partition table size is " << mainHeader.numParts << ".\n";
-   GetPartRange(&curLow, &curHigh);
-   curHigh++; // since GetPartRange() returns numbers starting from 0...
-   // There's no point in having fewer than four partitions....
-   if (curHigh < 4)
-      curHigh = 4;
-   sprintf(prompt, "Enter new size (%d up, default %d): ", (int) curHigh,
-           (int) NUM_GPT_ENTRIES);
-   newSize = GetNumber(4, 65535, 128, prompt);
-   if (newSize < 128) {
-      cout << "Caution: The partition table size should officially be 16KB or larger,\n"
-           << "which works out to 128 entries. In practice, smaller tables seem to\n"
-           << "work with most OSes, but this practice is risky. I'm proceeding with\n"
-           << "the resize, but you may want to reconsider this action and undo it.\n\n";
-   } // if
-   SetGPTSize(newSize);
-} // GPTData::ResizePartitionTable()
-
-// Interactively create a partition
-void GPTData::CreatePartition(void) {
-   uint64_t firstBlock, firstInLargest, lastBlock, sector;
-   uint32_t firstFreePart = 0;
-   char prompt[255];
-   int partNum;
-
-   // Find first free partition...
-   while (partitions[firstFreePart].GetFirstLBA() != 0) {
-      firstFreePart++;
-   } // while
-
-   if (((firstBlock = FindFirstAvailable()) != 0) &&
-         (firstFreePart < mainHeader.numParts)) {
-      lastBlock = FindLastAvailable();
-      firstInLargest = FindFirstInLargest();
-
-      // Get partition number....
-      do {
-         sprintf(prompt, "Partition number (%d-%d, default %d): ", firstFreePart + 1,
-                 mainHeader.numParts, firstFreePart + 1);
-         partNum = GetNumber(firstFreePart + 1, mainHeader.numParts,
-                             firstFreePart + 1, prompt) - 1;
-         if (partitions[partNum].GetFirstLBA() != 0)
-            cout << "partition " << partNum + 1 << " is in use.\n";
-      } while (partitions[partNum].GetFirstLBA() != 0);
-
-      // Get first block for new partition...
-      sprintf(prompt, "First sector (%llu-%llu, default = %llu) or {+-}size{KMGT}: ",
-              (unsigned long long) firstBlock, (unsigned long long) lastBlock,
-              (unsigned long long) firstInLargest);
-      do {
-         sector = GetSectorNum(firstBlock, lastBlock, firstInLargest, prompt);
-      } while (IsFree(sector) == 0);
-      Align(&sector); // Align sector to correct multiple
-      firstBlock = sector;
-
-      // Get last block for new partitions...
-      lastBlock = FindLastInFree(firstBlock);
-      sprintf(prompt, "Last sector (%llu-%llu, default = %llu) or {+-}size{KMGT}: ",
-              (unsigned long long) firstBlock, (unsigned long long) lastBlock,
-              (unsigned long long) lastBlock);
-      do {
-         sector = GetSectorNum(firstBlock, lastBlock, lastBlock, prompt);
-      } while (IsFree(sector) == 0);
-      lastBlock = sector;
-
-      firstFreePart = CreatePartition(partNum, firstBlock, lastBlock);
-      partitions[partNum].ChangeType();
-      partitions[partNum].SetDefaultDescription();
-   } else {
-      cout << "No free sectors available\n";
-   } // if/else
-} // GPTData::CreatePartition()
-
-// Interactively delete a partition (duh!)
-void GPTData::DeletePartition(void) {
-   int partNum;
-   uint32_t low, high;
-   char prompt[255];
-
-   if (GetPartRange(&low, &high) > 0) {
-      sprintf(prompt, "Partition number (%d-%d): ", low + 1, high + 1);
-      partNum = GetNumber(low + 1, high + 1, low, prompt);
-      DeletePartition(partNum - 1);
-   } else {
-      cout << "No partitions\n";
-   } // if/else
-} // GPTData::DeletePartition()
-
-// Prompt user for a partition number, then change its type code
-// using ChangeGPTType(struct GPTPartition*) function.
-void GPTData::ChangePartType(void) {
-   int partNum;
-   uint32_t low, high;
-
-   if (GetPartRange(&low, &high) > 0) {
-      partNum = GetPartNum();
-      partitions[partNum].ChangeType();
-   } else {
-      cout << "No partitions\n";
-   } // if/else
-} // GPTData::ChangePartType()
-
-// Partition attributes seem to be rarely used, but I want a way to
-// adjust them for completeness....
-void GPTData::SetAttributes(uint32_t partNum) {
-   Attributes theAttr;
-
-   theAttr.SetAttributes(partitions[partNum].GetAttributes());
-   theAttr.DisplayAttributes();
-   theAttr.ChangeAttributes();
-   partitions[partNum].SetAttributes(theAttr.GetAttributes());
-} // GPTData::SetAttributes()
-
-// This function destroys the on-disk GPT structures. Returns 1 if the
-// user confirms destruction, 0 if the user aborts.
-// If prompt == 0, don't ask user about proceeding and do NOT wipe out
-// MBR. (Set prompt == 0 when doing a GPT-to-MBR conversion.)
-// If prompt == -1, don't ask user about proceeding and DO wipe out
-// MBR.
-int GPTData::DestroyGPT(int prompt) {
-   int i, sum, tableSize;
-   uint8_t blankSector[512], goOn = 'Y', blank = 'N';
-   uint8_t* emptyTable;
-
-   for (i = 0; i < 512; i++) {
-      blankSector[i] = 0;
-   } // for
-
-   if (((apmFound) || (bsdFound)) && (prompt > 0)) {
-      cout << "WARNING: APM or BSD disklabel structures detected! This operation could\n"
-           << "damage any APM or BSD partitions on this disk!\n";
-   } // if APM or BSD
-   if (prompt > 0) {
-      cout << "\a\aAbout to wipe out GPT on " << device << ". Proceed? ";
-      goOn = GetYN();
-   } // if
-   if (goOn == 'Y') {
-      if (myDisk.OpenForWrite(device)) {
-         myDisk.Seek(mainHeader.currentLBA); // seek to GPT header
-         if (myDisk.Write(blankSector, 512) != 512) { // blank it out
-            cerr << "Warning! GPT main header not overwritten! Error is " << errno << "\n";
-         } // if
-         myDisk.Seek(mainHeader.partitionEntriesLBA); // seek to partition table
-         tableSize = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
-         emptyTable = new uint8_t[tableSize];
-         for (i = 0; i < tableSize; i++)
-            emptyTable[i] = 0;
-         sum = myDisk.Write(emptyTable, tableSize);
-         if (sum != tableSize)
-            cerr << "Warning! GPT main partition table not overwritten! Error is " << errno << "\n";
-         myDisk.Seek(secondHeader.partitionEntriesLBA); // seek to partition table
-         sum = myDisk.Write(emptyTable, tableSize);
-         if (sum != tableSize)
-            cerr << "Warning! GPT backup partition table not overwritten! Error is " << errno << "\n";
-         myDisk.Seek(secondHeader.currentLBA); // seek to GPT header
-         if (myDisk.Write(blankSector, 512) != 512) { // blank it out
-            cerr << "Warning! GPT backup header not overwritten! Error is " << errno << "\n";
-         } // if
-         if (prompt > 0) {
-            cout << "Blank out MBR? ";
-            blank = GetYN();
-         } // if
-         // Note on below: Touch the MBR only if the user wants it completely
-         // blanked out. Version 0.4.2 deleted the 0xEE partition and re-wrote
-         // the MBR, but this could wipe out a valid MBR that the program
-         // had subsequently discarded (say, if it conflicted with older GPT
-         // structures).
-         if ((blank == 'Y') || (prompt < 0)) {
-            myDisk.Seek(0);
-            if (myDisk.Write(blankSector, 512) != 512) { // blank it out
-               cerr << "Warning! MBR not overwritten! Error is " << errno << "!\n";
-            } // if
-         } else {
-            cout << "MBR is unchanged. You may need to delete an EFI GPT (0xEE) partition\n"
-                 << "with fdisk or another tool.\n";
-         } // if/else
-         myDisk.DiskSync();
-         myDisk.Close();
-         cout << "GPT data structures destroyed! You may now partition the disk using fdisk or\n"
-              << "other utilities. Program will now terminate.\n";
-         delete[] emptyTable;
-      } else {
-         cerr << "Problem opening " << device << " for writing! Program will now terminate.\n";
-      } // if/else (fd != -1)
-   } // if (goOn == 'Y')
-   return (goOn == 'Y');
-} // GPTData::DestroyGPT()
-
 /**************************************************************************
  *                                                                        *
  * Partition table transformation functions (MBR or BSD disklabel to GPT) *
@@ -1420,13 +1268,14 @@ int GPTData::DestroyGPT(int prompt) {
  *                                                                        *
  **************************************************************************/
 
-// Examines the MBR & GPT data, and perhaps asks the user questions, to
-// determine which set of data to use: the MBR (use_mbr), the GPT (use_gpt),
-// or create a new set of partitions (use_new)
+// Examines the MBR & GPT data to determine which set of data to use: the
+// MBR (use_mbr), the GPT (use_gpt), the BSD disklabel (use_bsd), or create
+// a new set of partitions (use_new). A return value of use_abort indicates
+// that this function couldn't determine what to do. Overriding functions
+// in derived classes may ask users questions in such cases.
 WhichToUse GPTData::UseWhichPartitions(void) {
    WhichToUse which = use_new;
    MBRValidity mbrState;
-   int answer;
 
    mbrState = protectiveMBR.GetValidity();
 
@@ -1470,49 +1319,20 @@ WhichToUse GPTData::UseWhichPartitions(void) {
       which = use_gpt;
    } // if
    if ((state == gpt_valid) && (mbrState == mbr)) {
-      if (!beQuiet) {
-         cout << "Found valid MBR and GPT. Which do you want to use?\n";
-         answer = GetNumber(1, 3, 2, " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
-         if (answer == 1) {
-            which = use_mbr;
-         } else if (answer == 2) {
-            which = use_gpt;
-            cout << "Using GPT and creating fresh protective MBR.\n";
-         } else which = use_new;
-      } else which = use_abort;
+      which = use_abort;
    } // if
 
-   // Nasty decisions here -- GPT is present, but corrupt (bad CRCs or other
-   // problems)
    if (state == gpt_corrupt) {
-      if (beQuiet) {
-         which = use_abort;
+      if (mbrState == gpt) {
+         cout << "\a\a****************************************************************************\n"
+              << "Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk\n"
+              << "verification and recovery are STRONGLY recommended.\n"
+              << "****************************************************************************\n";
+         which = use_gpt;
       } else {
-         if ((mbrState == mbr) || (mbrState == hybrid)) {
-            cout << "Found valid MBR and corrupt GPT. Which do you want to use? (Using the\n"
-                 << "GPT MAY permit recovery of GPT data.)\n";
-            answer = GetNumber(1, 3, 2, " 1 - MBR\n 2 - GPT\n 3 - Create blank GPT\n\nYour answer: ");
-            if (answer == 1) {
-               which = use_mbr;
-            } else if (answer == 2) {
-               which = use_gpt;
-            } else which = use_new;
-         } else if (mbrState == invalid) {
-            cout << "Found invalid MBR and corrupt GPT. What do you want to do? (Using the\n"
-                 << "GPT MAY permit recovery of GPT data.)\n";
-            answer = GetNumber(1, 2, 1, " 1 - GPT\n 2 - Create blank GPT\n\nYour answer: ");
-            if (answer == 1) {
-               which = use_gpt;
-            } else which = use_new;
-         } else { // corrupt GPT, MBR indicates it's a GPT disk....
-            cout << "\a\a****************************************************************************\n"
-                 << "Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk\n"
-                 << "verification and recovery are STRONGLY recommended.\n"
-                 << "****************************************************************************\n";
-            which = use_gpt;
-         } // if/else/else
-      } // else (beQuiet)
-   } // if (corrupt GPT)
+         which = use_abort;
+      } // if/else MBR says disk is GPT
+   } // if GPT corrupt
 
    if (which == use_new)
       cout << "Creating new GPT entries.\n";
@@ -1520,13 +1340,14 @@ WhichToUse GPTData::UseWhichPartitions(void) {
    return which;
 } // UseWhichPartitions()
 
-// Convert MBR partition table into GPT form
-int GPTData::XFormPartitions(void) {
+// Convert MBR partition table into GPT form.
+void GPTData::XFormPartitions(void) {
    int i, numToConvert;
    uint8_t origType;
 
    // Clear out old data & prepare basics....
    ClearGPTData();
+   protectiveMBR.EmptyBootloader();
 
    // Convert the smaller of the # of GPT or MBR partitions
    if (mainHeader.numParts > (MAX_MBR_PARTS))
@@ -1549,71 +1370,60 @@ int GPTData::XFormPartitions(void) {
    // Record that all original CRCs were OK so as not to raise flags
    // when doing a disk verification
    mainCrcOk = secondCrcOk = mainPartsCrcOk = secondPartsCrcOk = 1;
-
-   return (1);
 } // GPTData::XFormPartitions()
 
 // Transforms BSD disklabel on the specified partition (numbered from 0).
-// If an invalid partition number is given, the program prompts for one.
-// (Default for i is -1; called without an option, it therefore prompts.)
+// If an invalid partition number is given, the program does nothing.
 // Returns the number of new partitions created.
-int GPTData::XFormDisklabel(int i) {
-   uint32_t low, high, partNum, startPart;
-   uint16_t hexCode;
+int GPTData::XFormDisklabel(uint32_t partNum) {
+   uint32_t low, high;
    int goOn = 1, numDone = 0;
    BSDData disklabel;
 
-   if (GetPartRange(&low, &high) != 0) {
-      if ((i < (int) low) || (i > (int) high))
-         partNum = GetPartNum();
-      else
-         partNum = (uint32_t) i;
+   if (GetPartRange(&low, &high) == 0) {
+      goOn = 0;
+      cout << "No partitions!\n";
+   } // if
+   if (partNum > high) {
+      goOn = 0;
+      cout << "Specified partition is invalid!\n";
+   } // if
 
-      // Find the partition after the last used one
-      startPart = high + 1;
-
-      // Now see if the specified partition has a BSD type code....
-      hexCode = partitions[partNum].GetHexType();
-      if ((hexCode != 0xa500) && (hexCode != 0xa900)) {
-         cout << "Specified partition doesn't have a disklabel partition type "
-              << "code.\nContinue anyway? ";
-         goOn = (GetYN() == 'Y');
-      } // if
-
-      // If all is OK, read the disklabel and convert it.
-      if (goOn) {
-         goOn = disklabel.ReadBSDData(&myDisk, partitions[partNum].GetFirstLBA(),
-                                      partitions[partNum].GetLastLBA());
-         if ((goOn) && (disklabel.IsDisklabel())) {
-            numDone = XFormDisklabel(&disklabel, startPart);
-            if (numDone == 1)
-               cout << "Converted " << numDone << " BSD partition.\n";
-            else
-               cout << "Converted " << numDone << " BSD partitions.\n";
-         } else {
-            cout << "Unable to convert partitions! Unrecognized BSD disklabel.\n";
-         } // if/else
-      } // if
-      if (numDone > 0) { // converted partitions; delete carrier
-         partitions[partNum].BlankPartition();
-      } // if
-   } else {
-      cout << "No partitions\n";
-   } // if/else
+   // If all is OK, read the disklabel and convert it.
+   if (goOn) {
+      goOn = disklabel.ReadBSDData(&myDisk, partitions[partNum].GetFirstLBA(),
+                                   partitions[partNum].GetLastLBA());
+      if ((goOn) && (disklabel.IsDisklabel())) {
+         numDone = XFormDisklabel(&disklabel);
+         if (numDone == 1)
+            cout << "Converted 1 BSD partition.\n";
+         else
+            cout << "Converted " << numDone << " BSD partitions.\n";
+      } else {
+         cout << "Unable to convert partitions! Unrecognized BSD disklabel.\n";
+      } // if/else
+   } // if
+   if (numDone > 0) { // converted partitions; delete carrier
+      partitions[partNum].BlankPartition();
+   } // if
    return numDone;
 } // GPTData::XFormDisklable(int i)
 
 // Transform the partitions on an already-loaded BSD disklabel...
-int GPTData::XFormDisklabel(BSDData* disklabel, uint32_t startPart) {
-   int i, numDone = 0;
+int GPTData::XFormDisklabel(BSDData* disklabel) {
+   int i, partNum = 0, numDone = 0;
 
-   if ((disklabel->IsDisklabel()) && (startPart >= 0) &&
-       (startPart < mainHeader.numParts)) {
+   if (disklabel->IsDisklabel()) {
       for (i = 0; i < disklabel->GetNumParts(); i++) {
-         partitions[i + startPart] = disklabel->AsGPT(i);
-         if (partitions[i + startPart].GetFirstLBA() != UINT64_C(0))
-            numDone++;
+         partNum = FindFirstFreePart();
+         if (partNum >= 0) {
+            partitions[partNum] = disklabel->AsGPT(i);
+            if (partitions[partNum].IsUsed())
+               numDone++;
+         } // if
       } // for
+      if (partNum == -1)
+         cerr << "Warning! Too many partitions to convert!\n";
    } // if
 
    // Record that all original CRCs were OK so as not to raise flags
@@ -1623,16 +1433,13 @@ int GPTData::XFormDisklabel(BSDData* disklabel, uint32_t startPart) {
    return numDone;
 } // GPTData::XFormDisklabel(BSDData* disklabel)
 
-// Add one GPT partition to MBR. Used by XFormToMBR() and MakeHybrid()
-// functions. Returns 1 if operation was successful.
+// Add one GPT partition to MBR. Used by PartsToMBR() functions. Created
+// partition has the active/bootable flag UNset and uses the GPT fdisk
+// type code divided by 0x0100 as the MBR type code.
+// Returns 1 if operation was 100% successful, 0 if there were ANY
+// problems.
 int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
-   int allOK = 1, typeCode, bootable;
-   uint64_t length;
-   char line[255];
-   char* junk;
-
-   cout.setf(ios::uppercase);
-   cout.fill('0');
+   int allOK = 1;
 
    if ((mbrPart < 0) || (mbrPart > 3)) {
       cout << "MBR partition " << mbrPart + 1 << " is out of range; omitting it.\n";
@@ -1651,156 +1458,60 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
       if (partitions[gptPart].GetLastLBA() > UINT32_MAX) {
          cout << "Caution: Partition end point past 32-bit pointer boundary;"
               << " some OSes may\nreact strangely.\n";
-      } // if partition ends past 32-bit (usually 2TiB) boundary
-      do {
-         cout << "Enter an MBR hex code (default " << hex;
-         cout.width(2);
-         cout << partitions[gptPart].GetHexType() / 0x0100 << "): ";
-         junk = fgets(line, 255, stdin);
-         if (line[0] == '\n')
-            typeCode = partitions[gptPart].GetHexType() / 256;
-         else
-            sscanf(line, "%x", &typeCode);
-      } while ((typeCode <= 0) || (typeCode > 255));
-      cout << "Set the bootable flag? ";
-      bootable = (GetYN() == 'Y');
-      length = partitions[gptPart].GetLengthLBA();
+      } // if
       protectiveMBR.MakePart(mbrPart, (uint32_t) partitions[gptPart].GetFirstLBA(),
-                             (uint32_t) length, typeCode, bootable);
+                             (uint32_t) partitions[gptPart].GetLengthLBA(),
+                             partitions[gptPart].GetHexType() / 256, 0);
    } else { // partition out of range
-      cout << "Partition " << gptPart + 1 << " begins beyond the 32-bit pointer limit of MBR "
-           << "partitions, or is\n too big; omitting it.\n";
+      if (allOK) // Display only if "else" triggered by out-of-bounds condition
+         cout << "Partition " << gptPart + 1 << " begins beyond the 32-bit pointer limit of MBR "
+              << "partitions, or is\n too big; omitting it.\n";
       allOK = 0;
    } // if/else
-   cout.fill(' ');
    return allOK;
 } // GPTData::OnePartToMBR()
 
-// Convert the GPT to MBR form. This function is necessarily limited; it
-// handles at most four partitions and creates layouts that ignore CHS
-// geometries. Returns the number of converted partitions; if this value
-// is over 0, the calling function should call DestroyGPT() to destroy
-// the GPT data, and then exit.
-int GPTData::XFormToMBR(void) {
-   char line[255];
-   char* junk;
-   int j, numParts, numConverted = 0;
-   uint32_t i, partNums[4];
+// Convert up to four partitions to MBR form and return the number done.
+// Partitions are specified in an array of GPT partition numbers,
+// with an associated array of partition type codes. Both must be
+// at least four elements in size (longer is OK, but will be ignored).
+// A partition number of MBR_EFI_GPT means to place an EFI GPT
+// protective partition in that location in the table (the associated
+// mbrType[] should be 0xEE), and MBR_EMPTY means not to create a
+// partition in that table position. If the mbrType[] entry for a
+// partition is 0, a default entry is used, based on the GPT
+// partition type code.
+// Returns the number of partitions converted, NOT counting EFI GPT
+// protective partitions.
+int GPTData::PartsToMBR(const int *gptParts, const int *mbrTypes) {
+   int i, numConverted = 0;
 
-   // Get the numbers of up to four partitions to add to the
-   // hybrid MBR....
-   numParts = CountParts();
-   cout << "Counted " << numParts << " partitions.\n";
-
-   // Prepare the MBR for conversion (empty it of existing partitions).
-   protectiveMBR.EmptyMBR(0);
-   protectiveMBR.SetDiskSize(diskSize);
-
-   if (numParts > 4) { // Over four partitions; engage in triage
-      cout << "Type from one to four GPT partition numbers, separated by spaces, to be\n"
-           << "used in the MBR, in sequence: ";
-      junk = fgets(line, 255, stdin);
-      numParts = sscanf(line, "%d %d %d %d", &partNums[0], &partNums[1],
-                        &partNums[2], &partNums[3]);
-   } else { // Four or fewer partitions; convert them all
-      i = j = 0;
-      while ((j < numParts) && (i < mainHeader.numParts)) {
-         if (partitions[i].GetFirstLBA() > 0) { // if GPT part. is defined
-            partNums[j++] = ++i; // flag it for conversion
-         } else i++;
-      } // while
-   } // if/else
-
-   for (i = 0; i < (uint32_t) numParts; i++) {
-      j = partNums[i] - 1;
-      cout << "\nCreating entry for partition #" << j + 1 << "\n";
-      numConverted += OnePartToMBR(j, i);
-   } // for
-   cout << "MBR writing returned " << protectiveMBR.WriteMBRData(&myDisk) << "\n";
-   return numConverted;
-} // GPTData::XFormToMBR()
-
-// Create a hybrid MBR -- an ugly, funky thing that helps GPT work with
-// OSes that don't understand GPT.
-void GPTData::MakeHybrid(void) {
-   uint32_t partNums[3];
-   char line[255];
-   char* junk;
-   int numParts, numConverted = 0, i, j, typeCode, mbrNum;
-   char fillItUp = 'M'; // fill extra partition entries? (Yes/No/Maybe)
-   char eeFirst = 'Y'; // Whether EFI GPT (0xEE) partition comes first in table
-
-   cout << "\nWARNING! Hybrid MBRs are flaky and potentially dangerous! If you decide not\n"
-        << "to use one, just hit the Enter key at the below prompt and your MBR\n"
-        << "partition table will be untouched.\n\n\a";
-
-   // Now get the numbers of up to three partitions to add to the
-   // hybrid MBR....
-   cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
-        << "added to the hybrid MBR, in sequence: ";
-   junk = fgets(line, 255, stdin);
-   numParts = sscanf(line, "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
-
-   if (numParts > 0) {
-      // Blank out the protective MBR, but leave the boot loader code
-      // alone....
-      protectiveMBR.EmptyMBR(0);
+   if ((gptParts != NULL) && (mbrTypes != NULL)) {
+      protectiveMBR.EmptyMBR();
       protectiveMBR.SetDiskSize(diskSize);
-      cout << "Place EFI GPT (0xEE) partition first in MBR (good for GRUB)? ";
-      eeFirst = GetYN();
-   } // if
-
-   for (i = 0; i < numParts; i++) {
-      j = partNums[i] - 1;
-      cout << "\nCreating entry for partition #" << j + 1 << "\n";
-      if (eeFirst == 'Y')
-         mbrNum = i + 1;
-      else
-         mbrNum = i;
-      numConverted += OnePartToMBR(j, mbrNum);
-   } // for
-
-   if ((numParts > 0) && (numConverted > 0)) { // User opted to create a hybrid MBR....
-      // Create EFI protective partition that covers the start of the disk.
-      // If this location (covering the main GPT data structures) is omitted,
-      // Linux won't find any partitions on the disk. Note that this is
-      // NUMBERED AFTER the hybrid partitions, contrary to what the
-      // gptsync utility does. This is because Windows seems to choke on
-      // disks with a 0xEE partition in the first slot and subsequent
-      // additional partitions, unless it boots from the disk.
-      if (eeFirst == 'Y')
-         mbrNum = 0;
-      else
-         mbrNum = numParts;
-      protectiveMBR.MakePart(mbrNum, 1, protectiveMBR.FindLastInFree(1), 0xEE);
-      protectiveMBR.SetHybrid();
-
-      // ... and for good measure, if there are any partition spaces left,
-      // optionally create another protective EFI partition to cover as much
-      // space as possible....
+      // Do two passes, one to get "real" partitions and
+      // the next to create EFI GPT protective partition(s)
       for (i = 0; i < 4; i++) {
-         if (protectiveMBR.GetType(i) == 0x00) { // unused entry....
-            if (fillItUp == 'M') {
-               cout << "\nUnused partition space(s) found. Use one to protect more partitions? ";
-               fillItUp = GetYN();
-               typeCode = 0x00; // use this to flag a need to get type code
-            } // if
-            if (fillItUp == 'Y') {
-               while ((typeCode <= 0) || (typeCode > 255)) {
-                  cout << "Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ";
-                  // Comment on above: Mac OS treats disks with more than one
-                  // 0xEE MBR partition as MBR disks, not as GPT disks.
-                  junk = fgets(line, 255, stdin);
-                  sscanf(line, "%x", &typeCode);
-                  if (line[0] == '\n')
-                     typeCode = 0;
-               } // while
-               protectiveMBR.MakeBiggestPart(i, typeCode); // make a partition
-            } // if (fillItUp == 'Y')
-         } // if unused entry
-      } // for (i = 0; i < 4; i++)
-   } // if (numParts > 0)
-} // GPTData::MakeHybrid()
+         if (gptParts[i] >= 0) {
+            numConverted += OnePartToMBR((uint32_t) gptParts[i], i);
+            if (mbrTypes[i] != 0)
+               protectiveMBR.SetPartType(i, mbrTypes[i]);
+         } // if
+      } // for (regular partition pass)
+      for (i = 0; i < 4; i++) {
+         if (gptParts[i] == MBR_EFI_GPT) {
+            if (protectiveMBR.FindFirstAvailable() == UINT32_C(1)) {
+               protectiveMBR.MakePart(i, 1, protectiveMBR.FindLastInFree(1), mbrTypes[i]);
+               protectiveMBR.SetHybrid();
+            } else {
+               protectiveMBR.MakeBiggestPart(i, mbrTypes[i]);
+            } // if/else
+         } // if EFI GPT partition specified
+      } // for (0xEE pass)
+   } // if arrays were passed
+   return numConverted;
+} // GPTData::PartsToMBR()
+
 
 /**********************************************************************
  *                                                                    *
@@ -1813,8 +1524,8 @@ void GPTData::MakeHybrid(void) {
 // necessary, copies data if it already exists. Returns 1 if all goes
 // well, 0 if an error is encountered.
 int GPTData::SetGPTSize(uint32_t numEntries) {
-   struct GPTPart* newParts;
-   struct GPTPart* trash;
+   GPTPart* newParts;
+   GPTPart* trash;
    uint32_t i, high, copyNum;
    int allOK = 1;
 
@@ -1907,10 +1618,8 @@ int GPTData::DeletePartition(uint32_t partNum) {
    return retval;
 } // GPTData::DeletePartition(uint32_t partNum)
 
-// Non-interactively create a partition. Note that this function is overloaded
-// with another of the same name but different parameters; that one prompts
-// the user for data. This one returns 1 if the operation was successful, 0
-// if a problem was discovered.
+// Non-interactively create a partition.
+// Returns 1 if the operation was successful, 0 if a problem was discovered.
 uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector) {
    int retval = 1; // assume there'll be no problems
 
@@ -1931,7 +1640,6 @@ uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64
 // Sort the GPT entries, eliminating gaps and making for a logical
 // ordering. Relies on QuickSortGPT() for the bulk of the work
 void GPTData::SortGPT(void) {
-   GPTPart temp;
    uint32_t i, numFound, firstPart, lastPart;
 
    // First, find the last partition with data, so as not to
@@ -1943,9 +1651,7 @@ void GPTData::SortGPT(void) {
    i = 0;
    while (i < lastPart) {
       if (partitions[i].GetFirstLBA() == 0) {
-         temp = partitions[i];
-         partitions[i] = partitions[lastPart];
-         partitions[lastPart] = temp;
+	     SwapPartitions(i, lastPart);
          do {
             lastPart--;
          } while ((lastPart > 0) && (partitions[lastPart].GetFirstLBA() == 0));
@@ -1959,8 +1665,50 @@ void GPTData::SortGPT(void) {
    GetPartRange(&firstPart, &lastPart);
 
    // Now call the recursive quick sort routine to do the real work....
-   QuickSortGPT(partitions, 0, lastPart);
+   QuickSortGPT(0, lastPart);
 } // GPTData::SortGPT()
+
+// Recursive quick sort algorithm for GPT partitions. Note that if there
+// are any empties in the specified range, they'll be sorted to the
+// start, resulting in a sorted set of partitions that begins with
+// partition 2, 3, or higher.
+void GPTData::QuickSortGPT(int start, int finish) {
+   uint64_t starterValue; // starting location of median partition
+   int left, right;
+
+   left = start;
+   right = finish;
+   starterValue = partitions[(start + finish) / 2].GetFirstLBA();
+   do {
+      while (partitions[left].GetFirstLBA() < starterValue)
+         left++;
+      while (partitions[right].GetFirstLBA() > starterValue)
+         right--;
+      if (left <= right)
+	     SwapPartitions(left++, right--);
+   } while (left <= right);
+   if (start < right) QuickSortGPT(start, right);
+   if (finish > left) QuickSortGPT(left, finish);
+} // GPTData::QuickSortGPT()
+
+// Swap the contents of two partitions.
+// Returns 1 if successful, 0 if either partition is out of range
+// (that is, not a legal number; either or both can be empty).
+// Note that if partNum1 = partNum2 and this number is in range,
+// it will be considered successful.
+int GPTData::SwapPartitions(uint32_t partNum1, uint32_t partNum2) {
+   GPTPart temp;
+   int allOK = 1;
+
+   if ((partNum1 < mainHeader.numParts) && (partNum2 < mainHeader.numParts)) {
+      if (partNum1 != partNum2) {
+         temp = partitions[partNum1];
+         partitions[partNum1] = partitions[partNum2];
+         partitions[partNum2] = temp;
+      } // if
+   } else allOK = 0; // partition numbers are valid
+   return allOK;
+} // GPTData::SwapPartitions()
 
 // Set up data structures for entirely new set of partitions on the
 // specified device. Returns 1 if OK, 0 if there were problems.
@@ -2151,9 +1899,9 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
       for (i = 0; i < mainHeader.numParts; i++) {
          if (partitions[i].GetFirstLBA() != UINT64_C(0)) { // it exists
             *high = i; // since we're counting up, set the high value
-	    // Set the low value only if it's not yet found...
+	        // Set the low value only if it's not yet found...
             if (*low == (mainHeader.numParts + 1)) *low = i;
-            numFound++;
+               numFound++;
          } // if
       } // for
    } // if
@@ -2165,12 +1913,26 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
    return numFound;
 } // GPTData::GetPartRange()
 
+// Returns the value of the first free partition, or -1 if none is
+// unused.
+int GPTData::FindFirstFreePart(void) {
+   int i = 0;
+
+   if (partitions != NULL) {
+      while ((partitions[i].IsUsed()) && (i < (int) mainHeader.numParts))
+         i++;
+      if (i >= (int) mainHeader.numParts)
+         i = -1;
+   } else i = -1;
+   return i;
+} // GPTData::FindFirstFreePart()
+
 // Returns the number of defined partitions.
 uint32_t GPTData::CountParts(void) {
    uint32_t i, counted = 0;
 
    for (i = 0; i < mainHeader.numParts; i++) {
-      if (partitions[i].GetFirstLBA() > 0)
+      if (partitions[i].IsUsed())
          counted++;
    } // for
    return counted;
@@ -2318,22 +2080,21 @@ int GPTData::IsFree(uint64_t sector) {
       if ((sector >= partitions[i].GetFirstLBA()) &&
            (sector <= partitions[i].GetLastLBA())) {
          isFree = 0;
-           } // if
+      } // if
    } // for
    if ((sector < mainHeader.firstUsableLBA) ||
         (sector > mainHeader.lastUsableLBA)) {
       isFree = 0;
-        } // if
-        return (isFree);
+   } // if
+   return (isFree);
 } // GPTData::IsFree()
 
 // Returns 1 if partNum is unused.
 int GPTData::IsFreePartNum(uint32_t partNum) {
    int retval = 1;
 
-   if ((partNum >= 0) && (partNum < mainHeader.numParts)) {
-      if ((partitions[partNum].GetFirstLBA() != UINT64_C(0)) ||
-          (partitions[partNum].GetLastLBA() != UINT64_C(0))) {
+   if ((partNum < mainHeader.numParts) && (partitions != NULL)) {
+      if (partitions[partNum].IsUsed()) {
          retval = 0;
       } // if partition is in use
    } else retval = 0;
@@ -2361,8 +2122,7 @@ void GPTData::ReverseHeaderBytes(struct GPTHeader* header) {
    ReverseBytes(&header->numParts, 4);
    ReverseBytes(&header->sizeOfPartitionEntries, 4);
    ReverseBytes(&header->partitionEntriesCRC, 4);
-   ReverseBytes(&header->reserved2, GPT_RESERVED);
-//   header->diskGUID.ReverseGUIDBytes();
+   ReverseBytes(header->reserved2, GPT_RESERVED);
 } // GPTData::ReverseHeaderBytes()
 
 // IMPORTANT NOTE: This function requires non-reversed mainHeader

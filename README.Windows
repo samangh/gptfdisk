@@ -90,16 +90,28 @@ use a version for another platform, or use a different partitioning tool
 altogether.
 
 I compiled gdisk.exe using MinGW (http://www.mingw.org), and in particular
-its Linux-hosted cross-compiler. I have not tested the compilability of the
-source code under more mainstream Windows compilers, or even on the
-Windows-hosted MinGW variant. MinGW was designed for porting Unix
-applications to Windows, so it's entirely possible that it will work where
-other compilers won't.
+its Linux-hosted cross-compiler. Under Ubuntu Linux, the Makefile.mingw
+file enables compilation of the software via MinGW. (Type "make -f
+Makefile.mingw" to compile the software.) If you try to compile using
+another compiler or even using MinGW under Windows or another Linux
+variety, you may need to adjust the Makefile.mingw options.
 
-Under Ubuntu Linux, the Makefile.mingw file enables compilation of the
-software. (Type "make -f Makefile.mingw" to compile the software.) If you
-try to compile using another compiler or even using MinGW under Windows or
-another Linux variety, you may need to adjust the Makefile.mingw options.
+I've also attempted to compile the code with OpenWatcom 1.8 and Microsoft
+Visual C++ 2008 Express. My OpenWatcom attempts failed, mostly because the
+compiler can't yet handle iostream output on standard C++ strings.
+OpenWatcom also seems to have incorrectly set the value of UINT32_MAX as if
+uint32_t values were 64-bit integers. This alone won't cause the compile to
+fail, but it would create bugs.
+
+My attemps with Visual C++ were much more successful; after tracking down
+and installing a stdint.h file (I used the one from
+http://msinttypes.googlecode.com/svn/trunk/stdint.h) and making a few other
+minor changes, the code compiled fine, and seems to run properly, although
+I've not tested it extensively. I created native projects for both
+OpenWatcom and Visual C++, ignoring the Makefile approach, but I'm not
+including the relevant project files in the source tarball, since they're
+easy enough to regenerate -- just include all the *.h files and all the
+*.cc files except diskio-unix.cc and sgdisk.cc, then build.
 
 If you modify GPT fdisk to get it to compile under another compiler, I
 welcome submission of patches.

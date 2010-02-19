@@ -1,5 +1,50 @@
-0.6.4 (??/??/2010):
+0.6.4 (2/19/2010):
 -------------------
+
+- Added -m (--gpttombr) option to sgdisk, enabling conversion of GPT
+  disks to MBR format, with a limit of four partitions total, and of course
+  without overcoming the 2TiB limit.
+
+- Added -h (--hybrid) option to sgdisk, enabling creation of hybrid
+  MBRs. Fewer options are available in sgdisk than in gdisk, though,
+  in order to keep the user interface manageable.
+
+- Fixed off-by-one bug in specification of partition when using the
+  -T (--transform-bsd) option in sgdisk.
+
+- Changed the code to create a new MBR unique disk signature whenever a new
+  protective MBR is generated (when doing an MBR-to-GPT conversion, when
+  using the 'n' option on the experts' menu, or when using the 'o' option
+  on the main menu, for example). Previous versions attempted to preserve
+  the existing MBR disk signature in most cases, but this resulted in
+  values of 0x00000000 whenever an empty disk was partitioned, and often in
+  other cases, too. Better to risk changing this value too often than to
+  leave multiple disks with 0x00000000 values, I think.
+
+- Added transpose ('t' on experts' menu in gdisk; or -r or --transpose in
+  sgdisk) command to enable fine-tuning partition order without doing a
+  full sort.
+
+- Added code to clear the MBR boot loader when doing an MBR-to-GPT
+  conversion. (This was already done in full-disk BSD-to-GPT conversions.)
+  This is done because I've seen a few problem reports that make me think
+  some MBR boot loaders freak out and hang the system when they encounter
+  GPT disks, and/or they attempt to load a second-stage boot loader stored
+  in what is now GPT territory, causing a system hang. Since MBR boot
+  loaders don't work on GPT disks anyhow (even GRUB needs to be
+  reinstalled), this new wiping behavior shouldn't cause any problems, and
+  may prevent a few.
+
+- Fixed bug in Windows version that prevented saving backup files.
+
+- Fixed bug that caused second and subsequent partition numbers in
+  prompts in hybrid MBR conversion procedure to be displayed in
+  hexadecimal.
+
+- Fixed very obscure potential bug in hybrid MBR/GPT synchronization when
+  deleting partitions; code wasn't matching partition lengths correctly,
+  which would only affect partitions that start at the same point but have
+  different lengths in MBR vs. GPT.
 
 - Fixed bug in the -E option to sgdisk; it was actually returning the
   last free sector, not the last free sector in the largest free block.

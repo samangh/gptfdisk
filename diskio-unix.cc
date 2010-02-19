@@ -97,7 +97,8 @@ int DiskIO::OpenForWrite(void) {
 // so the file can be re-opened without specifying the filename.
 void DiskIO::Close(void) {
    if (isOpen)
-      close(fd);
+      if (close(fd) < 0)
+         cerr << "Warning! Problem closing file!\n";
    isOpen = 0;
    openForWrite = 0;
 } // DiskIO::Close()
@@ -117,7 +118,7 @@ int DiskIO::GetBlockSize(void) {
 #ifdef __APPLE__
       err = ioctl(fd, DKIOCGETBLOCKSIZE, &blockSize);
 #endif
-#ifdef __FreeBSD__
+#if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
       err = ioctl(fd, DIOCGSECTORSIZE, &blockSize);
 #endif
 #ifdef __linux__
@@ -161,7 +162,7 @@ void DiskIO::DiskSync(void) {
       i = ioctl(fd, DKIOCSYNCHRONIZECACHE);
       platformFound++;
 #endif
-#ifdef __FreeBSD__
+#if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
       sleep(2);
       i = ioctl(fd, DIOCGFLUSH);
       cout << "Warning: The kernel may continue to use old or deleted partitions.\n"
@@ -295,8 +296,6 @@ int DiskIO::Write(void* buffer, int numBytes) {
 // greatly since then to enable FreeBSD and MacOS support, as well as to
 // return correct values for disk image files.
 uint64_t DiskIO::DiskSize(int *err) {
-   long sz; // Do not delete; needed for Linux
-   long long b; // Do not delete; needed for Linux
    uint64_t sectors = 0; // size in sectors
    off_t bytes = 0; // size in bytes
    struct stat64 st;
@@ -317,13 +316,15 @@ uint64_t DiskIO::DiskSize(int *err) {
       *err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
       platformFound++;
 #endif
-#ifdef __FreeBSD__
+#if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
       *err = ioctl(fd, DIOCGMEDIASIZE, &bytes);
-      b = GetBlockSize();
+      long long b = GetBlockSize();
       sectors = bytes / b;
       platformFound++;
 #endif
 #ifdef __linux__
+      long sz;
+      long long b;
       *err = ioctl(fd, BLKGETSIZE, &sz);
       if (*err) {
          sectors = sz = 0;

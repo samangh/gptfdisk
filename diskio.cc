@@ -25,7 +25,6 @@
 #else
 #include <sys/ioctl.h>
 #endif
-#include <stdio.h>
 #include <string>
 #include <stdint.h>
 #include <errno.h>

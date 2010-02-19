@@ -1,6 +1,6 @@
 .\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.6.3" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.6.4" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -496,6 +496,14 @@ size) are unsupported by the GPT specification; however, in practice they
 seem to work, and can sometimes be useful in converting MBR disks. Larger
 sizes also work fine. OSes may impose their own limits on the number of
 partitions, though.
+
+.TP
+.B t
+Swap two partitions' entries in the partition table. One partition may be
+empty. For instance, if partitions 1\-4 are defined, transposing 1 and 5
+results in a table with partitions numbered from 2\-5. Transposing
+partitions in this way has no effect on their disk space allocation; it
+only alters their order in the partition table.
 
 .TP 
 .B v

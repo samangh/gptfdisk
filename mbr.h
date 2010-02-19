@@ -105,9 +105,12 @@ public:
    // Functions to create, delete, or change partitions
    // Pass EmptyMBR 1 to clear the boot loader code, 0 to leave it intact
    void EmptyMBR(int clearBootloader = 1);
+   void EmptyBootloader(void);
    void MakeProtectiveMBR(int clearBoot = 0);
    void MakePart(int num, uint32_t startLBA, uint32_t lengthLBA, int type = 0x07,
                  int bootable = 0);
+   int SetPartType(int num, int type);
+   int SetPartBootable(int num, int bootable = 1);
    int MakeBiggestPart(int i, int type); // Make partition filling most space
    void DeletePartition(int i);
    int DeleteByLocation(uint64_t start64, uint64_t length64);

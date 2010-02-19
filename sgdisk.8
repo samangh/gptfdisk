@@ -1,6 +1,6 @@
 .\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.3" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.6.4" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -60,14 +60,15 @@ attempt to convert the MBR or disklabel into GPT form. (BSD disklabels are
 likely to have unusable first and/or final partitions because they overlap
 with the GPT data structures, though.) GPT fdisk can identify, but not use
 data in, Apple Partition Map (APM) disks, which are used on 680x0\- and
-PowerPC\-based Macintoshes. If you specify any option that results in changes
-to an MBR or BSD disklabel, \fBsgdisk\fR ignores those changes unless the
-\fI\-g\fR (\fI\-\-mbrtogpt\fR) or \fI\-z\fR (\fI\-\-zap\fR) option is used.
-If you use the \fI\-g\fR option, \fBsgdisk\fR replaces the MBR or disklabel
-with a GPT. \fIThis action is potentially dangerous!\fR Your system may become
-unbootable, and partition type codes may become corrupted if the disk uses
-unrecognized type codes. Boot problems are particularly likely if you're
-multi\-booting with any GPT\-unaware OS.
+PowerPC\-based Macintoshes. If you specify any option that results in
+changes to an MBR or BSD disklabel, \fBsgdisk\fR ignores those changes
+unless the \fI\-g\fR (\fI\-\-mbrtogpt\fR), \fI\-z\fR (\fI\-\-zap\fR), or
+\fI\-Z\fR (\fI\-\-zap\-all\fR) option is used. If you use the \fI\-g\fR
+option, \fBsgdisk\fR replaces the MBR or disklabel with a GPT. \fIThis
+action is potentially dangerous!\fR Your system may become unbootable, and
+partition type codes may become corrupted if the disk uses unrecognized
+type codes. Boot problems are particularly likely if you're multi\-booting
+with any GPT\-unaware OS.
 
 The MBR\-to\-GPT conversion will leave at least one gap in the partition
 numbering if the original MBR used logical partitions. These gaps are
@@ -210,6 +211,17 @@ Convert an MBR or BSD disklabel disk to a GPT disk. As a safety measure, use of
 this option is required on MBR or BSD disklabel disks if you intend to save your
 changes, in order to prevent accidentally damaging such disks.
 
+.TP
+.B \-h, \-\-hybrid
+Create a hybrid MBR. This option takes from one to three partition numbers,
+separated by colons, as arguments. The created hybrid MBR places an EFI GPT
+(type 0xEE) partition first in the table, followed by the partition(s) you
+specify. Their type codes are based on the GPT fdisk type codes divided by
+0x0100, which is usually correct for Windows partitions. If the
+active/bootable flag should be set, you must do so in another program, such
+as \fBfdisk\fR. The \fBgdisk\fR program offers additional hybrid MBR
+creation options.
+
 .TP 
 .B \-i, \-\-info=partnum
 Show detailed partition information. The summary information produced by
@@ -240,6 +252,17 @@ adds code numbers sequentially, such as 0xa500 for a FreeBSD disklabel,
 0xa501 for FreeBSD boot, 0xa502 for FreeBSD swap, and so on. Note that
 these two\-byte codes are unique to \fBgdisk\fR and \fBsgdisk\fR. This
 option does not require you to specify a valid disk device filename.
+
+.TP
+.B \-m, \-\-gpttombr
+Convert disk from GPT to MBR form. This option takes from one to four
+partition numbers, separated by colons, as arguments. Their type codes are
+based on the GPT fdisk type codes divided by 0x0100. If the active/bootable
+flag should be set, you must do so in another program, such as \fBfdisk\fR.
+The \fBgdisk\fR program offers additional MBR conversion options. It is not
+possible to convert more than four partitions from GPT to MBR form or to
+convert partitions that start above the 2TiB mark or that are larger than
+2TiB.
 
 .TP 
 .B \-n, \-\-new=partnum:start:end
@@ -273,6 +296,15 @@ additional information, use the \fI\-i\fR (\fI\-\-info\fR) option.
 Pretend to make specified changes. In\-memory GPT data structures are
 altered according to other parameters, but changes are not written
 to disk.
+
+.TP
+.B \-r, \-\-transpose
+Swap two partitions' entries in the partition table. One or both partitions
+may be empty, although swapping two empty partitions is pointless. For
+instance, if partitions 1\-4 are defined, transposing 1 and 5 results in a
+table with partitions numbered from 2\-5. Transposing partitions in this
+way has no effect on their disk space allocation; it only alters their
+order in the partition table.
 
 .TP 
 .B \-s, \-\-sort
@@ -317,14 +349,22 @@ specifying a device filename.
 
 .TP 
 .B \-z, \-\-zap
-Zap (destroy) the GPT data structures and exit. Use this option if you want to
-repartition a GPT disk using \fBfdisk\fR or some other GPT\-unaware program.
-You'll be given the choice of preserving the existing MBR, in case it's a
-hybrid MBR with salvageable partitions or if you've already created new MBR
-partitions and want to erase the remnants of your GPT partitions. \fIIf you've
-already created new MBR partitions, it's conceivable that this option will
-damage the first and/or last MBR partitions!\fR Such an event is unlikely, but
-could occur if your new MBR partitions overlap the old GPT data structures.
+Zap (destroy) the GPT data structures and then exit. Use this option if you
+want to repartition a GPT disk using \fBfdisk\fR or some other GPT\-unaware
+program. This option destroys only the GPT data structures; it leaves the
+MBR intact. This makes it useful for wiping out GPT data structures after a
+disk has been repartitioned for MBR using a GPT-unaware utility; however,
+there's a risk that it will damage boot loaders or even the start of the
+first or end of the last MBR partition. If you use it on a valid GPT disk,
+the MBR will be left with an inappropriate EFI GPT (0xEE) partition
+definition, which you can delete using another utility.
+
+.TP
+.B \-Z, \-\-zap\-all
+Zap (destroy) the GPT and MBR data structures and then exit. This option
+works much like \fI\-z\fR, but as it wipes the MBR as well as the GPT, it's
+more suitable if you want to repartition a disk after using this option,
+and completely unsuitable if you've already repartitioned the disk.
 
 .TP 
 .B \-?, \-\-help
@@ -353,7 +393,7 @@ Non\-GPT disk detected and no \fI\-g\fR option
 .B 4
 An error prevented saving changes
 .SH "BUGS"
-As of January 2010 (version 0.6.0), \fBsgdisk\fR
+As of February 2010 (version 0.6.4), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 

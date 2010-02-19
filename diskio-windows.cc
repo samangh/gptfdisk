@@ -19,7 +19,7 @@
 #include <winioctl.h>
 #define fstat64 fstat
 #define stat64 stat
-//#define S_IRGRP 0
+#define S_IRGRP 0
 #define S_IROTH 0
 #include <stdio.h>
 #include <string>
@@ -93,6 +93,14 @@ int DiskIO::OpenForWrite(void) {
    fd = CreateFile(realFilename.c_str(), GENERIC_READ | GENERIC_WRITE,
                    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
                    FILE_ATTRIBUTE_NORMAL, NULL);
+   // Preceding call can fail when creating backup files; if so, try
+   // again with different option...
+   if (fd == INVALID_HANDLE_VALUE) {
+      CloseHandle(fd);
+      fd = CreateFile(realFilename.c_str(), GENERIC_READ | GENERIC_WRITE,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS,
+                      FILE_ATTRIBUTE_NORMAL, NULL);
+   } // if
    if (fd == INVALID_HANDLE_VALUE) {
       CloseHandle(fd);
       isOpen = 0;

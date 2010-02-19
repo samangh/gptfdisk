@@ -55,6 +55,9 @@ struct  BSDRecord {      // the partition table
 };
 
 // Full data in tweaked BSD format
+// For some reason this has to be packed or MS Visual C++'s debugger complains
+// about memory errors whenever a BSDData variable is destroyed.
+#pragma pack (8)
 class BSDData {
    protected:
       // We only need a few items from the main BSD disklabel data structure....
@@ -62,7 +65,7 @@ class BSDData {
       uint32_t sectorSize;       // # of bytes per sector
       uint32_t signature2;       // the magic number (again)
       uint16_t numParts;         // number of partitions in table
-      BSDRecord* partitions;     // partition array
+      struct BSDRecord* partitions;     // partition array
 
       // Above are basic BSD disklabel data; now add more stuff....
       uint64_t labelFirstLBA;    // first sector of BSD disklabel (partition or disk)

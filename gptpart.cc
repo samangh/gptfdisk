@@ -66,6 +66,11 @@ string GPTPart::GetDescription(void) {
    return theName;
 } // GPTPart::GetDescription()
 
+// Return 1 if the partition is in use
+int GPTPart::IsUsed(void) {
+   return (firstLBA != UINT64_C(0));
+} // GPTPart::IsUsed()
+
 // Set the type code to the specified one. Also changes the partition
 // name *IF* the current name is the generic one for the current partition
 // type.
@@ -139,6 +144,7 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
 
    if (firstLBA != 0) {
       sizeInSI = BytesToSI(blockSize * (lastLBA - firstLBA + 1));
+      cout.fill(' ');
       cout.width(4);
       cout << partNum + 1 << "  ";
       cout.width(14);
@@ -256,36 +262,3 @@ void GPTPart::ChangeType(void) {
       SetDefaultDescription();
    } // if
 } // GPTPart::ChangeType()
-
-/***********************************
- * Non-class but related functions *
- ***********************************/
-
-// Recursive quick sort algorithm for GPT partitions. Note that if there
-// are any empties in the specified range, they'll be sorted to the
-// start, resulting in a sorted set of partitions that begins with
-// partition 2, 3, or higher.
-void QuickSortGPT(GPTPart* partitions, int start, int finish) {
-   uint64_t starterValue; // starting location of median partition
-   int left, right;
-   GPTPart temp;
-
-   left = start;
-   right = finish;
-   starterValue = partitions[(start + finish) / 2].GetFirstLBA();
-   do {
-      while (partitions[left].GetFirstLBA() < starterValue)
-         left++;
-      while (partitions[right].GetFirstLBA() > starterValue)
-         right--;
-      if (left <= right) {
-         temp = partitions[left];
-         partitions[left] = partitions[right];
-         partitions[right] = temp;
-         left++;
-         right--;
-      } // if
-   } while (left <= right);
-   if (start < right) QuickSortGPT(partitions, start, right);
-   if (finish > left) QuickSortGPT(partitions, left, finish);
-} // QuickSortGPT()

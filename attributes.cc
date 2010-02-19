@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <iostream>
+#include <sstream>
 #include "attributes.h"
 
 using namespace std;
@@ -20,13 +21,13 @@ using namespace std;
 // data.
 Attributes::Attributes(void) {
    int i;
-   char temp[ATR_NAME_SIZE];
+   ostringstream temp;
 
    // Most bits are undefined, so start by giving them an
    // appropriate name
    for (i = 1; i < NUM_ATR; i++) {
-      sprintf(temp, "Undefined bit #%d", i);
-      atNames[i] = temp;
+      temp << "Undefined bit #" << i;
+	  atNames[i] = temp.str();
    } // for
 
    // Now reset those names that are defined....

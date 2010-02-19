@@ -15,7 +15,13 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.4-pre1"
+#define GPTFDISK_VERSION "0.6.4"
+
+// Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
+// numbered value to refer to partition numbers. (Most will be 0 or positive,
+// of course.)
+#define MBR_EFI_GPT -1
+#define MBR_EMPTY -2
 
 using namespace std;
 
@@ -83,7 +89,7 @@ public:
    // Basic necessary functions....
    GPTData(void);
    GPTData(string deviceFilename);
-   ~GPTData(void);
+   virtual ~GPTData(void);
 
    // Verify (or update) data integrity
    int Verify(void);
@@ -98,6 +104,7 @@ public:
 
    // Load or save data from/to disk
    int LoadMBR(const string & f) {return protectiveMBR.ReadMBRData(f);}
+   int WriteProtectiveMBR(void) {return protectiveMBR.WriteMBRData(&myDisk);}
    void PartitionScan(void);
    int LoadPartitions(const string & deviceFilename);
    int ForceLoadGPTData(void);
@@ -106,32 +113,24 @@ public:
    int SaveGPTData(int quiet = 0);
    int SaveGPTBackup(const string & filename);
    int LoadGPTBackup(const string & filename);
+   int SaveMBR(void);
+   int DestroyGPT(void);
+   int DestroyMBR(void);
 
    // Display data....
    void ShowAPMState(void);
    void ShowGPTState(void);
    void DisplayGPTData(void);
    void DisplayMBRData(void) {protectiveMBR.DisplayMBRData();}
-   void ShowDetails(void);
    void ShowPartDetails(uint32_t partNum);
 
-   // Request information from the user (& possibly do something with it)
-   uint32_t GetPartNum(void);
-   void ResizePartitionTable(void);
-   void CreatePartition(void);
-   void DeletePartition(void);
-   void ChangePartType(void);
-   void SetAttributes(uint32_t partNum);
-   int DestroyGPT(int prompt = 1); // Returns 1 if user proceeds
-
-   // Convert between GPT and other formats (may require user interaction)
-   WhichToUse UseWhichPartitions(void);
-   int XFormPartitions(void);
-   int XFormDisklabel(int OnGptPart = -1);
-   int XFormDisklabel(BSDData* disklabel, uint32_t startPart);
+   // Convert between GPT and other formats
+   virtual WhichToUse UseWhichPartitions(void);
+   void XFormPartitions(void);
+   virtual int XFormDisklabel(uint32_t partNum);
+   int XFormDisklabel(BSDData* disklabel);
    int OnePartToMBR(uint32_t gptPart, int mbrPart); // add one partition to MBR. Returns 1 if successful
-   int XFormToMBR(void); // convert GPT to MBR, wiping GPT afterwards. Returns 1 if successful
-   void MakeHybrid(void);
+   int PartsToMBR(const int *gptParts, const int *mbrTypes);
 
    // Adjust GPT structures WITHOUT user interaction...
    int SetGPTSize(uint32_t numEntries);
@@ -139,6 +138,8 @@ public:
    int DeletePartition(uint32_t partNum);
    uint32_t CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector);
    void SortGPT(void);
+   void QuickSortGPT(int start, int finish);
+   int SwapPartitions(uint32_t partNum1, uint32_t partNum2);
    int ClearGPTData(void);
    void MoveSecondHeaderToEnd();
    int SetName(uint32_t partNum, const string & theName = "");
@@ -150,6 +151,7 @@ public:
 
    // Return data about the GPT structures....
    int GetPartRange(uint32_t* low, uint32_t* high);
+   int FindFirstFreePart(void);
    uint32_t GetNumParts(void) {return mainHeader.numParts;}
    uint64_t GetMainHeaderLBA(void) {return mainHeader.currentLBA;}
    uint64_t GetSecondHeaderLBA(void) {return secondHeader.currentLBA;}

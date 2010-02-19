@@ -9,24 +9,24 @@
 
 //#include <iostream>
 #include <stdio.h>
-#include <getopt.h>
+//#include <getopt.h>
 #include <string.h>
 #include <string>
 #include <iostream>
 #include "mbr.h"
-#include "gpt.h"
+#include "gpttext.h"
 #include "support.h"
 
 // Function prototypes....
-void MainMenu(string filename, struct GPTData* theGPT);
+void MainMenu(string filename, GPTDataTextUI* theGPT);
 void ShowCommands(void);
-void ExpertsMenu(string filename, struct GPTData* theGPT);
+void ExpertsMenu(string filename, GPTDataTextUI* theGPT);
 void ShowExpertCommands(void);
-void RecoveryMenu(string filename, struct GPTData* theGPT);
+void RecoveryMenu(string filename, GPTDataTextUI* theGPT);
 void ShowRecoveryCommands(void);
 
 int main(int argc, char* argv[]) {
-   GPTData theGPT;
+   GPTDataTextUI theGPT;
    int doMore = 1;
    char* device = NULL;
 
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 
 // Accept a command and execute it. Returns only when the user
 // wants to exit (such as after a 'w' or 'q' command).
-void MainMenu(string filename, struct GPTData* theGPT) {
+void MainMenu(string filename, GPTDataTextUI* theGPT) {
    char command, line[255], buFile[255];
    char* junk;
    int goOn = 1;
@@ -174,7 +174,7 @@ void ShowCommands(void) {
 
 // Accept a recovery & transformation menu command. Returns only when the user
 // issues an exit command, such as 'w' or 'q'.
-void RecoveryMenu(string filename, struct GPTData* theGPT) {
+void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
    char command, line[255], buFile[255];
    char* junk;
    uint32_t temp1;
@@ -221,10 +221,11 @@ void RecoveryMenu(string filename, struct GPTData* theGPT) {
             if (temp1 > 0) {
                cout << "Converted " << temp1 << " partitions. Finalize and exit? ";
                if (GetYN() == 'Y') {
-                  if (theGPT->DestroyGPT(0) > 0)
+                  if (theGPT->DestroyGPT() > 0)
                      goOn = 0;
                } else {
                   theGPT->MakeProtectiveMBR();
+                  theGPT->WriteProtectiveMBR();
                   cout << "Note: New protective MBR created.\n";
                } // if/else
             } // if
@@ -299,11 +300,10 @@ void ShowRecoveryCommands(void) {
 
 // Accept an experts' menu command. Returns only after the user
 // selects an exit command, such as 'w' or 'q'.
-void ExpertsMenu(string filename, struct GPTData* theGPT) {
+void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
    char command, line[255];
    char* junk;
-   uint32_t pn;
-   uint32_t temp1, temp2;
+   uint32_t pn, temp1, temp2;
    int goOn = 1;
    GUIDData aGUID;
 
@@ -359,10 +359,10 @@ void ExpertsMenu(string filename, struct GPTData* theGPT) {
             break;
          case 'p': case 'P':
             theGPT->DisplayGPTData();
-	    break;
+            break;
          case 'q': case 'Q':
-	    goOn = 0;
-	    break;
+	         goOn = 0;
+	         break;
          case 'r': case 'R':
             RecoveryMenu(filename, theGPT);
             goOn = 0;
@@ -370,6 +370,9 @@ void ExpertsMenu(string filename, struct GPTData* theGPT) {
          case 's': case 'S':
             theGPT->ResizePartitionTable();
             break;
+	      case 't': case 'T':
+	         theGPT->SwapPartitions();
+	         break;
          case 'v': case 'V':
             theGPT->Verify();
             break;
@@ -379,7 +382,7 @@ void ExpertsMenu(string filename, struct GPTData* theGPT) {
             } // if
             break;
          case 'z': case 'Z':
-            if (theGPT->DestroyGPT() == 1) {
+            if (theGPT->DestroyGPTwPrompt() == 1) {
                goOn = 0;
             }
             break;
@@ -405,6 +408,7 @@ void ShowExpertCommands(void) {
    cout << "q\tquit without saving changes\n";
    cout << "r\trecovery and transformation options (experts only)\n";
    cout << "s\tresize partition table\n";
+   cout << "t\ttranspose two partition table entries\n";
    cout << "v\tverify disk\n";
    cout << "w\twrite table to disk and exit\n";
    cout << "z\tzap (destroy) GPT data structures and exit\n";

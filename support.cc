@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include "support.h"
 
 #include <sys/types.h>
@@ -166,10 +167,9 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & 
 // form
 string BytesToSI(uint64_t size) {
    string units;
-   char theValue[99];
+   ostringstream theValue;
    float sizeInSI;
 
-   theValue[0] = '\0';
    sizeInSI = (float) size;
    units = " bytes";
    if (sizeInSI > 1024.0) {
@@ -192,12 +192,14 @@ string BytesToSI(uint64_t size) {
       sizeInSI /= 1024.0;
       units = " PiB";
    } // if
+   theValue.setf(ios::fixed);
    if (units == " bytes") { // in bytes, so no decimal point
-      sprintf(theValue, "%1.0f%s", sizeInSI, units.c_str());
+      theValue.precision(0);
    } else {
-      sprintf(theValue, "%1.1f%s", sizeInSI, units.c_str());
+      theValue.precision(1);
    } // if/else
-   return theValue;
+   theValue << sizeInSI << units;
+   return theValue.str();
 } // BlocksToSI()
 
 // Converts two consecutive characters in the input string into a

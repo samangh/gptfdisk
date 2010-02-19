@@ -10,7 +10,7 @@
 #define __STDC_CONSTANT_MACROS
 
 #include <stdio.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <fcntl.h>
@@ -273,7 +273,7 @@ int MBRData::WriteMBRData(void) {
    int allOK = 1;
 
    if (myDisk != NULL) {
-      if (myDisk->OpenForWrite(device) != 0) {
+      if (myDisk->OpenForWrite() != 0) {
          allOK = WriteMBRData(myDisk);
       } else {
          allOK = 0;
@@ -493,10 +493,7 @@ void MBRData::EmptyMBR(int clearBootloader) {
    // 2-byte nulls area only if requested to do so. (This is the
    // default.)
    if (clearBootloader == 1) {
-      for (i = 0; i < 440; i++)
-         code[i] = 0;
-      diskSignature = (uint32_t) rand();
-      nulls = 0;
+      EmptyBootloader();
    } // if
 
    // Blank out the partitions
@@ -515,6 +512,17 @@ void MBRData::EmptyMBR(int clearBootloader) {
    MBRSignature = MBR_SIGNATURE;
 } // MBRData::EmptyMBR()
 
+// Blank out the boot loader area. Done with the initial MBR-to-GPT
+// conversion, since MBR boot loaders don't understand GPT, and so
+// need to be replaced....
+void MBRData::EmptyBootloader(void) {
+   int i;
+
+   for (i = 0; i < 440; i++)
+      code[i] = 0;
+   nulls = 0;
+} // MBRData::EmptyBootloader
+
 // Create a protective MBR. Clears the boot loader area if clearBoot > 0.
 void MBRData::MakeProtectiveMBR(int clearBoot) {
 
@@ -523,6 +531,7 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
    // Initialize variables
    nulls = 0;
    MBRSignature = MBR_SIGNATURE;
+   diskSignature = (uint32_t) rand();
 
    partitions[0].status = UINT8_C(0); // Flag the protective part. as unbootable
 
@@ -561,7 +570,7 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
 void MBRData::MakePart(int num, uint32_t start, uint32_t length, int type,
                        int bootable) {
    if ((num >= 0) && (num < MAX_MBR_PARTS)) {
-      partitions[num].status = (uint8_t) bootable * (uint8_t) 0x80;
+//      partitions[num].status = (uint8_t) bootable * (uint8_t) 0x80;
       partitions[num].firstSector[0] = UINT8_C(0);
       partitions[num].firstSector[1] = UINT8_C(0);
       partitions[num].firstSector[2] = UINT8_C(0);
@@ -576,8 +585,39 @@ void MBRData::MakePart(int num, uint32_t start, uint32_t length, int type,
          LBAtoCHS((uint64_t) start, partitions[num].firstSector);
          LBAtoCHS((uint64_t) (start + length - 1), partitions[num].lastSector);
       } // if (length > 0)
+      SetPartBootable(num, bootable);
    } // if valid partition number
 } // MBRData::MakePart()
+
+// Set the partition's type code.
+// Returns 1 if successful, 0 if not (invalid partition number)
+int MBRData::SetPartType(int num, int type) {
+   int allOK = 1;
+
+   if ((num >= 0) && (num < MAX_MBR_PARTS)) {
+      if (partitions[num].lengthLBA != UINT32_C(0)) {
+         partitions[num].partitionType = (uint8_t) type;
+      } else allOK = 0;
+   } else allOK = 0;
+   return allOK;
+} // MBRData::SetPartType()
+
+// Set (or remove) the partition's bootable flag. Setting it is the
+// default; pass 0 as bootable to remove the flag.
+// Returns 1 if successful, 0 if not (invalid partition number)
+int MBRData::SetPartBootable(int num, int bootable) {
+   int allOK = 1;
+
+   if ((num >= 0) && (num < MAX_MBR_PARTS)) {
+      if (partitions[num].lengthLBA != UINT32_C(0)) {
+         if (bootable == 0)
+            partitions[num].status = UINT8_C(0);
+         else
+            partitions[num].status = UINT8_C(0x80);
+      } else allOK = 0;
+   } else allOK = 0;
+   return allOK;
+} // MBRData::SetPartBootable()
 
 // Create a partition that fills the most available space. Returns
 // 1 if partition was created, 0 otherwise. Intended for use in
@@ -637,7 +677,7 @@ int MBRData::DeleteByLocation(uint64_t start64, uint64_t length64) {
       start32 = (uint32_t) start64;
       length32 = (uint32_t) length64;
       for (i = 0; i < MAX_MBR_PARTS; i++) {
-         if ((partitions[i].firstLBA == start32) && (partitions[i].lengthLBA = length32) &&
+         if ((partitions[i].firstLBA == start32) && (partitions[i].lengthLBA == length32) &&
              (partitions[i].partitionType != 0xEE)) {
             DeletePartition(i);
             if (state == hybrid)
@@ -717,7 +757,7 @@ uint32_t MBRData::FindLastInFree(uint32_t start) {
    uint32_t i;
 
    if ((diskSize <= UINT32_MAX) && (diskSize > 0))
-      nearestStart = diskSize - 1;
+      nearestStart = (uint32_t) diskSize - 1;
    else
       nearestStart = UINT32_MAX - 1;
    for (i = 0; i < 4; i++) {
