@@ -1,3 +1,15 @@
+0.6.4.1 (2/20/2010):
+--------------------
+
+Note: Neither of the following changes affects actual program code, so I've
+left the version number in the program at 0.6.4.
+
+- Altered Makefile to pass user's compiler and linker environment
+  variables through.
+
+- Added #include to gpttext.cc to enable it to compile on the latest
+  GCC versions (it was failing on at least some 4.4.x compilers).
+
 0.6.4 (2/19/2010):
 -------------------
 

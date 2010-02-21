@@ -757,18 +757,24 @@ int GPTData::LoadSecondTableAsMain(void) {
 // failure.
 int GPTData::LoadHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector, int *crcOk) {
    int allOK = 1;
+   GPTHeader tempHeader;
 
    disk.Seek(sector);
-   if (disk.Read(header, 512) != 512) {
+   if (disk.Read(&tempHeader, 512) != 512) {
       cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
       allOK = 0;
    } // if
-   *crcOk = CheckHeaderCRC(header);
+   *crcOk = CheckHeaderCRC(&tempHeader);
 
-      // Reverse byte order, if necessary
+   // Reverse byte order, if necessary
    if (IsLittleEndian() == 0) {
       ReverseHeaderBytes(header);
    } // if
+
+   if (allOK && mainHeader.numParts != tempHeader.numParts)
+      allOK = SetGPTSize(tempHeader.numParts);
+
+   *header = tempHeader;
    return allOK;
 } // GPTData::LoadHeader
 

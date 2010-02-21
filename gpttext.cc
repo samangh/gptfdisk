@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <iostream>
 #include <sstream>
+#include <cstdio>
 #include "attributes.h"
 #include "gpttext.h"
 
