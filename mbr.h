@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include "gptpart.h"
+#include "partnotes.h"
 #include "diskio.h"
 
 #ifndef __MBRSTRUCTS
@@ -21,6 +22,8 @@
 
 using namespace std;
 
+class PartNotes;
+
 /****************************************
  *                                      *
  * MBRData class and related structures *
@@ -30,13 +33,17 @@ using namespace std;
 // Data for a single MBR partition record
 // Note that firstSector and lastSector are in CHS addressing, which
 // splits the bits up in a weird way.
+// On read or write of MBR entries, firstLBA is an absolute disk sector.
+// On read of logical entries, it's relative to the EBR record for that
+// partition. When writing EBR records, it's relative to the extended
+// partition's start.
 #pragma pack(1)
 struct MBRRecord {
    uint8_t status;
    uint8_t firstSector[3];
    uint8_t partitionType;
    uint8_t lastSector[3];
-   uint32_t firstLBA;
+   uint32_t firstLBA; // see above
    uint32_t lengthLBA;
 }; // struct MBRRecord
 
@@ -90,9 +97,11 @@ public:
    int WriteMBRData(void);
    int WriteMBRData(DiskIO *theDisk);
    int WriteMBRData(const string & deviceFilename);
+   int WriteMBRData(struct TempMBR & mbr, DiskIO *theDisk, uint64_t sector);
+   void SetDisk(DiskIO *theDisk) {myDisk = theDisk; canDeleteMyDisk = 0;}
 
    // Display data for user...
-   void DisplayMBRData(void);
+   void DisplayMBRData(int maxParts = 4);
    void ShowState(void);
 
    // Functions that set or get disk metadata (size, CHS geometry, etc.)
@@ -115,6 +124,7 @@ public:
    void DeletePartition(int i);
    int DeleteByLocation(uint64_t start64, uint64_t length64);
    void OptimizeEESize(void);
+   int CreateLogicals(PartNotes& notes);
 
    // Functions to find information on free space....
    uint32_t FindFirstAvailable(uint32_t start = 1);

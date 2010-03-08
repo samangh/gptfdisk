@@ -11,11 +11,12 @@
 #include "mbr.h"
 #include "bsd.h"
 #include "gptpart.h"
+#include "partnotes.h"
 
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.5-pre1"
+#define GPTFDISK_VERSION "0.6.5"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -24,6 +25,8 @@
 #define MBR_EMPTY -2
 
 using namespace std;
+
+class PartNotes;
 
 /****************************************
  *                                      *
@@ -101,6 +104,7 @@ public:
    void RebuildSecondHeader(void);
    int FindHybridMismatches(void);
    int FindOverlaps(void);
+   int FindInsanePartitions(void);
 
    // Load or save data from/to disk
    int LoadMBR(const string & f) {return protectiveMBR.ReadMBRData(f);}
@@ -130,7 +134,7 @@ public:
    virtual int XFormDisklabel(uint32_t partNum);
    int XFormDisklabel(BSDData* disklabel);
    int OnePartToMBR(uint32_t gptPart, int mbrPart); // add one partition to MBR. Returns 1 if successful
-   int PartsToMBR(const int *gptParts, const int *mbrTypes);
+   int PartsToMBR(PartNotes & notes);
 
    // Adjust GPT structures WITHOUT user interaction...
    int SetGPTSize(uint32_t numEntries);
@@ -157,6 +161,10 @@ public:
    uint64_t GetSecondHeaderLBA(void) {return secondHeader.currentLBA;}
    uint64_t GetMainPartsLBA(void) {return mainHeader.partitionEntriesLBA;}
    uint64_t GetSecondPartsLBA(void) {return secondHeader.partitionEntriesLBA;}
+   uint64_t GetFirstUsableLBA(void) {return mainHeader.firstUsableLBA;}
+   uint64_t GetLastUsableLBA(void) {return mainHeader.lastUsableLBA;}
+   uint64_t GetPartFirstLBA(uint32_t i) {return partitions[i].GetFirstLBA();}
+   uint64_t GetPartLastLBA(uint32_t i) {return partitions[i].GetLastLBA();}
    uint32_t CountParts(void);
 
    // Find information about free space
@@ -165,7 +173,7 @@ public:
    uint64_t FindLastAvailable();
    uint64_t FindLastInFree(uint64_t start);
    uint64_t FindFreeBlocks(uint32_t *numSegments, uint64_t *largestSegment);
-   int IsFree(uint64_t sector);
+   int IsFree(uint64_t sector, uint32_t *partNum = NULL);
    int IsFreePartNum(uint32_t partNum);
 
    // Change how functions work, or return information on same

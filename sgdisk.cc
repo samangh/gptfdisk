@@ -14,6 +14,7 @@
 #include <popt.h>
 #include <errno.h>
 #include <iostream>
+#include <sstream>
 #include "mbr.h"
 #include "gpt.h"
 #include "support.h"
@@ -48,6 +49,7 @@ int main(int argc, char *argv[]) {
       {"backup", 'b', POPT_ARG_STRING, &backupFile, 'b', "backup GPT to file", "file"},
       {"change-name", 'c', POPT_ARG_STRING, &partName, 'c', "change partition's name", "partnum:name"},
       {"delete", 'd', POPT_ARG_INT, &deletePartNum, 'd', "delete a partition", "partnum"},
+      {"display-alignment", 'D', POPT_ARG_NONE, NULL, 'D', "show number of sectors per allocation block", ""},
       {"move-second-header", 'e', POPT_ARG_NONE, NULL, 'e', "move second header to end of disk", ""},
       {"end-of-largest", 'E', POPT_ARG_NONE, NULL, 'E', "show end of largest free block", ""},
       {"first-in-largest", 'f', POPT_ARG_NONE, NULL, 'f', "show start of the largest free block", ""},
@@ -139,6 +141,10 @@ int main(int argc, char *argv[]) {
                      cerr << "Error " << errno << " deleting partition!\n";
                      neverSaveData = 1;
                   } else saveData = 1;
+                  break;
+               case 'D':
+                  cout << "Partitions created on multiples of " << theGPT.GetAlignment()
+                       << " sector(s)\n";
                   break;
                case 'e':
                   theGPT.JustLooking(0);
@@ -299,7 +305,7 @@ int main(int argc, char *argv[]) {
 // Extract integer data from argument string, which should be colon-delimited
 uint64_t GetInt(char* argument, int itemNum) {
    int startPos = -1, endPos = -1;
-   unsigned long long retval = 0;
+   uint64_t retval = 0;
    string Info;
 
    Info = argument;
@@ -311,7 +317,8 @@ uint64_t GetInt(char* argument, int itemNum) {
       endPos = Info.length();
    endPos--;
 
-   sscanf(Info.substr(startPos, endPos - startPos + 1).c_str(), "%llu", &retval);
+   istringstream inString(Info.substr(startPos, endPos - startPos + 1));
+   inString >> retval;
    return retval;
 } // GetInt()
 
@@ -335,23 +342,32 @@ string GetString(char* argument, int itemNum) {
 // Create a hybrid or regular MBR from GPT data structures
 int BuildMBR(GPTData* theGPT, char* argument, int isHybrid) {
    int numParts, allOK = 1, i;
-   int gptParts[4], mbrTypes[4];
+   PartNotes notes;
+   struct PartInfo *newNote;
 
-   for (i = 0; i < 4; i++) {
-      gptParts[i] = MBR_EMPTY;
-      mbrTypes[i] = 0; // All 0s flags to use default type
-   } // for
-   if ((theGPT != NULL) && (argument != NULL) && ((isHybrid == 0) || (isHybrid == 1))) {
+   if ((theGPT != NULL) && (argument != NULL)) {
       numParts = CountColons(argument) + 1;
       if (numParts <= (4 - isHybrid)) {
-         if (isHybrid) {
-            gptParts[0] = MBR_EFI_GPT;
-            mbrTypes[0] = 0xEE;
-         } // if
          for (i = 0; i < numParts; i++) {
-            gptParts[i + isHybrid] = GetInt(argument, i + 1) - 1;
+            newNote = new struct PartInfo;
+            newNote->gptPartNum = GetInt(argument, i + 1) - 1;
+            newNote->active = 0;
+            newNote->hexCode = 0; // code to compute it from default
+            newNote->type = PRIMARY;
+            newNote->firstLBA = theGPT->GetPartFirstLBA(newNote->gptPartNum);
+            newNote->lastLBA = theGPT->GetPartLastLBA(newNote->gptPartNum);
+            notes.AddToEnd(newNote);
          } // for
-         if (theGPT->PartsToMBR(gptParts, mbrTypes) != numParts)
+         if (isHybrid) {
+            newNote = new struct PartInfo;
+            newNote->gptPartNum = MBR_EFI_GPT;
+            newNote->active = 0;
+            newNote->hexCode = 0xEE;
+            newNote->type = PRIMARY;
+            // newNote firstLBA and lastLBA are computed later...
+            notes.AddToStart(newNote);
+         } // if
+         if (theGPT->PartsToMBR(notes) != numParts)
             allOK = 0;
       } else allOK = 0;
    } else allOK = 0;

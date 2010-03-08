@@ -16,7 +16,8 @@ Read the main README file for general information on the program, and read
 the gdisk.html document (the Linux man page converted to HTML format) for
 detailed use information. My GPT fdisk Web page,
 http://www.rodsbooks.com/gdisk/, provides a more tutorial introduction to
-the software.
+the software. I originally wrote GPT fdisk on Linux, and some Linux- and
+Unix-centric language remains in the documentation.
 
 Windows Use Notes
 -----------------
@@ -82,36 +83,32 @@ correctly by all versions of GPT fdisk.
 Source Code and Compilation Issues
 ----------------------------------
 
-As of version 0.6.2, I haven't been able to get the code to detect the disk
-sector size to work under Windows, so the Windows binary always assumes a
-512-byte sector size. If you use a disk with another sector size, you'll
-have to change this assumption in the source code (in diskio-windows.cc),
-use a version for another platform, or use a different partitioning tool
-altogether.
+I have successfully compiled GPT fdisk using two different Windows
+compilers:
 
-I compiled gdisk.exe using MinGW (http://www.mingw.org), and in particular
-its Linux-hosted cross-compiler. Under Ubuntu Linux, the Makefile.mingw
-file enables compilation of the software via MinGW. (Type "make -f
-Makefile.mingw" to compile the software.) If you try to compile using
-another compiler or even using MinGW under Windows or another Linux
-variety, you may need to adjust the Makefile.mingw options.
+- MinGW (http://www.mingw.org), and in particular its Linux-hosted
+  cross-compiler -- Under Fedora Linux, the Makefile.mingw file enables
+  compilation of the software via MinGW. (Type "make -f Makefile.mingw" to
+  compile the software.) If you try to compile using another compiler or
+  even using MinGW under Windows or another Linux variety, you may need to
+  adjust the Makefile.mingw options.
 
-I've also attempted to compile the code with OpenWatcom 1.8 and Microsoft
-Visual C++ 2008 Express. My OpenWatcom attempts failed, mostly because the
-compiler can't yet handle iostream output on standard C++ strings.
-OpenWatcom also seems to have incorrectly set the value of UINT32_MAX as if
-uint32_t values were 64-bit integers. This alone won't cause the compile to
-fail, but it would create bugs.
+- Microsoft Visual C++ 2008 Express
+  (http://www.microsoft.com/express/Windows/) -- This compiler requires a
+  third-party stdint.h file (I used the one from
+  http://msinttypes.googlecode.com/svn/trunk/stdint.h), but it otherwise
+  works fine. A project is easily created by adding all the *.h files and
+  all the *.cc files except diskio-unix.cc and sgdisk.cc.
 
-My attemps with Visual C++ were much more successful; after tracking down
-and installing a stdint.h file (I used the one from
-http://msinttypes.googlecode.com/svn/trunk/stdint.h) and making a few other
-minor changes, the code compiled fine, and seems to run properly, although
-I've not tested it extensively. I created native projects for both
-OpenWatcom and Visual C++, ignoring the Makefile approach, but I'm not
-including the relevant project files in the source tarball, since they're
-easy enough to regenerate -- just include all the *.h files and all the
-*.cc files except diskio-unix.cc and sgdisk.cc, then build.
+The MinGW compiler produces much larger executables than does the MS
+compiler. The resulting binaries seem to work equally well, but my testing
+has been minimal.
+
+I've also attempted to compile the code with OpenWatcom 1.8, but this
+attempt failed, mostly because the compiler can't yet handle iostream
+output on standard C++ strings. OpenWatcom also seems to have incorrectly
+set the value of UINT32_MAX as if uint32_t values were 64-bit integers.
+This alone won't cause the compile to fail, but it would create bugs.
 
 If you modify GPT fdisk to get it to compile under another compiler, I
 welcome submission of patches.

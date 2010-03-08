@@ -10,7 +10,6 @@
 #define __STDC_CONSTANT_MACROS
 
 #include <stdio.h>
-//#include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <fcntl.h>
@@ -20,6 +19,7 @@
 #include <errno.h>
 #include <iostream>
 #include "mbr.h"
+#include "partnotes.h"
 #include "support.h"
 
 using namespace std;
@@ -182,7 +182,7 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
          } // if
       } // if
 
-      /* Check to see if it's in GPT format.... */
+      // Check to see if it's in GPT format....
       if (allOK) {
          for (i = 0; i < 4; i++) {
             if (partitions[i].partitionType == UINT8_C(0xEE)) {
@@ -211,8 +211,7 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
 // extendedStart = LBA of the start of the extended partition
 // diskOffset = LBA offset WITHIN the extended partition of the one to be read
 // partNum = location in partitions[] array to store retrieved data
-int MBRData::ReadLogicalPart(uint32_t extendedStart,
-                             uint32_t diskOffset, int partNum) {
+int MBRData::ReadLogicalPart(uint32_t extendedStart, uint32_t diskOffset, int partNum) {
    struct TempMBR ebr;
    uint64_t offset;
 
@@ -267,8 +266,9 @@ int MBRData::ReadLogicalPart(uint32_t extendedStart,
    return (partNum);
 } // MBRData::ReadLogicalPart()
 
-// Write the MBR data to the default defined device. Note that this writes
-// ONLY the MBR itself, not the logical partition data.
+// Write the MBR data to the default defined device. This writes both the
+// MBR itself and any defined logical partitions, provided there's an
+// MBR extended partition.
 int MBRData::WriteMBRData(void) {
    int allOK = 1;
 
@@ -283,25 +283,16 @@ int MBRData::WriteMBRData(void) {
    return allOK;
 } // MBRData::WriteMBRData(void)
 
-// Save the MBR data to a file. Note that this function writes ONLY the
-// MBR data, not the logical partitions (if any are defined).
+// Save the MBR data to a file. This writes both the
+// MBR itself and any defined logical partitions, provided there's an
+// MBR extended partition.
 int MBRData::WriteMBRData(DiskIO *theDisk) {
-   int i, j, allOK;
+   int i, j, partNum, allOK, moreLogicals = 0;
+   uint32_t extFirstLBA = 0;
+   uint64_t writeEbrTo; // 64-bit because we support extended in 2-4TiB range
    TempMBR tempMBR;
 
-   // Reverse the byte order, if necessary
-   if (IsLittleEndian() == 0) {
-      ReverseBytes(&diskSignature, 4);
-      ReverseBytes(&nulls, 2);
-      ReverseBytes(&MBRSignature, 2);
-      for (i = 0; i < 4; i++) {
-         ReverseBytes(&partitions[i].firstLBA, 4);
-         ReverseBytes(&partitions[i].lengthLBA, 4);
-      } // for
-   } // if
-
-   // Copy MBR data to a 512-byte data structure for writing, to
-   // work around a FreeBSD limitation....
+   // First write the main MBR data structure....
    for (i = 0; i < 440; i++)
       tempMBR.code[i] = code[i];
    tempMBR.diskSignature = diskSignature;
@@ -316,31 +307,49 @@ int MBRData::WriteMBRData(DiskIO *theDisk) {
          tempMBR.partitions[i].firstSector[j] = partitions[i].firstSector[j];
          tempMBR.partitions[i].lastSector[j] = partitions[i].lastSector[j];
       } // for j...
-   } // for i...
-
-   // Now write that data structure...
-   allOK = theDisk->OpenForWrite();
-   if (allOK && theDisk->Seek(0)) {
-      if (theDisk->Write(&tempMBR, 512) != 512) {
-         allOK = 0;
-         cerr << "Warning! Error " << errno << " when saving MBR!\n";
+      if (partitions[i].partitionType == 0x0f) {
+         extFirstLBA = partitions[i].firstLBA;
+         moreLogicals = 1;
       } // if
-   } else {
-      allOK = 0;
-      cerr << "Warning! Error " << errno << " when seeking to MBR to write it!\n";
-   } // if/else
-   theDisk->Close();
+   } // for i...
+   allOK = WriteMBRData(tempMBR, theDisk, 0);
 
-   // Reverse the byte order back, if necessary
-   if (IsLittleEndian() == 0) {
-      ReverseBytes(&diskSignature, 4);
-      ReverseBytes(&nulls, 2);
-      ReverseBytes(&MBRSignature, 2);
-      for (i = 0; i < 4; i++) {
-         ReverseBytes(&partitions[i].firstLBA, 4);
-         ReverseBytes(&partitions[i].lengthLBA, 4);
-      } // for
-   }// if
+   // Set up tempMBR with some constant data for logical partitions...
+   tempMBR.diskSignature = 0;
+   for (i = 2; i < 4; i++) {
+      tempMBR.partitions[i].firstLBA = tempMBR.partitions[i].lengthLBA = 0;
+      tempMBR.partitions[i].partitionType = 0x00;
+      for (j = 0; j < 3; j++) {
+         tempMBR.partitions[i].firstSector[j] = 0;
+         tempMBR.partitions[i].lastSector[j] = 0;
+      } // for j
+   } // for i
+
+   partNum = 4;
+   writeEbrTo = (uint64_t) extFirstLBA;
+   // If extended partition is present, write logicals...
+   while (allOK && moreLogicals && (partNum < MAX_MBR_PARTS)) {
+      tempMBR.partitions[0] = partitions[partNum];
+      tempMBR.partitions[0].firstLBA = 1; // partition starts on sector after EBR
+      // tempMBR.partitions[1] points to next EBR or terminates EBR linked list...
+      if ((partNum < MAX_MBR_PARTS - 1) && (partitions[partNum + 1].firstLBA > 0)) {
+         tempMBR.partitions[1].partitionType = 0x0f;
+         tempMBR.partitions[1].firstLBA = partitions[partNum + 1].firstLBA - 1;
+         tempMBR.partitions[1].lengthLBA = partitions[partNum + 1].lengthLBA + 1;
+         LBAtoCHS((uint64_t) tempMBR.partitions[1].firstLBA,
+                  (uint8_t *) &tempMBR.partitions[1].firstSector);
+         LBAtoCHS(tempMBR.partitions[1].lengthLBA - extFirstLBA,
+                  (uint8_t *) &tempMBR.partitions[1].lastSector);
+      } else {
+         tempMBR.partitions[1].partitionType = 0x00;
+         tempMBR.partitions[1].firstLBA = 0;
+         tempMBR.partitions[1].lengthLBA = 0;
+         moreLogicals = 0;
+      } // if/else
+      allOK = WriteMBRData(tempMBR, theDisk, writeEbrTo);
+      partNum++;
+      writeEbrTo = (uint64_t) tempMBR.partitions[1].firstLBA + (uint64_t) extFirstLBA;
+   } // while
    return allOK;
 } // MBRData::WriteMBRData(DiskIO *theDisk)
 
@@ -349,17 +358,64 @@ int MBRData::WriteMBRData(const string & deviceFilename) {
    return WriteMBRData();
 } // MBRData::WriteMBRData(const string & deviceFilename)
 
+// Write a single MBR record to the specified sector. Used by the like-named
+// function to write both the MBR and multiple EBR (for logical partition)
+// records.
+// Returns 1 on success, 0 on failure
+int MBRData::WriteMBRData(struct TempMBR & mbr, DiskIO *theDisk, uint64_t sector) {
+   int i, allOK;
+
+   // Reverse the byte order, if necessary
+   if (IsLittleEndian() == 0) {
+      ReverseBytes(&mbr.diskSignature, 4);
+      ReverseBytes(&mbr.nulls, 2);
+      ReverseBytes(&mbr.MBRSignature, 2);
+      for (i = 0; i < 4; i++) {
+         ReverseBytes(&mbr.partitions[i].firstLBA, 4);
+         ReverseBytes(&mbr.partitions[i].lengthLBA, 4);
+      } // for
+   } // if
+
+   // Now write the data structure...
+   allOK = theDisk->OpenForWrite();
+   if (allOK && theDisk->Seek(sector)) {
+      if (theDisk->Write(&mbr, 512) != 512) {
+         allOK = 0;
+         cerr << "Error " << errno << " when saving MBR!\n";
+      } // if
+   } else {
+      allOK = 0;
+      cerr << "Error " << errno << " when seeking to MBR to write it!\n";
+   } // if/else
+   theDisk->Close();
+
+   // Reverse the byte order back, if necessary
+   if (IsLittleEndian() == 0) {
+      ReverseBytes(&mbr.diskSignature, 4);
+      ReverseBytes(&mbr.nulls, 2);
+      ReverseBytes(&mbr.MBRSignature, 2);
+      for (i = 0; i < 4; i++) {
+         ReverseBytes(&mbr.partitions[i].firstLBA, 4);
+         ReverseBytes(&mbr.partitions[i].lengthLBA, 4);
+      } // for
+   }// if
+   return allOK;
+} // MBRData::WriteMBRData(uint64_t sector)
+
 /********************************************
  *                                          *
  * Functions that display data for the user *
  *                                          *
  ********************************************/
 
-// Show the MBR data to the user....
-void MBRData::DisplayMBRData(void) {
+// Show the MBR data to the user, up to the specified maximum number
+// of partitions....
+void MBRData::DisplayMBRData(int maxParts) {
    int i;
    char bootCode;
 
+   if (maxParts > MAX_MBR_PARTS)
+      maxParts = MAX_MBR_PARTS;
    cout << "MBR disk identifier: 0x";
    cout.width(8);
    cout.fill('0');
@@ -367,7 +423,7 @@ void MBRData::DisplayMBRData(void) {
    cout << hex << diskSignature << dec << "\n";
    cout << "MBR partitions:\n";
    cout << "Number\t Boot\t Start (sector)\t Length (sectors)\tType\n";
-   for (i = 0; i < MAX_MBR_PARTS; i++) {
+   for (i = 0; i < maxParts; i++) {
       if (partitions[i].lengthLBA != 0) {
          if (partitions[i].status && 0x80) // it's bootable
             bootCode = '*';
@@ -462,7 +518,7 @@ int MBRData::LBAtoCHS(uint64_t lba, uint8_t * chs) {
          remainder -= head * numSecspTrack;
          sector = remainder;
          if (head < numHeads)
-            chs[0] = head;
+            chs[0] = (uint8_t) head;
          else
             retval = 0;
          if (sector < numSecspTrack) {
@@ -535,19 +591,6 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
 
    partitions[0].status = UINT8_C(0); // Flag the protective part. as unbootable
 
-   // Write CHS data. This maxes out the use of the disk, as much as
-   // possible -- even to the point of exceeding the capacity of sub-8GB
-   // disks. The EFI spec says to use 0xffffff as the ending value,
-   // although normal MBR disks max out at 0xfeffff. FWIW, both GNU Parted
-   // and Apple's Disk Utility use 0xfeffff, and the latter puts that
-   // value in for the FIRST sector, too!
-   partitions[0].firstSector[0] = UINT8_C(0);
-   partitions[0].firstSector[1] = UINT8_C(1);
-   partitions[0].firstSector[2] = UINT8_C(0);
-   partitions[0].lastSector[0] = UINT8_C(255);
-   partitions[0].lastSector[1] = UINT8_C(255);
-   partitions[0].lastSector[2] = UINT8_C(255);
-
    partitions[0].partitionType = UINT8_C(0xEE);
    partitions[0].firstLBA = UINT32_C(1);
    if (diskSize < UINT32_MAX) { // If the disk is under 2TiB
@@ -555,6 +598,16 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
    } else { // disk is too big to represent, so fake it...
       partitions[0].lengthLBA = UINT32_MAX;
    } // if/else
+
+   // Write CHS data. This maxes out the use of the disk, as much as
+   // possible -- even to the point of exceeding the capacity of sub-8GB
+   // disks. The EFI spec says to use 0xffffff as the ending value,
+   // although normal MBR disks max out at 0xfeffff. FWIW, both GNU Parted
+   // and Apple's Disk Utility use 0xfeffff, and the latter puts that
+   // value in for the FIRST sector, too!
+   LBAtoCHS(1, partitions[0].firstSector);
+   if (LBAtoCHS(partitions[0].lengthLBA, partitions[0].lastSector) == 0)
+      partitions[0].lastSector[0] = 0xFF;
 
    state = gpt;
 } // MBRData::MakeProtectiveMBR()
@@ -567,10 +620,8 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
 // specific size requirements that this function won't handle. It may
 // be used for creating the 0xEE partition(s) in a hybrid MBR, though,
 // since those toss the rulebook away anyhow....
-void MBRData::MakePart(int num, uint32_t start, uint32_t length, int type,
-                       int bootable) {
+void MBRData::MakePart(int num, uint32_t start, uint32_t length, int type, int bootable) {
    if ((num >= 0) && (num < MAX_MBR_PARTS)) {
-//      partitions[num].status = (uint8_t) bootable * (uint8_t) 0x80;
       partitions[num].firstSector[0] = UINT8_C(0);
       partitions[num].firstSector[1] = UINT8_C(0);
       partitions[num].firstSector[2] = UINT8_C(0);
@@ -715,6 +766,56 @@ void MBRData::OptimizeEESize(void) {
    } // if
 } // MBRData::OptimizeEESize()
 
+// Creates an MBR extended partition holding logical partitions that
+// correspond to the list of GPT partitions in theList. The extended
+// partition is placed in position #4 (counting from 1) in the MBR.
+// The logical partition data are copied to the partitions[] array in
+// positions 4 and up (counting from 0). Neither the MBR nor the EBR
+// entries are written to disk; that is left for the WriteMBRData()
+// function.
+// Returns number of converted partitions
+int MBRData::CreateLogicals(PartNotes& notes) {
+   uint64_t extEndLBA = 0, extStartLBA = UINT64_MAX;
+   int i = 4, numLogicals = 0;
+   struct PartInfo aPart;
+
+   // Find bounds of the extended partition....
+   notes.Rewind();
+   while (notes.GetNextInfo(&aPart) >= 0) {
+      if (aPart.type == LOGICAL) {
+         if (extStartLBA > aPart.firstLBA)
+            extStartLBA = aPart.firstLBA;
+         if (extEndLBA < aPart.lastLBA)
+            extEndLBA = aPart.lastLBA;
+         numLogicals++;
+      } // if
+   } // while
+   extStartLBA--;
+
+   if ((extStartLBA < UINT32_MAX) && ((extEndLBA - extStartLBA + 1) < UINT32_MAX)) {
+      notes.Rewind();
+      i = 4;
+      while ((notes.GetNextInfo(&aPart) >= 0) && (i < MAX_MBR_PARTS)) {
+         if (aPart.type == LOGICAL) {
+            partitions[i].partitionType = aPart.hexCode;
+            partitions[i].firstLBA = (uint32_t) (aPart.firstLBA - extStartLBA);
+            partitions[i].lengthLBA = (uint32_t) (aPart.lastLBA - aPart.firstLBA + 1);
+            LBAtoCHS(UINT64_C(1), (uint8_t *) &partitions[i].firstSector);
+            LBAtoCHS(partitions[i].lengthLBA, (uint8_t *) &partitions[i].lastSector);
+            partitions[i].status = aPart.active * 0x80;
+            i++;
+         } // if
+      } // while
+      MakePart(3, (uint32_t) extStartLBA, (uint32_t) (extEndLBA - extStartLBA + 1), 0x0f, 0);
+   } else {
+      if (numLogicals > 0) {
+         cerr << "Unable to create logical partitions; they exceed the 2 TiB limit!\n";
+//         cout << "extStartLBA = " << extStartLBA << ", extEndLBA = " << extEndLBA << "\n";
+      }
+   } // if/else
+   return (i - 4);
+} // MBRData::CreateLogicals()
+
 /****************************************
  *                                      *
  * Functions to find data on free space *
@@ -777,10 +878,10 @@ uint32_t MBRData::FindFirstInFree(uint32_t start) {
    bestLastLBA = 1;
    for (i = 0; i < 4; i++) {
       thisLastLBA = partitions[i].firstLBA + partitions[i].lengthLBA;
-      if (thisLastLBA > 0) thisLastLBA--;
-      if ((thisLastLBA > bestLastLBA) && (thisLastLBA < start)) {
+      if (thisLastLBA > 0)
+         thisLastLBA--;
+      if ((thisLastLBA > bestLastLBA) && (thisLastLBA < start))
          bestLastLBA = thisLastLBA + 1;
-      } // if
    } // for
    return (bestLastLBA);
 } // MBRData::FindFirstInFree()
@@ -796,7 +897,8 @@ int MBRData::IsFree(uint32_t sector) {
       // Note: Weird two-line thing to avoid subtracting 1 from a 0 value
       // for an unsigned int....
       last = first + partitions[i].lengthLBA;
-      if (last > 0) last--;
+      if (last > 0)
+         last--;
       if ((first <= sector) && (last >= sector))
          isFree = 0;
    } // for

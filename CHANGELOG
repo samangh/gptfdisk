@@ -1,4 +1,53 @@
-0.6.4.1 (2/20/2010):
+0.6.5 (3/7/2010):
+-----------------
+
+- Added tests to verify ('v') function and to pre-save checks to look for
+  partitions that end before they begin or that are too big for their
+  disks.
+
+- Fixed a bug that could cause spurious data to appear in a grown partition
+  table.
+
+- Added ability to convert some or all partitions to logical partitions in
+  GPT-to-MBR conversion. This feature is limited by the fact that at least
+  one free sector must exist immediately prior to each logical partition,
+  so it won't do much good if partitions are crammed together. It should be
+  possible to convert back to MBR any disk that started that way, provided
+  no partitions were added or resized when the disk was in GPT form; and
+  disks that were partitioned with Apple's Disk Utility or other tools that
+  insert unpartitioned space should also be convertible. CAUTION: THE
+  LOGICAL PARTITION CREATION FEATURE DOESN'T TRY TO ALIGN PARTITIONS OR
+  PARTITION HEADER DATA TO CYLINDER BOUNDARIES! It's conceivable that some
+  older OSes or utilities will object to these disks, although Linux, OS X,
+  Windows Vista, and Windows 7 all seem happy with them.
+
+- Fixed bug that caused creation of 0-length file if an incorrect device
+  filename was typed.
+
+- The gdisk program now prompts for a device filename if it's called with
+  no options. This enables gdisk to do something useful if it's launched by
+  double-clicking its icon in a GUI environment.
+
+- Added workaround for bug in some versions of MinGW that caused the
+  program to garble input sector numbers.
+
+- The Windows version now works on disks with over-512-byte sectors.
+  Tested on a magneto-optical (MO) drive with 2048-byte sectors.
+
+- Added -D (--display-alignment) option to sgdisk, to display sector
+  alignment value (by default, 1 for sub-800GiB disks and 8 for disks
+  over that size).
+
+- Fixed bug in computation of CHS geometries for protective MBR. This is
+  non-critical, since most modern utilities ignore the CHS geometries.
+  Concerned users can use the 'n' option on the experts' menu to build new
+  protective MBRs with the new algorithm, if desired. (Note that GNU
+  Parted, at least, gets this wrong, too.)
+
+- Fixed memory-allocation bug when reading GPT disks with partition tables
+  with over 128 entries; could cause program to crash on startup.
+
+0.6.4-2 (2/20/2010):
 --------------------
 
 Note: Neither of the following changes affects actual program code, so I've

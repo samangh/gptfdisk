@@ -29,8 +29,6 @@ AType* PartType::lastType = NULL;
 // related codes similar numbers and (given appropriate entry positions
 // in the linked list) keeps them together in the listings generated
 // by typing "L" at the main gdisk menu.
-// See http://www.win.tue.nl/~aeb/partitions/partition_types-1.html
-// for a list of MBR partition type codes.
 PartType::PartType(void) : GUIDData() {
    numInstances++;
    if (numInstances == 1) {
@@ -67,6 +65,8 @@ PartType::~PartType(void) {
 
 // Add all partition type codes to the internal linked-list structure.
 // Used by constructors.
+// See http://www.win.tue.nl/~aeb/partitions/partition_types-1.html
+// for a list of MBR partition type codes.
 void PartType::AddAllTypes(void) {
    // Start with the "unused entry," which should normally appear only
    // on empty partition table entries....
@@ -161,7 +161,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xfd00, "A19D880F-05FC-4D3B-A006-743F0F84911E", "Linux RAID");
 
    // Note: DO NOT use the 0xffff code; that's reserved to indicate an
-   // unknown type code.
+   // unknown GUID type code.
 } // PartType::AddAllTypes()
 
 // Add a single type to the linked list of types. Returns 1 if operation
@@ -195,12 +195,9 @@ PartType & PartType::operator=(uint16_t ID) {
    AType* theItem = allTypes;
    int found = 0;
 
-   // Assign a default value....
-   GUIDData::operator=("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"); // 0700, Linux/Windows data
-
    // Now search the type list for a match to the ID....
    while ((theItem != NULL) && (!found)) {
-      if (theItem->MBRType == ID)  { // found it!
+      if (theItem->MBRType == ID)  {
          GUIDData::operator=(theItem->GUIDType);
          found = 1;
       } else {
@@ -208,6 +205,8 @@ PartType & PartType::operator=(uint16_t ID) {
       } // if/else
    } // while
    if (!found) {
+      // Assign a default value....
+      GUIDData::operator=("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"); // 0700, Linux/Windows data
       cout.setf(ios::uppercase);
       cout.fill('0');
       cout << "Exact type match not found for type code ";
@@ -278,7 +277,8 @@ void PartType::ShowAllTypes(void) {
          cout.width(4);
          cout << hex << thisType->MBRType << " ";
          cout << thisType->name.substr(0, 20);
-         for (i = 0; i < (20 - (thisType->name.substr(0, 20).length())); i++) cout << " ";
+         for (i = 0; i < (20 - (thisType->name.substr(0, 20).length())); i++)
+            cout << " ";
          if ((colCount % 3) == 0)
             cout << "\n";
          else

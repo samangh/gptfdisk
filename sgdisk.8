@@ -1,6 +1,6 @@
-.\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
+.\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.4" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.6.5" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -185,6 +185,12 @@ the partition on the disk. If a corresponding hybrid MBR partition exists,
 MBR protective partition to fill the new free space.
 
 .TP 
+.B \-D, \-\-display\-alignment
+Display current sector alignment value. Partitions will be created on multiples
+of the sector value reported by this option. You can change the alignment value
+with the \-a option.
+
+.TP 
 .B e, \-\-move\-second\-header
 Move backup GPT data structures to the end of the disk. Use this option if
 you've added disks to a RAID array, thus creating a virtual disk with space
@@ -211,7 +217,7 @@ Convert an MBR or BSD disklabel disk to a GPT disk. As a safety measure, use of
 this option is required on MBR or BSD disklabel disks if you intend to save your
 changes, in order to prevent accidentally damaging such disks.
 
-.TP
+.TP 
 .B \-h, \-\-hybrid
 Create a hybrid MBR. This option takes from one to three partition numbers,
 separated by colons, as arguments. The created hybrid MBR places an EFI GPT
@@ -253,7 +259,7 @@ adds code numbers sequentially, such as 0xa500 for a FreeBSD disklabel,
 these two\-byte codes are unique to \fBgdisk\fR and \fBsgdisk\fR. This
 option does not require you to specify a valid disk device filename.
 
-.TP
+.TP 
 .B \-m, \-\-gpttombr
 Convert disk from GPT to MBR form. This option takes from one to four
 partition numbers, separated by colons, as arguments. Their type codes are
@@ -297,7 +303,7 @@ Pretend to make specified changes. In\-memory GPT data structures are
 altered according to other parameters, but changes are not written
 to disk.
 
-.TP
+.TP 
 .B \-r, \-\-transpose
 Swap two partitions' entries in the partition table. One or both partitions
 may be empty, although swapping two empty partitions is pointless. For
@@ -353,13 +359,13 @@ Zap (destroy) the GPT data structures and then exit. Use this option if you
 want to repartition a GPT disk using \fBfdisk\fR or some other GPT\-unaware
 program. This option destroys only the GPT data structures; it leaves the
 MBR intact. This makes it useful for wiping out GPT data structures after a
-disk has been repartitioned for MBR using a GPT-unaware utility; however,
+disk has been repartitioned for MBR using a GPT\-unaware utility; however,
 there's a risk that it will damage boot loaders or even the start of the
 first or end of the last MBR partition. If you use it on a valid GPT disk,
 the MBR will be left with an inappropriate EFI GPT (0xEE) partition
 definition, which you can delete using another utility.
 
-.TP
+.TP 
 .B \-Z, \-\-zap\-all
 Zap (destroy) the GPT and MBR data structures and then exit. This option
 works much like \fI\-z\fR, but as it wipes the MBR as well as the GPT, it's
@@ -393,7 +399,7 @@ Non\-GPT disk detected and no \fI\-g\fR option
 .B 4
 An error prevented saving changes
 .SH "BUGS"
-As of February 2010 (version 0.6.4), \fBsgdisk\fR
+As of March 2010 (version 0.6.5), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 

@@ -84,11 +84,9 @@ char GetYN(void) {
 // specified number of sectors (or KiB, MiB, etc.). Use the def
  //value as the default if the user just hits Enter
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & prompt) {
-   unsigned long long response;
-   int num, plusFlag = 0;
-   uint64_t mult = 1;
-   char suffix;
-   char line[255];
+   uint64_t response, mult = 1;
+   int plusFlag = 0;
+   char suffix, line[255];
 
    response = low - 1; // Ensure one pass by setting a too-low initial value
    while ((response < low) || (response > high)) {
@@ -112,12 +110,13 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & 
       } // if
 
       // Extract numeric response and, if present, suffix
-      num = sscanf(line, "%llu%c", &response, &suffix);
+      istringstream inString(line);
+      inString >> response >> suffix;
 
       // If no response, use default (def)
-      if (num <= 0) {
-         response = (unsigned long long) def;
-	 suffix = ' ';
+      if (strlen(line) == 0) {
+         response = def;
+	      suffix = ' ';
          plusFlag = 0;
       } // if
 
@@ -144,22 +143,22 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & 
       } // switch
 
       // Adjust response based on multiplier and plus flag, if present
-      response *= (unsigned long long) mult;
+      response *= mult;
       if (plusFlag == 1) {
          // Recompute response based on low part of range (if default = high
          // value, which should be the case when prompting for the end of a
          // range) or the defaut value (if default != high, which should be
          // the case for the first sector of a partition).
          if (def == high)
-            response = response + (unsigned long long) low - UINT64_C(1);
+            response = response + low - UINT64_C(1);
          else
-            response = response + (unsigned long long) def - UINT64_C(1);
+            response = response + def - UINT64_C(1);
       } // if
       if (plusFlag == -1) {
-         response = (unsigned long long) high - response;
+         response = high - response;
       } // if
    } // while
-   return ((uint64_t) response);
+   return response;
 } // GetSectorNum()
 
 // Takes a size in bytes (in size) and converts this to a size in

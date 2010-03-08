@@ -61,7 +61,7 @@ GUIDData & GUIDData::operator=(const string & orig) {
    // Break points for segments, either with or without characters separating the segments....
    size_t longSegs[6] = {0, 9, 14, 19, 24, 36};
    size_t shortSegs[6] = {0, 8, 12, 16, 20, 32};
-   size_t *segStart = longSegs; // Assume there are separators between segments */
+   size_t *segStart = longSegs; // Assume there are separators between segments
 
    Zero();
 
@@ -150,7 +150,7 @@ GUIDData & GUIDData::GetGUIDFromUser(void) {
       cout << "Enter a six-byte hexadecimal number for the fifth segment: ";
       cin >> part5;
       operator=(part1 += (string) "-" += part2 += (string) "-" += part3
-            += (string) "-" += part4 += (string) "-" += part5);
+                += (string) "-" += part4 += (string) "-" += part5);
    } // if/else
    cin.ignore(255, '\n');
    cout << "New GUID: " << AsString() << "\n";
@@ -217,15 +217,15 @@ string GUIDData::AsString(void) {
 
 // Delete spaces or braces (which often enclose GUIDs) from the orig string,
 // returning modified string.
-string GUIDData::DeleteSpaces(const string & orig) {
-   string copy;
+string GUIDData::DeleteSpaces(string s) {
    size_t position;
 
-   copy = orig;
-   for (position = copy.length(); position > 0; position--) {
-      if ((copy[position - 1] == ' ') || (copy[position - 1] == '{') || (copy[position - 1] == '}')) {
-         copy.erase(position - 1, 1);
-      } // if
-   } // for
-   return copy;
+   if (s.length() > 0) {
+      for (position = s.length(); position > 0; position--) {
+         if ((s[position - 1] == ' ') || (s[position - 1] == '{') || (s[position - 1] == '}')) {
+            s.erase(position - 1, 1);
+         } // if
+      } // for
+   } // if
+   return s;
 } // GUIDData::DeleteSpaces()

@@ -26,6 +26,12 @@ using namespace std;
 GPTPart::GPTPart(void) {
    int i;
 
+   partitionType.Zero();
+   uniqueGUID.Zero();
+   firstLBA = 0;
+   lastLBA = 0;
+   attributes = 0;
+
    for (i = 0; i < NAME_SIZE; i++)
       name[i] = '\0';
 } // Default constructor
@@ -48,6 +54,7 @@ string GPTPart::GetTypeName(void) {
 // set before the beginning).
 uint64_t GPTPart::GetLengthLBA(void) {
    uint64_t length = 0;
+
    if (firstLBA <= lastLBA)
       length = lastLBA - firstLBA + UINT64_C(1);
    return length;
@@ -86,7 +93,7 @@ void GPTPart::SetType(PartType t) {
 // string, although the GUID partition definition requires a UTF-16LE
 // string. This function creates a simple-minded copy for this.
 void GPTPart::SetName(const string & theName) {
-   char newName[NAME_SIZE]; // New name
+   char newName[NAME_SIZE];
    char *junk;
    int i;
 
@@ -222,8 +229,6 @@ int GPTPart::DoTheyOverlap(const GPTPart & other) {
 
 // Reverse the bytes of integral data types; used on big-endian systems.
 void GPTPart::ReversePartBytes(void) {
-//   partitionType.ReverseGUIDBytes();
-//   uniqueGUID.ReverseGUIDBytes();
    ReverseBytes(&firstLBA, 8);
    ReverseBytes(&lastLBA, 8);
    ReverseBytes(&attributes, 8);
@@ -242,6 +247,7 @@ void GPTPart::ChangeType(void) {
 
    if (GetDescription() == GetTypeName())
       changeName = 1;
+
    cout << "Current type is '" << GetTypeName() << "'\n";
    while ((!partitionType.Valid(typeNum)) && (typeNum != 0)) {
       cout << "Hex code (L to show codes, 0 to enter raw code, Enter = 0700): ";

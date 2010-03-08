@@ -64,9 +64,7 @@ int DiskIO::OpenForRead(void) {
                       NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
       if (fd == INVALID_HANDLE_VALUE) {
          CloseHandle(fd);
-         cerr << "Problem opening ";
-         cerr << realFilename;
-         cerr << " for reading!\n";
+         cerr << "Problem opening " << realFilename << " for reading!\n";
          realFilename = "";
          userFilename = "";
          isOpen = 0;
@@ -123,11 +121,11 @@ void DiskIO::Close(void) {
 } // DiskIO::Close()
 
 // Returns block size of device pointed to by fd file descriptor. If the ioctl
-// returns an error condition, print a warning but return a value of SECTOR_SIZE
-// (512)..
+// returns an error condition, assume it's a disk file and return a value of
+// SECTOR_SIZE (512). If the disk can't be opened at all, return a value of 0.
 int DiskIO::GetBlockSize(void) {
-   int err;
-   DWORD blockSize, junk1, junk2, junk3;
+   DWORD blockSize = 0, retBytes;
+   DISK_GEOMETRY_EX geom;
 
    // If disk isn't open, try to open it....
    if (!isOpen) {
@@ -135,29 +133,11 @@ int DiskIO::GetBlockSize(void) {
    } // if
 
    if (isOpen) {
-/*      BOOL WINAPI GetDiskFreeSpace(
-                                   __in   LPCTSTR lpRootPathName,
-                                   __out  LPDWORD lpSectorsPerCluster,
-                                   __out  LPDWORD lpBytesPerSector,
-                                   __out  LPDWORD lpNumberOfFreeClusters,
-                                   __out  LPDWORD lpTotalNumberOfClusters
-                                  ); */
-//      err = GetDiskFreeSpace(realFilename.c_str(), &junk1, &blockSize, &junk2, &junk3);
-      // Above call is fubared -- returns weird values for blockSize....
-      err = 1;
-      blockSize = 512;
-
-      if (err == 0) {
+	  if (DeviceIoControl(fd, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geom, sizeof(geom), &retBytes, NULL)) {
+         blockSize = geom.Geometry.BytesPerSector;
+	  } else { // was probably an ordinary file; set default value....
          blockSize = SECTOR_SIZE;
-         // ENOTTY = inappropriate ioctl; probably being called on a disk image
-         // file, so don't display the warning message....
-         // 32-bit code returns EINVAL, I don't know why. I know I'm treading on
-         // thin ice here, but it should be OK in all but very weird cases....
-         if (errno != 267) { // 267 is returned on ordinary files
-            cerr << "\aError " << GetLastError() << " when determining sector size! "
-                 << "Setting sector size to " << SECTOR_SIZE << "\n";
-         } // if
-      } // if (err == -1)
+	  } // if/else
    } // if (isOpen)
 
    return (blockSize);

@@ -33,7 +33,7 @@ using namespace std;
 class GUIDData {
    protected:
       my_uuid_t uuidData;
-      string DeleteSpaces(const string & orig);
+      string DeleteSpaces(string s);
    public:
       GUIDData(void);
       GUIDData(const GUIDData & orig);

@@ -1,6 +1,6 @@
-.\" Copyright 2009 Roderick W. Smith (rodsmith@rodsbooks.com)
+.\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.6.4" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.6.5" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -9,7 +9,6 @@ gdisk \- Interactive GUID partition table (GPT) manipulator
 .I device
 
 .SH "DESCRIPTION"
-
 GPT fdisk (aka \fBgdisk\fR) is a text\-mode menu\-driven program for
 creation and manipulation of partition tables. It will automatically
 convert an old\-style Master Boot Record (MBR) partition table or BSD
@@ -102,9 +101,10 @@ such partitions as having the "boot flag" set.)
 .B *
 Some boot loaders for BIOS\-based systems make use of a \fIBIOS Boot
 Partition\fR (\fBgdisk\fR internal code 0xEF02), in which the secondary
-boot loader is stored, possibly without the benefit of a filesystem. This
-partition can typically be quite small (roughly 32 to 200 KiB), but you
-should consult your boot loader documentation for details.
+boot loader is stored, possibly without the benefit of a filesystem. (GRUB2
+may optionally use such a partition.) This partition can typically be quite
+small (roughly 32 to 200 KiB), but you should consult your boot loader
+documentation for details.
 
 .TP 
 .B *
@@ -139,10 +139,10 @@ menu provides the functions that are most likely to be useful for typical partit
 .TP 
 .B b
 Save partition data to a backup file. You can back up your current
-in-memory partition table to a disk file using this option. The resulting
+in\-memory partition table to a disk file using this option. The resulting
 file is a binary file consisting of the protective MBR, the main GPT
 header, the backup GPT header, and one copy of the partition table, in that
-order. Note that the backup is of the current in-memory data structures, so
+order. Note that the backup is of the current in\-memory data structures, so
 if you launch the program, make changes, and then use this option, the
 backup will reflect your changes. Note also that the restore option is on
 the recovery & transformation menu; the backup option is on the main menu
@@ -312,15 +312,17 @@ set of GPT partitions.
 
 .TP 
 .B g
-Convert GPT into MBR and exit. This option converts up to four GPT partitions
+Convert GPT into MBR and exit. This option converts as many partitions as possible
 into MBR form, destroys the GPT data structures, saves the new MBR, and exits.
 Use this option if you've tried GPT and find that MBR works better for you.
-Note that this function generates up to four \fIprimary\fR MBR partitions;
-it cannot generate logical partitions, and so it cannot transform more than
-four partitions. If four or fewer partitions exist, and if they can be represented
-in the 32\-bit MBR LBA scheme, this function converts
-them all. If more than four partitions exist, you'll be asked to select which
-ones to convert. See also the 'h' option.
+Note that this function generates up to four primary MBR partitions or three
+primary partitions and as many logical partitions as can be generated. Each
+logical partition requires at least one unallocated block immediately before
+its first block. Therefore, it may be possible to convert a maximum of four
+partitions on disks with tightly\-packed partitions; however, if free space was
+inserted between partitions when they were created, and if the disk is under
+2 TiB in size, it should be possible to convert all the partitions to MBR form.
+See also the 'h' option.
 
 .TP 
 .B h
@@ -329,7 +331,9 @@ OSes, or those that can't boot from a GPT disk, to access up to three of
 the partitions on the disk by creating MBR entries for them. Note that
 these hybrid MBR entries can easily go out of sync with the GPT entries,
 particularly when hybrid\-unaware GPT utilities are used to edit the disk.
-Thus, you may need to recreate the hybrid MBR if you use such tools.
+Thus, you may need to recreate the hybrid MBR if you use such tools. Unlike
+the 'g' option, this option does not support converting any partitions into
+MBR logical partitions.
 
 .TP 
 .B i
@@ -416,15 +420,15 @@ you might want to adjust the number manually if you've wound up with the
 same GUID on two partitions because of buggy GUID assignments (hopefully
 not in \fBgdisk\fR) or sheer incredible coincidence.
 
-.TP
+.TP 
 .B d
 Display the number of logical sectors per physical sector. This value
 determines the sector alignment that GPT fdisk enforces. See the
 description of the 'l' option for more details. Note that this value is
-only auto-detected on Linux with a 2.6.32 kernel or later; on other
+only auto\-detected on Linux with a 2.6.32 kernel or later; on other
 platforms, it defaults to 8.
 
-.TP
+.TP 
 .B e
 Move backup GPT data structures to the end of the disk. Use this command if
 you've added disks to a RAID array, thus creating a virtual disk with space
@@ -442,14 +446,14 @@ a fresh random GUID or enter one manually with this option.
 Show detailed partition information. This option is identical to the 'i'
 option on the main menu.
 
-.TP
+.TP 
 .B l
 Change the number of logical sectors per physical sector. Prior to December
-of 2009, most hard disks used 512-byte physical sectors. Starting in
+of 2009, most hard disks used 512\-byte physical sectors. Starting in
 December of 2009, disk manufacturers began transitioning to disks with
-larger physical sectors, but their firmware translated to 512-byte logical
+larger physical sectors, but their firmware translated to 512\-byte logical
 sectors to maintain compatibility with older OSes. If partitions begin
-mid-physical-sector, though, performance can suffer on such drives, since
+mid\-physical\-sector, though, performance can suffer on such drives, since
 important filesystem data structures can span physical sectors on the disk.
 To minimize such problems, GPT fdisk aligns the start of partitions on the
 boundary of presumed physical sectors. You can set the number of logical
@@ -497,7 +501,7 @@ seem to work, and can sometimes be useful in converting MBR disks. Larger
 sizes also work fine. OSes may impose their own limits on the number of
 partitions, though.
 
-.TP
+.TP 
 .B t
 Swap two partitions' entries in the partition table. One partition may be
 empty. For instance, if partitions 1\-4 are defined, transposing 1 and 5
@@ -531,13 +535,13 @@ entering data. When only one option is possible, \fBgdisk\fR
 usually bypasses the prompt entirely.
 
 .SH "BUGS"
-As of January 2010 (version 0.5.3), \fBgdisk\fR
+As of March 2010 (version 0.6.5), \fBgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
 .B *
-The program compiles correctly only on Linux, FreeBSD, and Mac OS X. Linux
-versions for x86\-64 (64\-bit), x86 (32\-bit), and PowerPC (32\-bit) have been
+The program compiles correctly only on Linux, FreeBSD, Mac OS X, and Windows.
+Linux versions for x86\-64 (64\-bit), x86 (32\-bit), and PowerPC (32\-bit) have been
 tested, with the x86\-64 version having seen the most testing.
 
 .TP 
@@ -607,7 +611,7 @@ caution!
 Booting after converting an MBR or BSD disklabel disk is likely to be
 disrupted. Sometimes re\-installing a boot loader will fix the problem, but
 other times you may need to switch boot loaders. Except on EFI\-based
-platforms, Windows through at least Windows 7 RC doesn't support booting
+platforms, Windows through at least Windows 7 doesn't support booting
 from GPT disks. Creating a hybrid MBR (using the 'h' option on the recovery &
 transformation menu) or abandoning GPT in favor of MBR may be your only
 options in this case.
@@ -633,6 +637,7 @@ Contributors:
 \fBmkfs (8)\fR,
 \fBparted (8)\fR,
 \fBsfdisk (8)\fR
+\fBsgdisk (8)\fR
 
 \fIhttp://en.wikipedia.org/wiki/GUID_Partition_Table\fR
 

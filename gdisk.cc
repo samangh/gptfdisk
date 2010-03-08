@@ -7,12 +7,12 @@
 /* This program is copyright (c) 2009, 2010 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
-//#include <iostream>
 #include <stdio.h>
 //#include <getopt.h>
 #include <string.h>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include "mbr.h"
 #include "gpttext.h"
 #include "support.h"
@@ -24,34 +24,44 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT);
 void ShowExpertCommands(void);
 void RecoveryMenu(string filename, GPTDataTextUI* theGPT);
 void ShowRecoveryCommands(void);
+void WinWarning(void);
 
 int main(int argc, char* argv[]) {
    GPTDataTextUI theGPT;
-   int doMore = 1;
-   char* device = NULL;
+   int doMore = 1, i;
+   char *device = NULL, *junk;
 
    cout << "GPT fdisk (gdisk) version " << GPTFDISK_VERSION << "\n\n";
 
-    if (argc == 2) { // basic usage
-      if (SizesOK()) {
-#ifdef _WIN32
-         cout << "\a************************************************************************\n"
-               << "Most versions of Windows cannot boot from a GPT disk, and most varieties\n"
-               << "prior to Vista cannot read GPT disks. Therefore, you should exit now\n"
-               << "unless you understand the implications of converting MBR to GPT, editing\n"
-               << "an existing GPT disk, or creating a new GPT disk layout!\n"
-               << "************************************************************************\n\n";
-         cout << "Are you SURE you want to continue? ";
-         if (GetYN() != 'Y')
-            exit(0);
-#endif
+   if (!SizesOK())
+      exit(1);
+
+   switch (argc) {
+      case 1:
+         WinWarning();
+         cout << "Type device filename, or press <Enter> to exit: ";
+         device = new char[255];
+         junk = fgets(device, 255, stdin);
+         if (device[0] != '\n') {
+            i = strlen(device);
+            if (i > 0)
+               if (device[i - 1] == '\n')
+                  device[i - 1] = '\0';
+            doMore = theGPT.LoadPartitions(device);
+            if (doMore) {
+               MainMenu(device, &theGPT);
+            } // if (doMore)
+         } // if
+         delete[] device;
+         break;
+      case 2: // basic usage
+         WinWarning();
          doMore = theGPT.LoadPartitions(argv[1]);
          if (doMore) {
             MainMenu(argv[1], &theGPT);
          } // if (doMore)
-      } // if (SizesOK())
-   } else if (argc == 3) { // usage with "-l" option
-      if (SizesOK()) {
+         break;
+      case 3: // usage with "-l" option
          if (strcmp(argv[1], "-l") == 0) {
             device = argv[2];
          } else if (strcmp(argv[2], "-l") == 0) {
@@ -64,10 +74,11 @@ int main(int argc, char* argv[]) {
             doMore = theGPT.LoadPartitions((string) device);
             if (doMore) theGPT.DisplayGPTData();
          } // if
-      } // if
-   } else {
-      cerr << "Usage: " << argv[0] << " [-l] device_file\n";
-   } // if/else
+         break;
+      default:
+         cerr << "Usage: " << argv[0] << " [-l] device_file\n";
+         break;
+   } // switch
 } // main
 
 // Accept a command and execute it. Returns only when the user
@@ -177,7 +188,7 @@ void ShowCommands(void) {
 void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
    char command, line[255], buFile[255];
    char* junk;
-   uint32_t temp1;
+   uint32_t temp1, numParts;
    int goOn = 1;
 
    do {
@@ -217,16 +228,17 @@ void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
             } // if
             break;
          case 'g': case 'G':
+            numParts = theGPT->GetNumParts();
             temp1 = theGPT->XFormToMBR();
             if (temp1 > 0) {
-               cout << "Converted " << temp1 << " partitions. Finalize and exit? ";
+               cout << "\nConverted " << temp1 << " partitions. Finalize and exit? ";
                if (GetYN() == 'Y') {
-                  if (theGPT->DestroyGPT() > 0)
+                  if ((theGPT->DestroyGPT() > 0) && (theGPT->SaveMBR()))
                      goOn = 0;
                } else {
                   theGPT->MakeProtectiveMBR();
-                  theGPT->WriteProtectiveMBR();
-                  cout << "Note: New protective MBR created.\n";
+                  theGPT->SetGPTSize(numParts);
+                  cout << "Note: New protective MBR created\n\n";
                } // if/else
             } // if
             break;
@@ -414,3 +426,19 @@ void ShowExpertCommands(void) {
    cout << "z\tzap (destroy) GPT data structures and exit\n";
    cout << "?\tprint this menu\n";
 } // ShowExpertCommands()
+
+// On Windows, display a warning and ask whether to continue. If the user elects
+// not to continue, exit immediately.
+void WinWarning(void) {
+#ifdef _WIN32
+   cout << "\a************************************************************************\n"
+   << "Most versions of Windows cannot boot from a GPT disk, and most varieties\n"
+   << "prior to Vista cannot read GPT disks. Therefore, you should exit now\n"
+   << "unless you understand the implications of converting MBR to GPT, editing\n"
+   << "an existing GPT disk, or creating a new GPT disk layout!\n"
+   << "************************************************************************\n\n";
+   cout << "Are you SURE you want to continue? ";
+   if (GetYN() != 'Y')
+      exit(0);
+#endif
+} // WinWarning()

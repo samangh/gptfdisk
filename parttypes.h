@@ -2,7 +2,6 @@
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdint.h>
-//#include <unistd.h>
 #include <stdlib.h>
 #include <string>
 #include "support.h"

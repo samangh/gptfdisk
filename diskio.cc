@@ -111,7 +111,6 @@ int DiskIO::FindAlignment(void) {
    int err = -2, errnum = 0, result = 8, physicalSectorSize = 4096;
    uint64_t diskSize;
 
-   cout << "Entering FindAlignment()\n";
 #if defined (__linux__) && defined (BLKPBSZGET)
    err = ioctl(fd, BLKPBSZGET, &physicalSectorSize);
    cout << "In FindAlignment(), physicalSectorSize = " << physicalSectorSize
@@ -137,7 +136,7 @@ int DiskIO::FindAlignment(void) {
       // user if it's found....
       diskSize = disksize(fd, &errnum);
       if ((diskSize % (uint64_t) result) != 0) {
-         fprintf(stderr, "\aWarning! Disk size (%llu) is not a multiple of alignment\n"
+         fprintf(stderr, "\aWarning! Disk size (%I64u) is not a multiple of alignment\n"
                          "size (%d), but it should be! Check disk manual and jumper settings!\n",
                          (unsigned long long) diskSize, result);
 } // if

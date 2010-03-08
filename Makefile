@@ -3,7 +3,7 @@ CXX=g++
 CFLAGS+=-D_FILE_OFFSET_BITS=64
 CXXFLAGS+=-Wall -D_FILE_OFFSET_BITS=64
 LDFLAGS+=
-LIB_NAMES=crc32 support guid gptpart mbr gpt bsd parttypes attributes diskio diskio-unix
+LIB_NAMES=crc32 support guid partnotes gptpart mbr gpt bsd parttypes attributes diskio diskio-unix
 LIB_SRCS=$(NAMES:=.cc)
 LIB_OBJS=$(LIB_NAMES:=.o)
 LIB_HEADERS=$(LIB_NAMES:=.h)

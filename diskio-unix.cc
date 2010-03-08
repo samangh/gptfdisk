@@ -34,7 +34,9 @@ void DiskIO::MakeRealName(void) {
    realFilename = userFilename;
 } // DiskIO::MakeRealName()
 
-// Open the currently on-record file for reading
+// Open the currently on-record file for reading. Returns 1 if the file is
+// already open or is opened by this call, 0 if opening the file doesn't
+// work.
 int DiskIO::OpenForRead(void) {
    int shouldOpen = 1;
 
@@ -49,10 +51,11 @@ int DiskIO::OpenForRead(void) {
    if (shouldOpen) {
       fd = open(realFilename.c_str(), O_RDONLY);
       if (fd == -1) {
-         cerr << "Problem opening " << realFilename << " for reading! Error is " << errno << "\n";
-         if (errno == EACCES) { // User is probably not running as root
+         cerr << "Problem opening " << realFilename << " for reading! Error is " << errno << ".\n";
+         if (errno == EACCES) // User is probably not running as root
             cerr << "You must run this program as root or use sudo!\n";
-         } // if
+         if (errno == ENOENT)
+            cerr << "The specified file does not exist!\n";
          realFilename = "";
          userFilename = "";
          isOpen = 0;
@@ -105,7 +108,7 @@ void DiskIO::Close(void) {
 
 // Returns block size of device pointed to by fd file descriptor. If the ioctl
 // returns an error condition, print a warning but return a value of SECTOR_SIZE
-// (512)..
+// (512). If the disk can't be opened at all, return a value of 0.
 int DiskIO::GetBlockSize(void) {
    int err = -1, blockSize = 0;
 
@@ -134,6 +137,7 @@ int DiskIO::GetBlockSize(void) {
          if ((errno != ENOTTY) && (errno != EINVAL)) {
             cerr << "\aError " << errno << " when determining sector size! Setting sector size to "
                  << SECTOR_SIZE << "\n";
+            cout << "Disk device is " << realFilename << "\n";
          } // if
       } // if (err == -1)
    } // if (isOpen)

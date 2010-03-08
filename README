@@ -69,7 +69,9 @@ compiler for C++. In addition, note these requirements:
 When all the necessary development tools and libraries are installed, you
 can uncompress the package and type "make" at the command prompt in the
 resulting directory. (You may need to type "make -f Makefile.mac" on Mac OS
-X or "make -f Makefile.mingw" to compile using MinGW for Windows.) The
+X or "make -f Makefile.mingw" to compile using MinGW for Windows.) You may
+also need to add header (include) directories or library directories by
+setting the CXXFLAGS environment variable or by editing the Makefile. The
 result should be program files called gdisk and sgdisk. Typing "make gdisk"
 or "make sgdisk" will compile only the requested programs. You can use
 these programs in place or copy the files to a suitable directory, such as
@@ -89,12 +91,12 @@ is with virtual QEMU disks. I've received user reports of success with
 RAID arrays over 2TiB in size, though.
 
 My main development platform is a system running the 64-bit version of
-Ubuntu 8.04. I've also tested on 64-bit OpenSuSE, 32-bit Fedora 10, 32-bit
-Fedora 11, 32-bit Ubuntu 6.10, 64-bit Ubunut 9.10, 64-bit Gentoo, 32-bit
-PowerPC Debian Linux, 32-bit Intel-based Mac OS X 10.5 and 10.6, and 64-bit
-FreeBSD 7.1. Problems relating to 64-bit integers on the 32-bit Linux have
-been common during development and may crop up in the future. The Mac OS X,
-FreeBSD, and big-endian (PowerPC) support are new.
+Gentoo Linux (previously Ubuntu 8.04). I've also tested on 64-bit OpenSuSE,
+32-bit Fedora 10, 32-bit Fedora 11, 32-bit Ubuntu 6.10, 64-bit Ubunut 9.10,
+32-bit PowerPC Debian Linux, 32-bit Intel-based Mac OS X 10.5 and 10.6, and
+64-bit FreeBSD 7.1. Problems relating to 64-bit integers on the 32-bit
+Linux have been common during development and may crop up in the future.
+The Mac OS X, FreeBSD, and big-endian (PowerPC) support are new.
 
 Redistribution
 --------------
