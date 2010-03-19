@@ -318,6 +318,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
    uint32_t pn, temp1, temp2;
    int goOn = 1;
    GUIDData aGUID;
+   ostringstream prompt;
 
    do {
       cout << "\nExpert command (? for help): ";
@@ -355,8 +356,10 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             theGPT->ShowDetails();
             break;
          case 'l': case 'L':
-            temp1 = GetNumber(1, 128, 8, (string)
-                              "Enter the sector alignment value (1-128, default = 8): ");
+            prompt.seekp(0);
+            prompt << "Enter the sector alignment value (1-" << MAX_ALIGNMENT << ", default = "
+                   << DEFAULT_ALIGNMENT << "): ";
+            temp1 = GetNumber(1, MAX_ALIGNMENT, DEFAULT_ALIGNMENT, prompt.str());
             theGPT->SetAlignment(temp1);
             break;
          case 'm': case 'M':

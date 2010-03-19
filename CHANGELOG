@@ -1,3 +1,22 @@
+0.6.6 (?/?/2010):
+-----------------
+
+- More alignment changes: GPT fdisk now attempts to determine the
+  alignment value based on alignment of current partitions, if any are
+  defined. If no partitions are defined, a default value of 2048 is
+  set. If the computed value is less than 8 on drives over about 596GiB,
+  it's reset to 8, since the drive might be a WD Advanced Format unit
+  that requires an 8-sector (or larger power-of-2) alignment value
+  for proper functioning. The 2048-sector default provides better
+  alignment in some RAID configurations.
+
+- Changed behavior when a backup restore fails. Previously, GPT fdisk
+  would create a fresh blank set of partitions. Now it does so only
+  if the failure occurs when interpreting the backup's contents; if the
+  user typed the wrong filename, the in-memory data structures aren't
+  touched.
+
+
 0.6.5 (3/7/2010):
 -----------------
 

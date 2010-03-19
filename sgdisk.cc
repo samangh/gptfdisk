@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
    GPTData theGPT;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
    int partNum = 0, deletePartNum = 0, infoPartNum = 0, bsdPartNum = 0, saveNonGPT = 1;
-   int alignment = 8, retval = 0, pretend = 0;
+   int alignment = DEFAULT_ALIGNMENT, retval = 0, pretend = 0;
    unsigned int hexCode;
    uint32_t tableSize = 128;
    uint64_t startSector, endSector;

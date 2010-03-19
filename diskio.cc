@@ -34,6 +34,7 @@
 
 #include "support.h"
 #include "diskio.h"
+#include "gpt.h"
 
 using namespace std;
 
@@ -93,11 +94,12 @@ int DiskIO::OpenForWrite(const string & filename) {
 // returns 1-sector alignment for unusual sector sizes and drives smaller than
 // a size defined by SMALLEST_ADVANCED_FORMAT, and 8-sector alignment for
 // larger drives with 512-byte sectors.
-int DiskIO::FindAlignment(void) {
-   int err, result;
+uint32_t DiskIO::FindAlignment(void) {
+   int err;
+   uint32_t result;
 
    if ((GetBlockSize() == 512) && (DiskSize(&err) >= SMALLEST_ADVANCED_FORMAT)) {
-      result = 8; // play it safe; align for 4096-byte sectors
+      result = DEFAULT_ALIGNMENT; // play it safe; align for 4096-byte sectors
    } else {
       result = 1; // unusual sector size; assume it's the real physical size
    } // if/else

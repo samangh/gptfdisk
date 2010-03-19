@@ -16,13 +16,23 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.5"
+#define GPTFDISK_VERSION "0.6.6-pre1"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
 // of course.)
 #define MBR_EFI_GPT -1
 #define MBR_EMPTY -2
+
+// Default values for sector alignment
+#define DEFAULT_ALIGNMENT 2048
+#define MAX_ALIGNMENT 32768
+
+// Below constant corresponds to an 800GB disk -- a somewhat arbitrary
+// cutoff
+//#define SMALLEST_ADVANCED_FORMAT UINT64_C(1677721600)
+// Now ~596GiB (640MB), since WD has introduced a smaller Advanced Format drive
+#define SMALLEST_ADVANCED_FORMAT UINT64_C(1250263728)
 
 using namespace std;
 
@@ -79,7 +89,7 @@ protected:
    int secondPartsCrcOk;
    int apmFound; // set to 1 if APM detected
    int bsdFound; // set to 1 if BSD disklabel detected in MBR
-   int sectorAlignment; // Start & end partitions at multiples of sectorAlignment
+   uint32_t sectorAlignment; // Start & end partitions at multiples of sectorAlignment
    int beQuiet;
    WhichToUse whichWasUsed;
 
@@ -177,8 +187,9 @@ public:
    int IsFreePartNum(uint32_t partNum);
 
    // Change how functions work, or return information on same
-   void SetAlignment(int n) {sectorAlignment = n;}
-   int GetAlignment(void) {return sectorAlignment;}
+   void SetAlignment(uint32_t n);
+   uint32_t ComputeAlignment(void); // Set alignment based on current partitions
+   uint32_t GetAlignment(void) {return sectorAlignment;}
    void JustLooking(int i = 1) {justLooking = i;}
    void BeQuiet(int i = 1) {beQuiet = i;}
    WhichToUse WhichWasUsed(void) {return whichWasUsed;}

@@ -149,10 +149,10 @@ sibling. Options available in \fBsgdisk\fR are:
 .B \-a, \-\-set\-alignment=value
 Set the sector alignment multiple. GPT fdisk aligns the start of partitions
 to sectors that are multiples of this value, which defaults to 8 on disks
-larger than 800GiB with 512\-byte sectors and to 1 on smaller disks or those
-with non\-512\-byte sectors. This alignment value is necessary to obtain
-optimum performance with Western Digital Advanced Format and similar drives
-with larger physical than logical sector sizes.
+larger than 596 GiB with 512\-byte logical sectors and to 1 on smaller
+disks or those with non\-512\-byte sectors. This alignment value is
+necessary to obtain optimum performance with Western Digital Advanced
+Format and similar drives with larger physical than logical sector sizes.
 
 .TP 
 .B \-b, \-\-backup=file

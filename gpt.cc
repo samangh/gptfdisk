@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <string.h>
+#include <math.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -641,6 +642,7 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
       if (allOK)
          CheckGPTSize();
       myDisk.Close();
+      ComputeAlignment();
    } else {
       allOK = 0;
    } // if/else
@@ -1116,20 +1118,20 @@ int GPTData::LoadGPTBackup(const string & filename) {
          if (!LoadPartitionTable(mainHeader, backupFile, (uint64_t) (3 - shortBackup)))
             cerr << "Warning! Read error " << errno
                  << " loading partition table; strange behavior now likely!\n";
-
       } else {
          allOK = 0;
       } // if/else
+      // Something went badly wrong, so blank out partitions
+      if (allOK == 0) {
+         cerr << "Improper backup file! Clearing all partition data!\n";
+         ClearGPTData();
+         protectiveMBR.MakeProtectiveMBR();
+      } // if
    } else {
       allOK = 0;
       cerr << "Unable to open file " << filename << " for reading! Aborting!\n";
    } // if/else
 
-   // Something went badly wrong, so blank out partitions
-   if (allOK == 0) {
-      ClearGPTData();
-      protectiveMBR.MakeProtectiveMBR();
-   } // if
    return allOK;
 } // GPTData::LoadGPTBackup()
 
@@ -2122,6 +2124,60 @@ int GPTData::IsFreePartNum(uint32_t partNum) {
 
    return retval;
 } // GPTData::IsFreePartNum()
+
+
+/***********************************************************
+ *                                                         *
+ * Change how functions work or return information on them *
+ *                                                         *
+ ***********************************************************/
+
+// Set partition alignment value; partitions will begin on multiples of
+// the specified value
+void GPTData::SetAlignment(uint32_t n) {
+   uint32_t l2;
+
+   sectorAlignment = n;
+   l2 = (uint32_t) log2(n);
+   if (PowerOf2(l2) != n)
+      cout << "Information: Your alignment value is not a power of 2.\n";
+} // GPTData::SetAlignment()
+
+// Compute sector alignment based on the current partitions (if any). Each
+// partition's starting LBA is examined, and if it's divisible by a power-of-2
+// value less than the maximum found so far (or 2^31 for the first partition
+// found), then the alignment value is adjusted down. If the computed
+// alignment is less than 8 and the disk is bigger than SMALLEST_ADVANCED_FORMAT,
+// resets it to 8. This is a safety measure for WD Advanced Format and
+// similar drives. If no partitions are defined, the alignment value is set
+// to DEFAULT_ALIGNMENT (2048). The result is that new drives are aligned to
+// 2048-sector multiples but the program won't complain about other alignments
+// on existing disks unless a smaller-than-8 alignment is used on small disks
+// (as safety for WD Advanced Format drives).
+// Returns the computed alignment value.
+uint32_t GPTData::ComputeAlignment(void) {
+   uint32_t i = 0, found, exponent = 31;
+   uint64_t align = DEFAULT_ALIGNMENT;
+
+   for (i = 0; i < mainHeader.numParts; i++) {
+      if (partitions[i].IsUsed()) {
+         found = 0;
+         while (!found) {
+            align = PowerOf2(exponent);
+            if ((partitions[i].GetFirstLBA() % align) == 0) {
+               found = 1;
+            } else {
+               exponent--;
+            } // if/else
+         } // while
+      } // if
+   } // for
+   if ((align < 8) && (diskSize >= SMALLEST_ADVANCED_FORMAT))
+      align = 8;
+//   cout << "Setting alignment to " << align << "\n";
+   SetAlignment(align);
+   return align;
+} // GPTData::ComputeAlignment()
 
 /********************************
  *                              *

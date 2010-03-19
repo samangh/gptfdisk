@@ -55,6 +55,6 @@ string BytesToSI(uint64_t size);
 unsigned char StrToHex(const string & input, unsigned int position);
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
-uint64_t PowerOf2(int value);
+uint64_t PowerOf2(uint32_t value);
 
 #endif

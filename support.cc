@@ -246,11 +246,11 @@ void ReverseBytes(void* theValue, int numBytes) {
 
 // Compute (2 ^ value). Given the return type, value must be 63 or less.
 // Used in some bit-fiddling functions
-uint64_t PowerOf2(int value) {
+uint64_t PowerOf2(uint32_t value) {
    uint64_t retval = 1;
-   int i;
+   uint32_t i;
 
-   if ((value < 64) && (value >= 0)) {
+   if (value < 64) {
       for (i = 0; i < value; i++) {
          retval *= 2;
       } // for

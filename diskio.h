@@ -35,10 +35,6 @@
 
 using namespace std;
 
-// Below constant corresponds to an 800GB disk -- a somewhat arbitrary
-// cutoff
-#define SMALLEST_ADVANCED_FORMAT UINT64_C(1677721600)
-
 /***************************************
  *                                     *
  * DiskIO class and related structures *
@@ -71,7 +67,7 @@ class DiskIO {
       int Write(void* buffer, int numBytes);
       void DiskSync(void); // resync disk caches to use new partitions
       int GetBlockSize(void);
-      int FindAlignment(void);
+      uint32_t FindAlignment(void);
       int FindAlignment(const string & filename);
       int IsOpen(void) {return isOpen;}
       int IsOpenForWrite(void) {return openForWrite;}

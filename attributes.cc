@@ -73,7 +73,7 @@ void Attributes::ChangeAttributes(void) {
    do {
       response = GetNumber(0, 64, -1, (string) "Toggle which attribute field (0-63, 64 to exit): ");
       if (response != 64) {
-         bitValue = PowerOf2(NUM_ATR - response - 1); // Find the integer value of the bit
+         bitValue = PowerOf2(uint32_t (NUM_ATR - response - 1)); // Find the integer value of the bit
          if ((bitValue & attributes) == bitValue) { // bit is set
             attributes -= bitValue; // so unset it
 	    cout << "Have disabled the '" << atNames[response] << "' attribute.\n";

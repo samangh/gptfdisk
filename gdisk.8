@@ -458,7 +458,7 @@ important filesystem data structures can span physical sectors on the disk.
 To minimize such problems, GPT fdisk aligns the start of partitions on the
 boundary of presumed physical sectors. You can set the number of logical
 sectors per physical sector with this option. The default is 1 on disks
-smaller than 800GB and 8 on larger disks.
+smaller than 596 GiB and 8 on larger disks with 512\-byte logical sectors.
 
 .TP 
 .B m

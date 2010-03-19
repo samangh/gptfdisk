@@ -85,7 +85,7 @@ int MBRData::ReadMBRData(const string & deviceFilename) {
       canDeleteMyDisk = 1;
    } // if
    if (myDisk->OpenForRead(deviceFilename)) {
-      ReadMBRData(myDisk);
+      allOK = ReadMBRData(myDisk);
    } else {
       allOK = 0;
    } // if
@@ -101,7 +101,7 @@ int MBRData::ReadMBRData(const string & deviceFilename) {
 // Note that any extended partition(s) present will be explicitly stored
 // in the partitions[] array, along with their contained partitions; the
 // extended container partition(s) should be ignored by other functions.
-void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
+int MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
    int allOK = 1, i, j, logicalNum;
    int err = 1;
    TempMBR tempMBR;
@@ -201,6 +201,7 @@ void MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
          } // for
       } // if (hybrid detection code)
    } // no initial error
+   return allOK;
 } // MBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize)
 
 // This is a recursive function to read all the logical partitions, following the
