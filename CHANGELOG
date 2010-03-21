@@ -1,14 +1,33 @@
-0.6.6 (?/?/2010):
+0.6.6 (3/21/2010):
 -----------------
 
-- More alignment changes: GPT fdisk now attempts to determine the
-  alignment value based on alignment of current partitions, if any are
-  defined. If no partitions are defined, a default value of 2048 is
-  set. If the computed value is less than 8 on drives over about 596GiB,
-  it's reset to 8, since the drive might be a WD Advanced Format unit
-  that requires an 8-sector (or larger power-of-2) alignment value
-  for proper functioning. The 2048-sector default provides better
-  alignment in some RAID configurations.
+- Added support for the "no block IO protocol" (referred to as "hide from
+  EFI" in GPT fdisk) and "legacy BIOS bootable" attribute bits. See Table
+  19 of the UEFI 2.3 specification (p. 153) for details.
+
+- Changed the sequence in which GPT data structures are written to disk;
+  backups are now written first, followed by the main structures. This is
+  as recommended in the UEFI 2.3 specification, since it's safer in the
+  extremely unlikely event that a RAID array's size is increased and
+  there's a power outage mid-write. (If the main structures are written
+  first in this case, they'll point to data that's not yet been written;
+  but by writing the backups first, the old main structures will still
+  point to the valid old backup structures.)
+
+- Protective MBRs now have disk signatures of 0x00000000, to better
+  conform with GPT as described in the UEFI 2.3 specification.
+
+- Added alignment information to the summary data produced by the
+  'p' main-menu option in gdisk or the -p option to sgdisk.
+
+- More alignment changes: GPT fdisk now attempts to determine the alignment
+  value based on alignment of current partitions, if any are defined. If no
+  partitions are defined, a default value of 2048 is set. If the computed
+  value is less than 8 on drives over about 596GiB, it's reset to 8, since
+  the drive might be a WD Advanced Format unit that requires an 8-sector
+  (or larger power-of-2) alignment value for best performance. The
+  2048-sector default provides better alignment in some RAID
+  configurations.
 
 - Changed behavior when a backup restore fails. Previously, GPT fdisk
   would create a fresh blank set of partitions. Now it does so only

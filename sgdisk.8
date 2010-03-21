@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.5" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.6.6" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -148,11 +148,10 @@ sibling. Options available in \fBsgdisk\fR are:
 .TP 
 .B \-a, \-\-set\-alignment=value
 Set the sector alignment multiple. GPT fdisk aligns the start of partitions
-to sectors that are multiples of this value, which defaults to 8 on disks
-larger than 596 GiB with 512\-byte logical sectors and to 1 on smaller
-disks or those with non\-512\-byte sectors. This alignment value is
-necessary to obtain optimum performance with Western Digital Advanced
-Format and similar drives with larger physical than logical sector sizes.
+to sectors that are multiples of this value, which defaults to 2048 on
+freshly formatted disks. This alignment value is necessary to obtain optimum
+performance with Western Digital Advanced Format and similar drives with larger
+physical than logical sector sizes and with some types of RAID arrays.
 
 .TP 
 .B \-b, \-\-backup=file
@@ -399,7 +398,7 @@ Non\-GPT disk detected and no \fI\-g\fR option
 .B 4
 An error prevented saving changes
 .SH "BUGS"
-As of March 2010 (version 0.6.5), \fBsgdisk\fR
+As of March 2010 (version 0.6.6), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 

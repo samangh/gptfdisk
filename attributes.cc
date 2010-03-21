@@ -32,6 +32,8 @@ Attributes::Attributes(void) {
 
    // Now reset those names that are defined....
    atNames[0] = "system partition"; // required for computer to operate
+   atNames[1] = "hide from EFI";
+   atNames[2] = "legacy BIOS bootable";
    atNames[60] = "read-only";
    atNames[62] = "hidden";
    atNames[63] = "do not automount";

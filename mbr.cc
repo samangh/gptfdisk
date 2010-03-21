@@ -588,7 +588,7 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
    // Initialize variables
    nulls = 0;
    MBRSignature = MBR_SIGNATURE;
-   diskSignature = (uint32_t) rand();
+   diskSignature = UINT32_C(0);
 
    partitions[0].status = UINT8_C(0); // Flag the protective part. as unbootable
 

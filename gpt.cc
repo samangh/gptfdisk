@@ -608,7 +608,6 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
       // store disk information....
       diskSize = myDisk.DiskSize(&err);
       blockSize = (uint32_t) myDisk.GetBlockSize();
-      sectorAlignment = myDisk.FindAlignment();
       device = deviceFilename;
       PartitionScan(); // Check for partition types, load GPT, & print summary
 
@@ -928,28 +927,24 @@ int GPTData::SaveGPTData(int quiet) {
 
    // Do it!
    if (allOK) {
-      // First, write the protective MBR...
-      allOK = protectiveMBR.WriteMBRData(&myDisk);
-
-      if (allOK && myDisk.OpenForWrite(device)) {
-         // Now write the main GPT header...
-         allOK = SaveHeader(&mainHeader, myDisk, 1);
-
-         // Now write the main partition tables...
-         if (allOK) {
-            allOK = SavePartitionTable(myDisk, mainHeader.partitionEntriesLBA);
-         } // if (allOK)
-
-         // Now seek to near the end to write the secondary GPT....
+      if (myDisk.OpenForWrite(device)) {
+         // As per UEFI specs, write the secondary table and GPT first....
          allOK = SavePartitionTable(myDisk, secondHeader.partitionEntriesLBA);
          if (!allOK)
             cerr << "Unable to save backup partition table! Perhaps the 'e' option on the experts'\n"
                  << "menu will resolve this problem.\n";
 
          // Now write the secondary GPT header...
-         if (allOK) {
-            allOK = SaveHeader(&secondHeader, myDisk, mainHeader.backupLBA);
-         } // if (allOK)
+         allOK = allOK && SaveHeader(&secondHeader, myDisk, mainHeader.backupLBA);
+
+         // Now write the main partition tables...
+         allOK = allOK && SavePartitionTable(myDisk, mainHeader.partitionEntriesLBA);
+
+         // Now write the main GPT header...
+         allOK = allOK && SaveHeader(&mainHeader, myDisk, 1);
+
+         // To top it off, write the protective MBR...
+         allOK = allOK && protectiveMBR.WriteMBRData(&myDisk);
 
          // re-read the partition table
          if (allOK) {
@@ -960,9 +955,9 @@ int GPTData::SaveGPTData(int quiet) {
             cout << "The operation has completed successfully.\n";
          } else {
             cerr << "Warning! An error was reported when writing the partition table! This error\n"
-                 << "MIGHT be harmless, but you may have trashed the disk! Use parted and, if\n"
-                 << "necessary, restore your original partition table.\n";
+                 << "MIGHT be harmless, but you may have trashed the disk!\n";
          } // if/else
+
          myDisk.Close();
       } else {
          cerr << "Unable to open device " << device << " for writing! Errno is "
@@ -1259,6 +1254,7 @@ void GPTData::DisplayGPTData(void) {
    cout << "First usable sector is " << mainHeader.firstUsableLBA
         << ", last usable sector is " << mainHeader.lastUsableLBA << "\n";
    totalFree = FindFreeBlocks(&i, &temp);
+   cout << "Partitions will be aligned on " << sectorAlignment << "-sector boundaries\n";
    cout << "Total free space is " << totalFree << " sectors ("
         << BytesToSI(totalFree * (uint64_t) blockSize) << ")\n";
    cout << "\nNumber  Start (sector)    End (sector)  Size       Code  Name\n";
@@ -1752,6 +1748,7 @@ int GPTData::ClearGPTData(void) {
    for (i = 0; i < GPT_RESERVED; i++) {
       mainHeader.reserved2[i] = '\0';
    } // for
+   sectorAlignment = DEFAULT_ALIGNMENT;
 
    // Now some semi-static items (computed based on end of disk)
    mainHeader.backupLBA = diskSize - UINT64_C(1);
@@ -1878,14 +1875,16 @@ int GPTData::Align(uint64_t* sector) {
       // Otherwise, notify the user that it couldn't be done....
       if (sectorOK == 1) {
          cout << "Information: Moved requested sector from " << original << " to "
-              << *sector << " for\nalignment purposes.\n";
+              << *sector << " in\norder to align on " << sectorAlignment
+              << "-sector boundaries.\n";
          if (!beQuiet)
             cout << "Use 'l' on the experts' menu to adjust alignment\n";
       } else {
          cout << "Information: Sector not aligned on " << sectorAlignment
               << "-sector boundary and could not be moved.\n"
               << "If you're using a Western Digital Advanced Format or similar disk with\n"
-              << "underlying 4096-byte sectors, performance may suffer.\n";
+              << "underlying 4096-byte sectors or certain types of RAID array, performance\n"
+              << "may suffer.\n";
          retval = 0;
       } // if/else
    } // if
@@ -2139,26 +2138,25 @@ void GPTData::SetAlignment(uint32_t n) {
 
    sectorAlignment = n;
    l2 = (uint32_t) log2(n);
-   if (PowerOf2(l2) != n)
-      cout << "Information: Your alignment value is not a power of 2.\n";
 } // GPTData::SetAlignment()
 
 // Compute sector alignment based on the current partitions (if any). Each
 // partition's starting LBA is examined, and if it's divisible by a power-of-2
-// value less than the maximum found so far (or 2^31 for the first partition
-// found), then the alignment value is adjusted down. If the computed
-// alignment is less than 8 and the disk is bigger than SMALLEST_ADVANCED_FORMAT,
-// resets it to 8. This is a safety measure for WD Advanced Format and
-// similar drives. If no partitions are defined, the alignment value is set
-// to DEFAULT_ALIGNMENT (2048). The result is that new drives are aligned to
-// 2048-sector multiples but the program won't complain about other alignments
-// on existing disks unless a smaller-than-8 alignment is used on small disks
-// (as safety for WD Advanced Format drives).
+// value less than or equal to the DEFAULT_ALIGNMENT value, but not by the
+// previously-located alignment value, then the alignment value is adjusted
+// down. If the computed alignment is less than 8 and the disk is bigger than
+// SMALLEST_ADVANCED_FORMAT, resets it to 8. This is a safety measure for WD
+// Advanced Format and similar drives. If no partitions are defined, the
+// alignment value is set to DEFAULT_ALIGNMENT (2048). The result is that new
+// drives are aligned to 2048-sector multiples but the program won't complain
+// about other alignments on existing disks unless a smaller-than-8 alignment
+// is used on small disks (as safety for WD Advanced Format drives).
 // Returns the computed alignment value.
 uint32_t GPTData::ComputeAlignment(void) {
    uint32_t i = 0, found, exponent = 31;
    uint64_t align = DEFAULT_ALIGNMENT;
 
+   exponent = (uint32_t) log2(DEFAULT_ALIGNMENT);
    for (i = 0; i < mainHeader.numParts; i++) {
       if (partitions[i].IsUsed()) {
          found = 0;
@@ -2174,7 +2172,6 @@ uint32_t GPTData::ComputeAlignment(void) {
    } // for
    if ((align < 8) && (diskSize >= SMALLEST_ADVANCED_FORMAT))
       align = 8;
-//   cout << "Setting alignment to " << align << "\n";
    SetAlignment(align);
    return align;
 } // GPTData::ComputeAlignment()

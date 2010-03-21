@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.6-pre1"
+#define GPTFDISK_VERSION "0.6.6"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -26,7 +26,7 @@
 
 // Default values for sector alignment
 #define DEFAULT_ALIGNMENT 2048
-#define MAX_ALIGNMENT 32768
+#define MAX_ALIGNMENT 65536
 
 // Below constant corresponds to an 800GB disk -- a somewhat arbitrary
 // cutoff

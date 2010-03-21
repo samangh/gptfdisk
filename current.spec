@@ -1,11 +1,11 @@
 Summary: An fdisk-like partitioning tool for GPT disks
 Name: gdisk
-Version: 0.6.5
+Version: 0.6.6
 Release: 1%{?dist}
 License: GPLv2
 URL: http://www.rodsbooks.com/gdisk
 Group: Applications/System
-Source: http://www.rodsbooks.com/gdisk/gdisk-0.6.5.tgz
+Source: http://www.rodsbooks.com/gdisk/gdisk-0.6.6.tgz
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
@@ -19,7 +19,7 @@ and the ability to convert MBR disks to GPT format.
 %setup -q
 
 %build
-make CFLAGS="$RPM_OPT_FLAGS" CXXFLAGS="$RPM_OPT_CXX_FLAGS"
+make CFLAGS="$RPM_OPT_FLAGS" CXXFLAGS="$RPM_OPT_CXX_FLAGS -D_FILE_OFFSET_BITS=64 -O2"
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -40,5 +40,5 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8*
 
 %changelog
-* Sun Mar 7 2010 R Smith <rodsmith@rodsbooks.com> - 0.6.5
-- Created spec file for 0.6.5 release
+* Sun Mar 21 2010 R Smith <rodsmith@rodsbooks.com> - 0.6.6
+- Created spec file for 0.6.6 release

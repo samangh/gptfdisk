@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.6.5" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.6.6" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -112,9 +112,9 @@ If Windows is to boot from a GPT disk, a partition of type \fIMicrosoft
 Reserved\fR (\fBgdisk\fR
 internal code 0x0C01) is recommended. This partition should be about 128 MiB
 in size. It ordinarily follows the EFI System Partition and immediately
-precedes the Windows data partitions. (Note that GNU Parted creates all
-FAT partitions as this type, which actually makes the partition unusable
-for normal file storage in both Windows and Mac OS X.)
+precedes the Windows data partitions. (Note that old versions of GNU Parted
+create all FAT partitions as this type, which actually makes the partition
+unusable for normal file storage in both Windows and Mac OS X.)
 
 .TP 
 .B *
@@ -208,7 +208,8 @@ the end of the same block for the end sector.
 .TP 
 .B o
 Clear out all partition data. This includes GPT header data,
-all partition definitions, and the protective MBR.
+all partition definitions, and the protective MBR. The sector alignment
+is reset to the default (2048 sectors, or 1MB).
 
 .TP 
 .B p
@@ -422,11 +423,8 @@ not in \fBgdisk\fR) or sheer incredible coincidence.
 
 .TP 
 .B d
-Display the number of logical sectors per physical sector. This value
-determines the sector alignment that GPT fdisk enforces. See the
-description of the 'l' option for more details. Note that this value is
-only auto\-detected on Linux with a 2.6.32 kernel or later; on other
-platforms, it defaults to 8.
+Display the sector alignment value. See the
+description of the 'l' option for more details.
 
 .TP 
 .B e
@@ -448,17 +446,15 @@ option on the main menu.
 
 .TP 
 .B l
-Change the number of logical sectors per physical sector. Prior to December
-of 2009, most hard disks used 512\-byte physical sectors. Starting in
-December of 2009, disk manufacturers began transitioning to disks with
-larger physical sectors, but their firmware translated to 512\-byte logical
-sectors to maintain compatibility with older OSes. If partitions begin
-mid\-physical\-sector, though, performance can suffer on such drives, since
-important filesystem data structures can span physical sectors on the disk.
-To minimize such problems, GPT fdisk aligns the start of partitions on the
-boundary of presumed physical sectors. You can set the number of logical
-sectors per physical sector with this option. The default is 1 on disks
-smaller than 596 GiB and 8 on larger disks with 512\-byte logical sectors.
+Change the sector alignment value. Disks with more logical sectors per
+physical sectors (such as some Western Digital models introduced in
+December of 2009) and some RAID configurations can suffer performance
+problems if partitions are not aligned properly for their internal data
+structures. On new disks, GPT fdisk attempts to align partitions on
+2048\-sector (1MiB) boundaries by default, which optimizes performance
+for both of these disk types. On pre\-partitioned disks, GPT fdisk
+attempts to identify the alignment value used on that disk. In either
+case, it can be changed by using this option.
 
 .TP 
 .B m
@@ -535,14 +531,16 @@ entering data. When only one option is possible, \fBgdisk\fR
 usually bypasses the prompt entirely.
 
 .SH "BUGS"
-As of March 2010 (version 0.6.5), \fBgdisk\fR
+As of March 2010 (version 0.6.6), \fBgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
 .B *
 The program compiles correctly only on Linux, FreeBSD, Mac OS X, and Windows.
 Linux versions for x86\-64 (64\-bit), x86 (32\-bit), and PowerPC (32\-bit) have been
-tested, with the x86\-64 version having seen the most testing.
+tested, with the x86\-64 version having seen the most testing. Under FreeBSD,
+32\-bit (x86) and 64\-bit (x86\-64) versions have been tested. Only 32\-bit
+versions for Mac OS X and Windows have been tested.
 
 .TP 
 .B *

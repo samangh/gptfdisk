@@ -143,8 +143,7 @@ int main(int argc, char *argv[]) {
                   } else saveData = 1;
                   break;
                case 'D':
-                  cout << "Partitions created on multiples of " << theGPT.GetAlignment()
-                       << " sector(s)\n";
+                  cout << theGPT.GetAlignment() << "\n";
                   break;
                case 'e':
                   theGPT.JustLooking(0);
