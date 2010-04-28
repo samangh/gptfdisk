@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.6"
+#define GPTFDISK_VERSION "0.6.7-pre1"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -75,6 +75,7 @@ class GPTData {
 protected:
    struct GPTHeader mainHeader;
    GPTPart *partitions;
+   uint32_t numParts;
    struct GPTHeader secondHeader;
    MBRData protectiveMBR;
    string device; // device filename

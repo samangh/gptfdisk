@@ -55,6 +55,7 @@ GPTData::GPTData(void) {
    whichWasUsed = use_new;
    srand((unsigned int) time(NULL));
    mainHeader.numParts = 0;
+   numParts = 0;
    SetGPTSize(NUM_GPT_ENTRIES);
 } // GPTData default constructor
 
@@ -77,6 +78,7 @@ GPTData::GPTData(string filename) {
    whichWasUsed = use_new;
    srand((unsigned int) time(NULL));
    mainHeader.numParts = 0;
+   numParts = 0;
    if (!LoadPartitions(filename))
       exit(2);
 } // GPTData(string filename) constructor
@@ -222,7 +224,7 @@ int GPTData::Verify(void) {
 
    // Check that partitions are aligned on proper boundaries (for WD Advanced
    // Format and similar disks)....
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       if ((partitions[i].GetFirstLBA() % sectorAlignment) != 0) {
          cout << "\nCaution: Partition " << i + 1 << " doesn't begin on a "
               << sectorAlignment << "-sector boundary. This may\nresult "
@@ -238,7 +240,7 @@ int GPTData::Verify(void) {
            << BytesToSI(totalFree * (uint64_t) blockSize) << ") available in "
            << numSegments << "\nsegments, the largest of which is "
            << largestSegment << " (" << BytesToSI(largestSegment * (uint64_t) blockSize)
-           << ") in size\n";
+           << ") in size.\n";
    } else {
       cout << "\nIdentified " << problems << " problems!\n";
    } // if/else
@@ -257,7 +259,7 @@ int GPTData::CheckGPTSize(void) {
    // first, locate the first & last used blocks
    firstUsedBlock = UINT64_MAX;
    lastUsedBlock = 0;
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       if ((partitions[i].GetFirstLBA() < firstUsedBlock) &&
            (partitions[i].GetFirstLBA() != 0))
          firstUsedBlock = partitions[i].GetFirstLBA();
@@ -372,14 +374,13 @@ int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
 // been made. Must be called on platform-ordered data (this function reverses
 // byte order and then undoes that reversal.)
 void GPTData::RecomputeCRCs(void) {
-   uint32_t crc, hSize, trueNumParts;
+   uint32_t crc, hSize;
    int littleEndian = 1;
 
    // Initialize CRC functions...
    chksum_crc32gentab();
 
    // Save some key data from header before reversing byte order....
-   trueNumParts = mainHeader.numParts;
    hSize = mainHeader.headerSize;
 
    if ((littleEndian = IsLittleEndian()) == 0) {
@@ -389,7 +390,7 @@ void GPTData::RecomputeCRCs(void) {
    } // if
 
    // Compute CRC of partition tables & store in main and secondary headers
-   crc = chksum_crc32((unsigned char*) partitions, trueNumParts * GPT_SIZE);
+   crc = chksum_crc32((unsigned char*) partitions, numParts * GPT_SIZE);
    mainHeader.partitionEntriesCRC = crc;
    secondHeader.partitionEntriesCRC = crc;
    if (littleEndian == 0) {
@@ -440,6 +441,7 @@ void GPTData::RebuildMainHeader(void) {
    for (i = 0 ; i < GPT_RESERVED; i++)
       mainHeader.reserved2[i] = secondHeader.reserved2[i];
    mainCrcOk = secondCrcOk;
+   SetGPTSize(mainHeader.numParts);
 } // GPTData::RebuildMainHeader()
 
 // Rebuild the secondary GPT header, using the main header as a model.
@@ -463,6 +465,7 @@ void GPTData::RebuildSecondHeader(void) {
    for (i = 0 ; i < GPT_RESERVED; i++)
       secondHeader.reserved2[i] = mainHeader.reserved2[i];
    secondCrcOk = mainCrcOk;
+   SetGPTSize(secondHeader.numParts);
 } // GPTData::RebuildSecondHeader()
 
 // Search for hybrid MBR entries that have no corresponding GPT partition.
@@ -483,7 +486,7 @@ int GPTData::FindHybridMismatches(void) {
                 (partitions[j].GetLastLBA() == mbrLast))
                found = 1;
             j++;
-         } while ((!found) && (j < mainHeader.numParts));
+         } while ((!found) && (j < numParts));
          if (!found) {
             numFound++;
             cout << "\nWarning! Mismatched GPT and MBR partition! MBR partition "
@@ -507,7 +510,7 @@ int GPTData::FindOverlaps(void) {
    int problems = 0;
    uint32_t i, j;
 
-   for (i = 1; i < mainHeader.numParts; i++) {
+   for (i = 1; i < numParts; i++) {
       for (j = 0; j < i; j++) {
          if (partitions[i].DoTheyOverlap(partitions[j])) {
             problems++;
@@ -530,14 +533,14 @@ int GPTData::FindInsanePartitions(void) {
    uint32_t i;
    int problems = 0;
 
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       if (partitions[i].GetFirstLBA() > partitions[i].GetLastLBA()) {
          problems++;
-         cout << "\nProblem: partition " << i << " ends before it begins.\n";
+         cout << "\nProblem: partition " << i + 1 << " ends before it begins.\n";
       } // if
       if (partitions[i].GetLastLBA() >= diskSize) {
          problems++;
-      cout << "\nProblem: partition " << i << " is too big for the disk.\n";
+      cout << "\nProblem: partition " << i + 1<< " is too big for the disk.\n";
       } // if
    } // for
    return problems;
@@ -782,7 +785,7 @@ int GPTData::LoadHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector
       ReverseHeaderBytes(&tempHeader);
    } // if
 
-   if (allOK && (mainHeader.numParts != tempHeader.numParts) && *crcOk) {
+   if (allOK && (numParts != tempHeader.numParts) && *crcOk) {
       allOK = SetGPTSize(tempHeader.numParts);
    }
 
@@ -839,14 +842,14 @@ int GPTData::CheckTable(struct GPTHeader *header) {
    uint8_t *storage;
    int newCrcOk = 0;
 
-   // Load backup partition table into temporary storage to check
+   // Load partition table into temporary storage to check
    // its CRC and store the results, then discard this temporary
    // storage, since we don't use it in any but recovery operations
    if (myDisk.Seek(header->partitionEntriesLBA)) {
-      sizeOfParts = secondHeader.numParts * secondHeader.sizeOfPartitionEntries;
+      sizeOfParts = header->numParts * header->sizeOfPartitionEntries;
       storage = new uint8_t[sizeOfParts];
       if (myDisk.Read(storage, sizeOfParts) != (int) sizeOfParts) {
-         cerr << "Warning! Error " << errno << " reading backup partition table!\n";
+         cerr << "Warning! Error " << errno << " reading partition table for CRC check!\n";
       } else {
          newCRC = chksum_crc32((unsigned char*) storage,  sizeOfParts);
          newCrcOk = (newCRC == header->partitionEntriesCRC);
@@ -1048,7 +1051,7 @@ int GPTData::SavePartitionTable(DiskIO & disk, uint64_t sector) {
    if (disk.Seek(sector)) {
       if (!littleEndian)
          ReversePartitionBytes();
-      if (disk.Write(partitions, mainHeader.sizeOfPartitionEntries * mainHeader.numParts) == -1)
+      if (disk.Write(partitions, mainHeader.sizeOfPartitionEntries * numParts) == -1)
          allOK = 0;
       if (!littleEndian)
          ReversePartitionBytes();
@@ -1062,7 +1065,7 @@ int GPTData::SavePartitionTable(DiskIO & disk, uint64_t sector) {
 // set of partitions.
 int GPTData::LoadGPTBackup(const string & filename) {
    int allOK = 1, val, err;
-   uint32_t numParts, sizeOfEntries;
+   uint32_t sizeOfEntries;
    int littleEndian = 1, shortBackup = 0;
    DiskIO backupFile;
 
@@ -1095,14 +1098,16 @@ int GPTData::LoadGPTBackup(const string & filename) {
       // this check!
       if ((val = CheckHeaderValidity()) > 0) {
          if (val == 2) { // only backup header seems to be good
-            numParts = secondHeader.numParts;
+            SetGPTSize(secondHeader.numParts);
+//            numParts = secondHeader.numParts;
             sizeOfEntries = secondHeader.sizeOfPartitionEntries;
          } else { // main header is OK
-            numParts = mainHeader.numParts;
+            SetGPTSize(mainHeader.numParts);
+//            numParts = mainHeader.numParts;
             sizeOfEntries = mainHeader.sizeOfPartitionEntries;
          } // if/else
 
-         SetGPTSize(numParts);
+//         SetGPTSize(numParts);
 
          if (secondHeader.currentLBA != diskSize - UINT64_C(1)) {
             cout << "Warning! Current disk size doesn't match that of the backup!\n"
@@ -1155,7 +1160,7 @@ int GPTData::DestroyGPT(void) {
       } // if
       if (!myDisk.Seek(mainHeader.partitionEntriesLBA))
          allOK = 0;
-      tableSize = mainHeader.numParts * mainHeader.sizeOfPartitionEntries;
+      tableSize = numParts * mainHeader.sizeOfPartitionEntries;
       emptyTable = new uint8_t[tableSize];
       for (i = 0; i < tableSize; i++)
          emptyTable[i] = 0;
@@ -1250,7 +1255,7 @@ void GPTData::DisplayGPTData(void) {
         << BytesToSI(diskSize * blockSize) << "\n";
    cout << "Logical sector size: " << blockSize << " bytes\n";
    cout << "Disk identifier (GUID): " << mainHeader.diskGUID.AsString() << "\n";
-   cout << "Partition table holds up to " << mainHeader.numParts << " entries\n";
+   cout << "Partition table holds up to " << numParts << " entries\n";
    cout << "First usable sector is " << mainHeader.firstUsableLBA
         << ", last usable sector is " << mainHeader.lastUsableLBA << "\n";
    totalFree = FindFreeBlocks(&i, &temp);
@@ -1258,7 +1263,7 @@ void GPTData::DisplayGPTData(void) {
    cout << "Total free space is " << totalFree << " sectors ("
         << BytesToSI(totalFree * (uint64_t) blockSize) << ")\n";
    cout << "\nNumber  Start (sector)    End (sector)  Size       Code  Name\n";
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       partitions[i].ShowSummary(i, blockSize);
    } // for
 } // GPTData::DisplayGPTData()
@@ -1294,7 +1299,7 @@ WhichToUse GPTData::UseWhichPartitions(void) {
       cout << "\n***************************************************************\n"
            << "Found invalid GPT and valid MBR; converting MBR to GPT format.\n";
       if (!justLooking) {
-         cout << "\aTHIS OPERATON IS POTENTIALLY DESTRUCTIVE! Exit by typing 'q' if\n"
+         cout << "\aTHIS OPERATION IS POTENTIALLY DESTRUCTIVE! Exit by typing 'q' if\n"
               << "you don't want to convert your MBR partitions to GPT format!\n";
       } // if
       cout << "***************************************************************\n\n";
@@ -1306,7 +1311,7 @@ WhichToUse GPTData::UseWhichPartitions(void) {
            << "Found invalid GPT and valid BSD disklabel; converting BSD disklabel\n"
            << "to GPT format.";
       if ((!justLooking) && (!beQuiet)) {
-      cout << "\a THIS OPERATON IS POTENTIALLY DESTRUCTIVE! Your first\n"
+      cout << "\a THIS OPERATION IS POTENTIALLY DESTRUCTIVE! Your first\n"
            << "BSD partition will likely be unusable. Exit by typing 'q' if you don't\n"
            << "want to convert your BSD partitions to GPT format!";
       } // if
@@ -1361,10 +1366,10 @@ void GPTData::XFormPartitions(void) {
    protectiveMBR.EmptyBootloader();
 
    // Convert the smaller of the # of GPT or MBR partitions
-   if (mainHeader.numParts > (MAX_MBR_PARTS))
+   if (numParts > MAX_MBR_PARTS)
       numToConvert = MAX_MBR_PARTS;
    else
-      numToConvert = mainHeader.numParts;
+      numToConvert = numParts;
 
    for (i = 0; i < numToConvert; i++) {
       origType = protectiveMBR.GetType(i);
@@ -1456,7 +1461,7 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
       cout << "MBR partition " << mbrPart + 1 << " is out of range; omitting it.\n";
       allOK = 0;
    } // if
-   if (gptPart >= mainHeader.numParts) {
+   if (gptPart >= numParts) {
       cout << "GPT partition " << gptPart + 1 << " is out of range; omitting it.\n";
       allOK = 0;
    } // if
@@ -1555,8 +1560,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
    // partition table, which causes problems when loading data from a RAID
    // array that's been expanded because this function is called when loading
    // data.
-   if (((numEntries != mainHeader.numParts) || (numEntries != secondHeader.numParts)
-       || (partitions == NULL)) && (numEntries > 0)) {
+   if (((numEntries != numParts) || (partitions == NULL)) && (numEntries > 0)) {
       newParts = new GPTPart [numEntries * sizeof (GPTPart)];
       if (newParts != NULL) {
          if (partitions != NULL) { // existing partitions; copy them over
@@ -1568,10 +1572,10 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
                     << "; cannot resize. Perhaps sorting will help.\n";
                allOK = 0;
             } else { // go ahead with copy
-               if (numEntries < mainHeader.numParts)
+               if (numEntries < numParts)
                   copyNum = numEntries;
                else
-                  copyNum = mainHeader.numParts;
+                  copyNum = numParts;
                for (i = 0; i < copyNum; i++) {
                   newParts[i] = partitions[i];
                } // for
@@ -1582,8 +1586,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
          } else { // No existing partition table; just create it
             partitions = newParts;
          } // if/else existing partitions
-         mainHeader.numParts = numEntries;
-         secondHeader.numParts = numEntries;
+         numParts = numEntries;
          mainHeader.firstUsableLBA = ((numEntries * GPT_SIZE) / blockSize) + 2 ;
          secondHeader.firstUsableLBA = mainHeader.firstUsableLBA;
          MoveSecondHeaderToEnd();
@@ -1594,6 +1597,8 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
          allOK = 0;
       } // if/else
    } // if/else
+   mainHeader.numParts = numParts;
+   secondHeader.numParts = numParts;
    return (allOK);
 } // GPTData::SetGPTSize()
 
@@ -1601,7 +1606,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
 void GPTData::BlankPartitions(void) {
    uint32_t i;
 
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       partitions[i].BlankPartition();
    } // for
 } // GPTData::BlankPartitions()
@@ -1611,10 +1616,10 @@ void GPTData::BlankPartitions(void) {
 // range, 0 if it was out of range.
 int GPTData::DeletePartition(uint32_t partNum) {
    uint64_t startSector, length;
-   uint32_t low, high, numParts, retval = 1;;
+   uint32_t low, high, numUsedParts, retval = 1;;
 
-   numParts = GetPartRange(&low, &high);
-   if ((numParts > 0) && (partNum >= low) && (partNum <= high)) {
+   numUsedParts = GetPartRange(&low, &high);
+   if ((numUsedParts > 0) && (partNum >= low) && (partNum <= high)) {
       // In case there's a protective MBR, look for & delete matching
       // MBR partition....
       startSector = partitions[partNum].GetFirstLBA();
@@ -1712,7 +1717,7 @@ int GPTData::SwapPartitions(uint32_t partNum1, uint32_t partNum2) {
    GPTPart temp;
    int allOK = 1;
 
-   if ((partNum1 < mainHeader.numParts) && (partNum2 < mainHeader.numParts)) {
+   if ((partNum1 < numParts) && (partNum2 < numParts)) {
       if (partNum1 != partNum2) {
          temp = partitions[partNum1];
          partitions[partNum1] = partitions[partNum2];
@@ -1805,7 +1810,7 @@ void GPTData::SetDiskGUID(GUIDData newGUID) {
 int GPTData::SetPartitionGUID(uint32_t pn, GUIDData theGUID) {
    int retval = 0;
 
-   if (pn < mainHeader.numParts) {
+   if (pn < numParts) {
       if (partitions[pn].GetFirstLBA() != UINT64_C(0)) {
          partitions[pn].SetUniqueGUID(theGUID);
          retval = 1;
@@ -1908,14 +1913,14 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
    uint32_t i;
    int numFound = 0;
 
-   *low = mainHeader.numParts + 1; // code for "not found"
+   *low = numParts + 1; // code for "not found"
    *high = 0;
-   if (mainHeader.numParts > 0) { // only try if partition table exists...
-      for (i = 0; i < mainHeader.numParts; i++) {
+   if (numParts > 0) { // only try if partition table exists...
+      for (i = 0; i < numParts; i++) {
          if (partitions[i].GetFirstLBA() != UINT64_C(0)) { // it exists
             *high = i; // since we're counting up, set the high value
 	        // Set the low value only if it's not yet found...
-            if (*low == (mainHeader.numParts + 1)) *low = i;
+            if (*low == (numParts + 1)) *low = i;
                numFound++;
          } // if
       } // for
@@ -1923,7 +1928,7 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
 
    // Above will leave *low pointing to its "not found" value if no partitions
    // are defined, so reset to 0 if this is the case....
-   if (*low == (mainHeader.numParts + 1))
+   if (*low == (numParts + 1))
       *low = 0;
    return numFound;
 } // GPTData::GetPartRange()
@@ -1934,9 +1939,9 @@ int GPTData::FindFirstFreePart(void) {
    int i = 0;
 
    if (partitions != NULL) {
-      while ((partitions[i].IsUsed()) && (i < (int) mainHeader.numParts))
+      while ((partitions[i].IsUsed()) && (i < (int) numParts))
          i++;
-      if (i >= (int) mainHeader.numParts)
+      if (i >= (int) numParts)
          i = -1;
    } else i = -1;
    return i;
@@ -1946,7 +1951,7 @@ int GPTData::FindFirstFreePart(void) {
 uint32_t GPTData::CountParts(void) {
    uint32_t i, counted = 0;
 
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       if (partitions[i].IsUsed())
          counted++;
    } // for
@@ -1980,7 +1985,7 @@ uint64_t GPTData::FindFirstAvailable(uint64_t start) {
    // cases where partitions are out of sequential order....
    do {
       firstMoved = 0;
-      for (i = 0; i < mainHeader.numParts; i++) {
+      for (i = 0; i < numParts; i++) {
          if ((first >= partitions[i].GetFirstLBA()) &&
              (first <= partitions[i].GetLastLBA())) { // in existing part.
             first = partitions[i].GetLastLBA() + 1;
@@ -2030,7 +2035,7 @@ uint64_t GPTData::FindLastAvailable(void) {
    // where partitions are out of logical order.
    do {
       lastMoved = 0;
-      for (i = 0; i < mainHeader.numParts; i++) {
+      for (i = 0; i < numParts; i++) {
          if ((last >= partitions[i].GetFirstLBA()) &&
              (last <= partitions[i].GetLastLBA())) { // in existing part.
             last = partitions[i].GetFirstLBA() - 1;
@@ -2049,7 +2054,7 @@ uint64_t GPTData::FindLastInFree(uint64_t start) {
    uint32_t i;
 
    nearestStart = mainHeader.lastUsableLBA;
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       if ((nearestStart > partitions[i].GetFirstLBA()) &&
           (partitions[i].GetFirstLBA() > start)) {
          nearestStart = partitions[i].GetFirstLBA() - 1;
@@ -2094,7 +2099,7 @@ int GPTData::IsFree(uint64_t sector, uint32_t *partNum) {
    int isFree = 1;
    uint32_t i;
 
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       if ((sector >= partitions[i].GetFirstLBA()) &&
            (sector <= partitions[i].GetLastLBA())) {
          isFree = 0;
@@ -2115,7 +2120,7 @@ int GPTData::IsFree(uint64_t sector, uint32_t *partNum) {
 int GPTData::IsFreePartNum(uint32_t partNum) {
    int retval = 1;
 
-   if ((partNum < mainHeader.numParts) && (partitions != NULL)) {
+   if ((partNum < numParts) && (partitions != NULL)) {
       if (partitions[partNum].IsUsed()) {
          retval = 0;
       } // if partition is in use
@@ -2157,7 +2162,7 @@ uint32_t GPTData::ComputeAlignment(void) {
    uint64_t align = DEFAULT_ALIGNMENT;
 
    exponent = (uint32_t) log2(DEFAULT_ALIGNMENT);
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       if (partitions[i].IsUsed()) {
          found = 0;
          while (!found) {
@@ -2199,19 +2204,11 @@ void GPTData::ReverseHeaderBytes(struct GPTHeader* header) {
    ReverseBytes(header->reserved2, GPT_RESERVED);
 } // GPTData::ReverseHeaderBytes()
 
-// IMPORTANT NOTE: This function requires non-reversed mainHeader
-// structure!
+// Reverse byte order for all partitions.
 void GPTData::ReversePartitionBytes() {
    uint32_t i;
 
-   // Check GPT signature on big-endian systems; this will mismatch
-   // if the function is called out of order. Unfortunately, it'll also
-   // mismatch if there's data corruption.
-   if ((mainHeader.signature != GPT_SIGNATURE) && (IsLittleEndian() == 0)) {
-      cerr << "GPT signature mismatch in GPTData::ReversePartitionBytes(). This indicates\n"
-           << "data corruption or a misplaced call to this function.\n";
-   } // if signature mismatch....
-   for (i = 0; i < mainHeader.numParts; i++) {
+   for (i = 0; i < numParts; i++) {
       partitions[i].ReversePartBytes();
    } // for
 } // GPTData::ReversePartitionBytes()

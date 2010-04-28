@@ -19,7 +19,7 @@ and the ability to convert MBR disks to GPT format.
 %setup -q
 
 %build
-make CFLAGS="$RPM_OPT_FLAGS" CXXFLAGS="$RPM_OPT_CXX_FLAGS -D_FILE_OFFSET_BITS=64 -O2"
+CFLAGS="$RPM_OPT_FLAGS" "$RPM_OPT_CXX_FLAGS" make
 
 %install
 rm -rf $RPM_BUILD_ROOT

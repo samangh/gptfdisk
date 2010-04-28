@@ -13,6 +13,7 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <locale>
 #include "mbr.h"
 #include "gpttext.h"
 #include "support.h"

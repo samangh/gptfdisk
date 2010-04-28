@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
                   if (theGPT.SetName(partNum, GetString(partName, 2))) {
                      saveData = 1;
                   } else {
-                     cerr << "Unable set set partition " << partNum + 1
+                     cerr << "Unable to set partition " << partNum + 1
                           << "'s name to '" << GetString(partName, 2) << "'!\n";
                      neverSaveData = 1;
                   } // if/else

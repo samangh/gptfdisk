@@ -1,3 +1,12 @@
+0.6.7 (?/?/2010):
+-----------------
+
+- Fixed bug that caused segfault on some invalid disks
+
+- Fixed bug that caused incorrect partition numbers to be displayed for
+  some verify problems.
+
+
 0.6.6 (3/21/2010):
 -----------------
 
