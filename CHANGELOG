@@ -1,5 +1,13 @@
-0.6.7 (?/?/2010):
+0.6.7 (5/1/2010):
 -----------------
+
+- Undid earlier change, with version 0.6.4, that wiped the MBR boot loader
+  when doing MBR-to-GPT conversions. I've now become skeptical that MBR
+  boot loaders were causing any real problems on GPT disks, so I'm going
+  back to the philosophy of leaving as much alone as possible.
+
+- Fixed bug that caused incorrect reporting of free space on 0-size disks
+  (e.g., files of 0 length passed as disk images).
 
 - Fixed bug that caused segfault on some invalid disks
 

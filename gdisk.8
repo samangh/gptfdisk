@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.6.6" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.6.7" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -155,7 +155,9 @@ Change the GPT name of a partition. This name is encoded as a UTF\-16
 string, but \fBgdisk\fR
 supports only ASCII characters as names. For the most part, Linux ignores
 the partition name, but it may be important in some OSes. GPT fdisk sets
-a default name based on the partition type code.
+a default name based on the partition type code. Note that the GPT partition
+name is different from the filesystem name, which is encoded in the filesystem's
+data structures.
 
 .TP 
 .B d

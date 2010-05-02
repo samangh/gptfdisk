@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.6" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.6.7" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -173,7 +173,9 @@ supports only ASCII characters as names. For the most part, Linux ignores
 the partition name, but it may be important in some OSes. GPT fdisk sets
 a default name based on the partition type code. If you want to set a name
 that includes a space, enclose it in quotation marks, as in
-\fIsgdisk \-c 1:"Sample Name" /dev/sdb\fR.
+\fIsgdisk \-c 1:"Sample Name" /dev/sdb\fR. Note that the GPT name of a
+partition is distinct from the filesystem name, which is encoded in the
+filesystem's data structures.
 
 .TP 
 .B \-d, \-\-delete=partnum

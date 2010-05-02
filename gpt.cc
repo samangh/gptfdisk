@@ -1363,7 +1363,6 @@ void GPTData::XFormPartitions(void) {
 
    // Clear out old data & prepare basics....
    ClearGPTData();
-   protectiveMBR.EmptyBootloader();
 
    // Convert the smaller of the # of GPT or MBR partitions
    if (numParts > MAX_MBR_PARTS)
@@ -2074,19 +2073,21 @@ uint64_t GPTData::FindFreeBlocks(uint32_t *numSegments, uint64_t *largestSegment
    uint32_t num = 0;
 
    *largestSegment = UINT64_C(0);
-   do {
-      firstBlock = FindFirstAvailable(start);
-      if (firstBlock != UINT64_C(0)) { // something's free...
-         lastBlock = FindLastInFree(firstBlock);
-         segmentSize = lastBlock - firstBlock + UINT64_C(1);
-         if (segmentSize > *largestSegment) {
-            *largestSegment = segmentSize;
+   if (diskSize > 0) {
+      do {
+         firstBlock = FindFirstAvailable(start);
+         if (firstBlock != UINT64_C(0)) { // something's free...
+            lastBlock = FindLastInFree(firstBlock);
+            segmentSize = lastBlock - firstBlock + UINT64_C(1);
+            if (segmentSize > *largestSegment) {
+               *largestSegment = segmentSize;
+            } // if
+            totalFound += segmentSize;
+            num++;
+            start = lastBlock + 1;
          } // if
-         totalFound += segmentSize;
-         num++;
-         start = lastBlock + 1;
-      } // if
-   } while (firstBlock != 0);
+      } while (firstBlock != 0);
+   } // if
    *numSegments = num;
    return totalFound;
 } // GPTData::FindFreeBlocks()
