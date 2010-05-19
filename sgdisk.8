@@ -166,7 +166,7 @@ the backup may not accurately reflect the damaged state; instead, they
 will reflect GPT fdisk's first\-pass interpretation of the GPT.
 
 .TP 
-.B \-c, \-\-change=partnum:name
+.B \-c, \-\-change\-name=partnum:name
 Change the GPT name of a partition. This name is encoded as a UTF\-16
 string, but \fBsgdisk\fR
 supports only ASCII characters as names. For the most part, Linux ignores
@@ -176,6 +176,17 @@ that includes a space, enclose it in quotation marks, as in
 \fIsgdisk \-c 1:"Sample Name" /dev/sdb\fR. Note that the GPT name of a
 partition is distinct from the filesystem name, which is encoded in the
 filesystem's data structures.
+
+.TP
+.B \-C, \-\-recompute-chs
+Recompute CHS values in protective or hybrid MBR. This option can sometimes
+help if a disk utility, OS, or BIOS doesn't like the CHS values used by the
+partitions in the protective or hybrid MBR. In particular, the GPT
+specification requires a CHS value of 0xFFFFFF for over-8GiB partitions,
+but this value is technically illegal by the usual standards. Some BIOSes
+hang if they encounter this value. This option will recompute a more normal
+CHS value -- 0xFEFFFF for over-8GiB partitions, enabling these BIOSes to
+boot.
 
 .TP 
 .B \-d, \-\-delete=partnum
@@ -217,6 +228,12 @@ sectors are available, this function returns the value 0.
 Convert an MBR or BSD disklabel disk to a GPT disk. As a safety measure, use of
 this option is required on MBR or BSD disklabel disks if you intend to save your
 changes, in order to prevent accidentally damaging such disks.
+
+.TP
+.B \-G, \-\-randomize\-guids
+Randomize the disk's GUID and all partitions' unique GUIDs (but not their
+partition type code GUIDs). This function may be used after cloning a disk
+in order to render all GUIDs once again unique.
 
 .TP 
 .B \-h, \-\-hybrid
@@ -286,6 +303,15 @@ sector. Pressing the Enter key with no input specifies the default value,
 which is the start of the largest available block for the start sector and
 the end of the same block for the end sector.
 
+.TP
+.B \-N, \-\-largest\-new
+Create a new partition that fills the largest available block of space on
+the disk. Note that if used on a completely blank disk, this is likely to
+result in a sector-moved warning, since the first available sector
+(normally 34) doesn't fall on a 2048-sector boundary (the default for
+alignment). You can use the \fI\-a\fR (\fI\-\-set\-alignment\fR) option to
+adjust the alignment, if desired.
+
 .TP 
 .B \-o, \-\-clear
 Clear out all partition data. This includes GPT header data,
@@ -336,6 +362,14 @@ launched, but this conversion is likely to produce first and/or last
 partitions that are unusable. The many BSD variants means that the
 probability of \fBsgdisk\fR being unable to convert a BSD disklabel is
 high compared to the likelihood of problems with an MBR conversion.
+
+.TP
+.B \-u, \-\-partition-guid=partnum:guid
+Set the partition unique GUID for an individual partition.
+
+.TP
+.B \-U, \-\-disk-guid=guid
+Set the GUID for the disk.
 
 .TP 
 .B \-\-usage

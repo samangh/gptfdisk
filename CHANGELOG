@@ -1,3 +1,27 @@
+0.6.8 (?/?/2010):
+-----------------
+
+- Fixed compile problem for FreeBSD (its math library lacks a log2()
+  function). Also created separate Makefile.freebsd with a couple of
+  FreeBSD-specific options.
+
+- Added -N (--largest-new) command to sgdisk. This command creates a single
+  partition that fills the largest single unpartitioned block of space on
+  the disk.
+
+- Fixed sgdisk man page error: the --change-name option was incorrectly
+  listed as --change.
+
+- Added 'h' option to gdisk experts' menu (-C or --recompute-chs in sgdisk)
+  to recompute all protective/hybrid MBR CHS values. This option is
+  intended to work around a bug in at least one BIOS that prevents the
+  computer from booting when the GPT-mandated (but technically illegal)
+  0xFFFFFF CHS value is used as the end point for a protective MBR. The
+  recomputed values will be legal (e.g., 0xFEFFFF instead of 0xFFFFFF),
+  but incorrect in GPT terms, and will therefore enable at least one
+  BIOS to boot with a GPT disk. See http://www.rodsbooks.com/gdisk/bios.html
+  for all I know about BIOS/GPT incompatibilities.
+
 0.6.7 (5/1/2010):
 -----------------
 

@@ -30,6 +30,11 @@
 
 using namespace std;
 
+#ifdef __FreeBSD__ 
+#define log2(x) (log(x) / M_LN2)
+#endif // __FreeBSD__
+
+
 /****************************************
  *                                      *
  * GPTData class and related structures *
@@ -1818,6 +1823,18 @@ int GPTData::SetPartitionGUID(uint32_t pn, GUIDData theGUID) {
    return retval;
 } // GPTData::SetPartitionGUID()
 
+// Set new random GUIDs for the disk and all partitions. Intended to be used
+// after disk cloning or similar operations that don't randomize the GUIDs.
+void GPTData::RandomizeGUIDs(void) {
+   uint32_t i;
+
+   mainHeader.diskGUID.Randomize();
+   secondHeader.diskGUID = mainHeader.diskGUID;
+   for (i = 0; i < numParts; i++)
+      if (partitions[i].IsUsed())
+         partitions[i].RandomizeUniqueGUID();
+} // GPTData::RandomizeGUIDs()
+
 // Change partition type code non-interactively. Returns 1 if
 // successful, 0 if not....
 int GPTData::ChangePartType(uint32_t partNum, uint16_t hexCode) {
@@ -1828,6 +1845,16 @@ int GPTData::ChangePartType(uint32_t partNum, uint16_t hexCode) {
    } else retval = 0;
    return retval;
 } // GPTData::ChangePartType()
+
+// Recompute the CHS values of all the MBR partitions. Used to reset
+// CHS values that some BIOSes require, despite the fact that the
+// resulting CHS values violate the GPT standard.
+void GPTData::RecomputeCHS(void) {
+   int i;
+
+   for (i = 0; i < 4; i++)
+      protectiveMBR.RecomputeCHS(i);
+} // GPTData::RecomputeCHS()
 
 // Adjust sector number so that it falls on a sector boundary that's a
 // multiple of sectorAlignment. This is done to improve the performance
@@ -2140,10 +2167,7 @@ int GPTData::IsFreePartNum(uint32_t partNum) {
 // Set partition alignment value; partitions will begin on multiples of
 // the specified value
 void GPTData::SetAlignment(uint32_t n) {
-   uint32_t l2;
-
    sectorAlignment = n;
-   l2 = (uint32_t) log2(n);
 } // GPTData::SetAlignment()
 
 // Compute sector alignment based on the current partitions (if any). Each

@@ -32,7 +32,9 @@ int CountColons(char* argument);
 int main(int argc, char *argv[]) {
    GPTData theGPT;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
-   int partNum = 0, deletePartNum = 0, infoPartNum = 0, bsdPartNum = 0, saveNonGPT = 1;
+   int partNum = 0, deletePartNum = 0, infoPartNum = 0, bsdPartNum = 0, largestPartNum = 0;
+   int saveNonGPT = 1;
+   uint32_t gptPartNum = 0;
    int alignment = DEFAULT_ALIGNMENT, retval = 0, pretend = 0;
    unsigned int hexCode;
    uint32_t tableSize = 128;
@@ -40,6 +42,7 @@ int main(int argc, char *argv[]) {
    char *device = NULL;
    char *newPartInfo = NULL, *typeCode = NULL, *partName = NULL;
    char *backupFile = NULL, *twoParts = NULL, *hybrids = NULL, *mbrParts;
+   char *partGUID = NULL, *diskGUID = NULL;
    PartType typeHelper;
 
    poptContext poptCon;
@@ -48,18 +51,21 @@ int main(int argc, char *argv[]) {
       {"set-alignment", 'a', POPT_ARG_INT, &alignment, 'a', "set sector alignment", "value"},
       {"backup", 'b', POPT_ARG_STRING, &backupFile, 'b', "backup GPT to file", "file"},
       {"change-name", 'c', POPT_ARG_STRING, &partName, 'c', "change partition's name", "partnum:name"},
+      {"recompute-chs", 'C', POPT_ARG_NONE, NULL, 'C', "recompute CHS values in protective/hybrid MBR", ""},
       {"delete", 'd', POPT_ARG_INT, &deletePartNum, 'd', "delete a partition", "partnum"},
       {"display-alignment", 'D', POPT_ARG_NONE, NULL, 'D', "show number of sectors per allocation block", ""},
       {"move-second-header", 'e', POPT_ARG_NONE, NULL, 'e', "move second header to end of disk", ""},
       {"end-of-largest", 'E', POPT_ARG_NONE, NULL, 'E', "show end of largest free block", ""},
       {"first-in-largest", 'f', POPT_ARG_NONE, NULL, 'f', "show start of the largest free block", ""},
       {"mbrtogpt", 'g', POPT_ARG_NONE, NULL, 'g', "convert MBR to GPT", ""},
+      {"randomize-guids", 'G', POPT_ARG_NONE, NULL, 'G', "randomize disk and partition GUIDs", ""},
       {"hybrid", 'h', POPT_ARG_STRING, &hybrids, 'h', "create hybrid MBR", "partnum[:partnum...]"},
       {"info", 'i', POPT_ARG_INT, &infoPartNum, 'i', "show detailed information on partition", "partnum"},
       {"load-backup", 'l', POPT_ARG_STRING, &backupFile, 'l', "load GPT backup from file", "file"},
       {"list-types", 'L', POPT_ARG_NONE, NULL, 'L', "list known partition types", ""},
       {"gpttombr", 'm', POPT_ARG_STRING, &mbrParts, 'm', "convert GPT to MBR", "partnum[:partnum...]"},
       {"new", 'n', POPT_ARG_STRING, &newPartInfo, 'n', "create new partition", "partnum:start:end"},
+      {"largest-new", 'N', POPT_ARG_INT, &largestPartNum, 'N', "create largest possible new partition", "partnum"},
       {"clear", 'o', POPT_ARG_NONE, NULL, 'o', "clear partition table", ""},
       {"print", 'p', POPT_ARG_NONE, NULL, 'p', "print partition table", ""},
       {"pretend", 'P', POPT_ARG_NONE, NULL, 'P', "make changes in memory, but don't write them", ""},
@@ -68,6 +74,8 @@ int main(int argc, char *argv[]) {
       {"resize-table", 'S', POPT_ARG_INT, &tableSize, 'S', "resize partition table", "numparts"},
       {"typecode", 't', POPT_ARG_STRING, &typeCode, 't', "change partition type code", "partnum:hexcode"},
       {"transform-bsd", 'T', POPT_ARG_INT, &bsdPartNum, 'T', "transform BSD disklabel partition to GPT", "partnum"},
+      {"partition-guid", 'u', POPT_ARG_STRING, &partGUID, 'u', "set partition GUID", "partnum:guid"},
+      {"disk-guid", 'U', POPT_ARG_STRING, &diskGUID, 'U', "set disk GUID", "guid"},
       {"verify", 'v', POPT_ARG_NONE, NULL, 'v', "check partition table integrity", ""},
       {"version", 'V', POPT_ARG_NONE, NULL, 'V', "display version information", ""},
       {"zap", 'z', POPT_ARG_NONE, NULL, 'z', "zap (destroy) GPT (but not MBR) data structures", ""},
@@ -161,6 +169,11 @@ int main(int argc, char *argv[]) {
                   saveData = 1;
                   saveNonGPT = 1;
                   break;
+               case 'G':
+                  theGPT.JustLooking(0);
+                  saveData = 1;
+                  theGPT.RandomizeGUIDs();
+                  break;
                case 'h':
                   theGPT.JustLooking(0);
                   if (BuildMBR(&theGPT, hybrids, 1) == 1)
@@ -208,6 +221,18 @@ int main(int argc, char *argv[]) {
                   } // if/else
                   free(newPartInfo);
                   break;
+               case 'N':
+                  theGPT.JustLooking(0);
+                  startSector = theGPT.FindFirstInLargest();
+                  endSector = theGPT.FindLastInFree(startSector);
+                  if (theGPT.CreatePartition(largestPartNum - 1, startSector, endSector)) {
+                     saveData = 1;
+                  } else {
+                     cerr << "Could not create partition " << largestPartNum << " from "
+                          << startSector << " to " << endSector << "\n";
+                     neverSaveData = 1;
+                  } // if/else
+                  break;
                case 'o':
                   theGPT.JustLooking(0);
                   theGPT.ClearGPTData();
@@ -228,6 +253,11 @@ int main(int argc, char *argv[]) {
                      neverSaveData = 1;
                      cerr << "Cannot swap partitions " << p1 + 1 << " and " << p2 + 1 << "\n";
                   } else saveData = 1;
+                  break;
+               case 'R':
+                  theGPT.JustLooking(0);
+                  theGPT.RecomputeCHS();
+                  saveData = 1;
                   break;
                case 's':
                   theGPT.JustLooking(0);
@@ -258,6 +288,17 @@ int main(int argc, char *argv[]) {
                   theGPT.JustLooking(0);
                   theGPT.XFormDisklabel(bsdPartNum - 1);
                   saveData = 1;
+                  break;
+               case 'u':
+                  theGPT.JustLooking(0);
+                  saveData = 1;
+                  gptPartNum = (int) GetInt(partGUID, 1) - 1;
+                  theGPT.SetPartitionGUID(gptPartNum, GetString(partGUID, 2).c_str());
+                  break;
+               case 'U':
+                  theGPT.JustLooking(0);
+                  saveData = 1;
+                  theGPT.SetDiskGUID(diskGUID);
                   break;
                case 'v':
                   theGPT.Verify();

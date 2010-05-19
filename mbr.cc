@@ -767,6 +767,23 @@ void MBRData::OptimizeEESize(void) {
    } // if
 } // MBRData::OptimizeEESize()
 
+// Recomputes the CHS values for the specified partition and adjusts the value.
+// Note that this will create a technically incorrect CHS value for EFI GPT (0xEE)
+// protective partitions, but this is required by some buggy BIOSes, so I'm
+// providing a function to do this deliberately at the user's command.
+// This function does nothing if the partition's length is 0.
+void MBRData::RecomputeCHS(int partNum) {
+   uint64_t firstLBA, lengthLBA;
+
+   firstLBA = (uint64_t) partitions[partNum].firstLBA;
+   lengthLBA = (uint64_t) partitions[partNum].lengthLBA;
+
+   if (lengthLBA > 0) {
+      LBAtoCHS(firstLBA, partitions[partNum].firstSector);
+      LBAtoCHS(firstLBA + lengthLBA - 1, partitions[partNum].lastSector);
+   } // if
+} // MBRData::RecomputeCHS()
+
 // Creates an MBR extended partition holding logical partitions that
 // correspond to the list of GPT partitions in theList. The extended
 // partition is placed in position #4 (counting from 1) in the MBR.

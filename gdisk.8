@@ -435,11 +435,28 @@ you've added disks to a RAID array, thus creating a virtual disk with space
 that follows the backup GPT data structures. This command moves the backup
 GPT data structures to the end of the disk, where they belong.
 
+.TP
+.B f
+Randomize the disk's GUID and all partitions' unique GUIDs (but not their
+partition type code GUIDs). This function may be used after cloning a disk
+with another utility in order to render all GUIDs once again unique.
+
 .TP 
 .B g
 Change disk GUID. Each disk has a unique GUID code, which \fBgdisk\fR
 assigns randomly upon creation of the GPT data structures. You can generate
 a fresh random GUID or enter one manually with this option.
+
+.TP
+.B h
+Recompute CHS values in protective or hybrid MBR. This option can sometimes
+help if a disk utility, OS, or BIOS doesn't like the CHS values used by the
+partitions in the protective or hybrid MBR. In particular, the GPT
+specification requires a CHS value of 0xFFFFFF for over-8GiB partitions,
+but this value is technically illegal by the usual standards. Some BIOSes
+hang if they encounter this value. This option will recompute a more normal
+CHS value -- 0xFEFFFF for over-8GiB partitions, enabling these BIOSes to
+boot.
 
 .TP 
 .B i

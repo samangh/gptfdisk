@@ -12,10 +12,10 @@ DEPEND= makedepend $(CXXFLAGS)
 all:	gdisk sgdisk
 
 gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
-	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o -L/opt/local/lib -L/usr/local/lib $(LDFLAGS) -luuid -o gdisk
+	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -luuid -o gdisk
 
 sgdisk: $(LIB_OBJS) sgdisk.o
-	$(CXX) $(LIB_OBJS) sgdisk.o -L/opt/local/lib -L/usr/local/lib $(LDFLAGS) -luuid -lpopt -o sgdisk
+	$(CXX) $(LIB_OBJS) sgdisk.o $(LDFLAGS) -luuid -lpopt -o sgdisk
 
 lint:	#no pre-reqs
 	lint $(SRCS)

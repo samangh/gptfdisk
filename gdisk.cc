@@ -349,9 +349,15 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             cout << "Relocating backup data structures to the end of the disk\n";
             theGPT->MoveSecondHeaderToEnd();
             break;
+         case 'f': case 'F':
+            theGPT->RandomizeGUIDs();
+            break;
          case 'g': case 'G':
             cout << "Enter the disk's unique GUID:\n";
             theGPT->SetDiskGUID(aGUID.GetGUIDFromUser());
+            break;
+         case 'h': case 'H':
+            theGPT->RecomputeCHS();
             break;
          case 'i': case 'I':
             theGPT->ShowDetails();
@@ -415,6 +421,7 @@ void ShowExpertCommands(void) {
    cout << "d\tdisplay the sector alignment value\n";
    cout << "e\trelocate backup data structures to the end of the disk\n";
    cout << "g\tchange disk GUID\n";
+   cout << "h\trecompute CHS values in protective/hybrid MBR\n";
    cout << "i\tshow detailed information on a partition\n";
    cout << "l\tset the sector alignment value\n";
    cout << "m\treturn to main menu\n";
