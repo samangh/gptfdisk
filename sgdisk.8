@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.7" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.6.8" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -365,11 +365,13 @@ high compared to the likelihood of problems with an MBR conversion.
 
 .TP
 .B \-u, \-\-partition-guid=partnum:guid
-Set the partition unique GUID for an individual partition.
+Set the partition unique GUID for an individual partition. The GUID may be
+a complete GUID or 'R' to set a random GUID.
 
 .TP
 .B \-U, \-\-disk-guid=guid
-Set the GUID for the disk.
+Set the GUID for the disk. The GUID may be a complete GUID or 'R' to set a
+random GUID.
 
 .TP 
 .B \-\-usage
@@ -529,6 +531,8 @@ Contributors:
 * Yves Blusseau (1otnwmz02@sneakemail.com)
 
 * David Hubbard (david.c.hubbard@gmail.com)
+
+* One anonymous contributor
 
 .SH "SEE ALSO"
 \fBcfdisk (8)\fR,

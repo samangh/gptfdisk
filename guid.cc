@@ -55,6 +55,8 @@ GUIDData & GUIDData::operator=(const GUIDData & orig) {
 // than 36 characters long, this function assumes the input GUID has
 // been compressed by removal of separators. In either event, there's
 // little in the way of sanity checking, so garbage in = garbage out!
+// One special case: If the first character is 'r' or 'R', a random
+// GUID is assigned.
 GUIDData & GUIDData::operator=(const string & orig) {
    string copy, fragment;
    size_t len;
@@ -63,45 +65,51 @@ GUIDData & GUIDData::operator=(const string & orig) {
    size_t shortSegs[6] = {0, 8, 12, 16, 20, 32};
    size_t *segStart = longSegs; // Assume there are separators between segments
 
-   Zero();
+   // If first character is an 'R' or 'r', set a random GUID; otherwise,
+   // try to parse it as a real GUID
+   if ((orig[0] == 'R') || (orig[0] == 'r')) {
+      Randomize();
+   } else {
+      Zero();
 
-   // Delete stray spaces....
-   copy = DeleteSpaces(orig);
+      // Delete stray spaces....
+      copy = DeleteSpaces(orig);
 
-   // If length is too short, assume there are no separators between segments
-   len = copy.length();
-   if (len < 36) {
-      segStart = shortSegs;
-   };
+      // If length is too short, assume there are no separators between segments
+      len = copy.length();
+      if (len < 36) {
+         segStart = shortSegs;
+      };
 
-   // Extract data fragments at fixed locations and convert to
-   // integral types....
-   if (len >= segStart[1]) {
-      uuidData[3] = StrToHex(copy, 0);
-      uuidData[2] = StrToHex(copy, 2);
-      uuidData[1] = StrToHex(copy, 4);
-      uuidData[0] = StrToHex(copy, 6);
-   } // if
-   if (len >= segStart[2]) {
-      uuidData[5] = StrToHex(copy, segStart[1]);
-      uuidData[4] = StrToHex(copy, segStart[1] + 2);
-   } // if
-   if (len >= segStart[3]) {
-      uuidData[7] = StrToHex(copy, segStart[2]);
-      uuidData[6] = StrToHex(copy, segStart[2] + 2);
-   } // if
-   if (len >= segStart[4]) {
-      uuidData[8] = StrToHex(copy, segStart[3]);
-      uuidData[9] = StrToHex(copy, segStart[3] + 2);
-   } // if
-   if (len >= segStart[5]) {
-      uuidData[10] = StrToHex(copy, segStart[4]);
-      uuidData[11] = StrToHex(copy, segStart[4] + 2);
-      uuidData[12] = StrToHex(copy, segStart[4] + 4);
-      uuidData[13] = StrToHex(copy, segStart[4] + 6);
-      uuidData[14] = StrToHex(copy, segStart[4] + 8);
-      uuidData[15] = StrToHex(copy, segStart[4] + 10);
-   } // if
+      // Extract data fragments at fixed locations and convert to
+      // integral types....
+      if (len >= segStart[1]) {
+         uuidData[3] = StrToHex(copy, 0);
+         uuidData[2] = StrToHex(copy, 2);
+         uuidData[1] = StrToHex(copy, 4);
+         uuidData[0] = StrToHex(copy, 6);
+      } // if
+      if (len >= segStart[2]) {
+         uuidData[5] = StrToHex(copy, segStart[1]);
+         uuidData[4] = StrToHex(copy, segStart[1] + 2);
+      } // if
+      if (len >= segStart[3]) {
+         uuidData[7] = StrToHex(copy, segStart[2]);
+         uuidData[6] = StrToHex(copy, segStart[2] + 2);
+      } // if
+      if (len >= segStart[4]) {
+         uuidData[8] = StrToHex(copy, segStart[3]);
+         uuidData[9] = StrToHex(copy, segStart[3] + 2);
+      } // if
+      if (len >= segStart[5]) {
+         uuidData[10] = StrToHex(copy, segStart[4]);
+         uuidData[11] = StrToHex(copy, segStart[4] + 2);
+         uuidData[12] = StrToHex(copy, segStart[4] + 4);
+         uuidData[13] = StrToHex(copy, segStart[4] + 6);
+         uuidData[14] = StrToHex(copy, segStart[4] + 8);
+         uuidData[15] = StrToHex(copy, segStart[4] + 10);
+      } // if
+   } // if/else randomize/set value
 
    return *this;
 } // GUIDData::operator=(const string & orig)

@@ -39,6 +39,7 @@ void DiskIO::MakeRealName(void) {
 // work.
 int DiskIO::OpenForRead(void) {
    int shouldOpen = 1;
+   struct stat64 st;
 
    if (isOpen) { // file is already open
       if (openForWrite) {
@@ -61,8 +62,22 @@ int DiskIO::OpenForRead(void) {
          isOpen = 0;
          openForWrite = 0;
       } else {
-         isOpen = 1;
+         isOpen = 0;
          openForWrite = 0;
+         if (fstat64(fd, &st) == 0) {
+            if (S_ISDIR(st.st_mode))
+               cerr << "The specified path is a directory!\n";
+#ifndef __FreeBSD__
+            else if (S_ISCHR(st.st_mode))
+               cerr << "The specified path is a character device!\n";
+#endif
+            else if (S_ISFIFO(st.st_mode))
+               cerr << "The specified path is a FIFO!\n";
+            else if (S_ISSOCK(st.st_mode))
+               cerr << "The specified path is a socket!\n";
+            else
+               isOpen = 1;
+         } // if (fstat64()...)
       } // if/else
    } // if
 

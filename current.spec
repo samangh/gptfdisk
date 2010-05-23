@@ -1,11 +1,11 @@
 Summary: An fdisk-like partitioning tool for GPT disks
 Name: gdisk
-Version: 0.6.7
+Version: 0.6.8
 Release: 1%{?dist}
 License: GPLv2
 URL: http://www.rodsbooks.com/gdisk
 Group: Applications/System
-Source: http://www.rodsbooks.com/gdisk/gdisk-0.6.7.tgz
+Source: http://www.rodsbooks.com/gdisk/gdisk-0.6.8.tgz
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
@@ -34,11 +34,11 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root -)
-%doc CHANGELOG COPYING README
+%doc NEWS COPYING README
 /sbin/gdisk
 /sbin/sgdisk
 %doc %{_mandir}/man8*
 
 %changelog
-* Sat May 1 2010 R Smith <rodsmith@rodsbooks.com> - 0.6.7
-- Created spec file for 0.6.7 release
+* Sun May 23 2010 R Smith <rodsmith@rodsbooks.com> - 0.6.8
+- Created spec file for 0.6.8 release

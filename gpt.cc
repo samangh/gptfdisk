@@ -30,10 +30,13 @@
 
 using namespace std;
 
-#ifdef __FreeBSD__ 
+#ifdef __FreeBSD__
 #define log2(x) (log(x) / M_LN2)
 #endif // __FreeBSD__
 
+#ifdef _MSC_VER
+#define log2(x) (log((double) x) / log(2.0))
+#endif // Microsoft Visual C++
 
 /****************************************
  *                                      *
