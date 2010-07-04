@@ -1,7 +1,7 @@
 /* gpt.h -- GPT and data structure definitions, types, and
    functions */
 
-/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009, 2010 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdint.h>
@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.8"
+#define GPTFDISK_VERSION "0.6.9"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,

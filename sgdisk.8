@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.8" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.6.9" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -304,7 +304,7 @@ which is the start of the largest available block for the start sector and
 the end of the same block for the end sector.
 
 .TP
-.B \-N, \-\-largest\-new
+.B \-N, \-\-largest\-new=num
 Create a new partition that fills the largest available block of space on
 the disk. Note that if used on a completely blank disk, this is likely to
 result in a sector-moved warning, since the first available sector
@@ -532,7 +532,7 @@ Contributors:
 
 * David Hubbard (david.c.hubbard@gmail.com)
 
-* One anonymous contributor
+* Justin Maggard (justin.maggard@netgear.com)
 
 .SH "SEE ALSO"
 \fBcfdisk (8)\fR,

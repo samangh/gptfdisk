@@ -23,6 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdint.h>
+#include <limits.h>
 #include <iostream>
 #include <sstream>
 #include <cstdio>
@@ -390,6 +391,7 @@ void GPTDataTextUI::MakeHybrid(void) {
       // Linux won't find any partitions on the disk.
       newNote = new struct PartInfo;
       newNote->gptPartNum = MBR_EFI_GPT;
+      newNote->firstLBA = 1;
       newNote->active = 0;
       newNote->hexCode = 0xEE;
       newNote->type = PRIMARY;

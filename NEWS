@@ -1,10 +1,20 @@
+0.6.9 (7/4/2010):
+------------------
+
+- Fixed minor error in sgdisk man page (--largest-new option requires
+  a partition number).
+
+- Fixed major bug in hybrid MBR creation, which caused incorrect
+  protective partition end point settings and occasionally other
+  problems.
+
 0.6.8 (5/23/2010):
 ------------------
 
-- Added tests to see if the file to be opened is a directory,
-  character device, FIFO, or socket; program now terminates if any of
-  these conditions is met. (Linux/FreeBSD/OS X only.) Thanks to an
-  anonymous contributor for this patch.
+- Added tests to see if the file to be opened is a directory, character
+  device, FIFO, or socket; program now terminates if any of these
+  conditions is met. (Linux/FreeBSD/OS X only.) Thanks to  Justin Maggard
+  for this patch.
 
 - Added 'f' option on gdisk's experts' menu (-G/--randomize-guids in
   sgdisk). This option randomizes the disk's GUID and all partitions'

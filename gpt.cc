@@ -1519,6 +1519,15 @@ int GPTData::PartsToMBR(PartNotes & notes) {
             protectiveMBR.SetPartBootable(mbrNum);
          mbrNum++;
       } // if
+      if (convInfo.gptPartNum == MBR_EFI_GPT)
+         mbrNum++;
+   } // for
+   // Now go through and set sizes for MBR_EFI_GPT partitions....
+   notes.Rewind();
+   mbrNum = 0;
+   while (notes.GetNextInfo(&convInfo) >= 0) {
+      if ((convInfo.gptPartNum >= 0) && (convInfo.type == PRIMARY))
+         mbrNum++;
       if (convInfo.gptPartNum == MBR_EFI_GPT) {
          if (protectiveMBR.FindFirstAvailable() == UINT32_C(1)) {
             protectiveMBR.MakePart(mbrNum, 1, protectiveMBR.FindLastInFree(1), convInfo.hexCode);
@@ -1527,12 +1536,11 @@ int GPTData::PartsToMBR(PartNotes & notes) {
             protectiveMBR.MakeBiggestPart(mbrNum, convInfo.hexCode);
          } // if/else
          mbrNum++;
-      } // if EFI GPT partition specified
-   } // for
+      } // if
+   } // while
    // Now do logical partition(s)...
    protectiveMBR.SetDisk(&myDisk);
    numConverted += protectiveMBR.CreateLogicals(notes);
-//   numConverted += PartsToLogical(notes);
    return numConverted;
 } // GPTData::PartsToMBR()
 

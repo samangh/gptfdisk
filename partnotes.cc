@@ -444,7 +444,6 @@ int PartNotes::IsLegal(void) {
    return (((p+e) <= 4) && (e <= 1));
 } // PartNotes::IsLegal()
 
-
 /*************************************************************************
  *                                                                       *
  * The following partitions manipulate the data in the quest to create a *
