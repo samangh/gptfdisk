@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.9"
+#define GPTFDISK_VERSION "0.6.10-pre1"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -125,7 +125,7 @@ public:
    int ForceLoadGPTData(void);
    int LoadMainTable(void);
    int LoadSecondTableAsMain(void);
-   int SaveGPTData(int quiet = 0);
+   int SaveGPTData(int quiet = 0, string filename = "");
    int SaveGPTBackup(const string & filename);
    int LoadGPTBackup(const string & filename);
    int SaveMBR(void);

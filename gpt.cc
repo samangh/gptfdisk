@@ -869,13 +869,16 @@ int GPTData::CheckTable(struct GPTHeader *header) {
 
 // Writes GPT (and protective MBR) to disk. Returns 1 on successful
 // write, 0 if there was a problem.
-int GPTData::SaveGPTData(int quiet) {
+int GPTData::SaveGPTData(int quiet, string filename) {
    int allOK = 1, littleEndian;
    char answer;
 
+   if (filename == "")
+      filename = device;
+
    littleEndian = IsLittleEndian();
 
-   if (device == "") {
+   if (filename == "") {
       cerr << "Device not defined.\n";
    } // if
 
@@ -938,7 +941,7 @@ int GPTData::SaveGPTData(int quiet) {
 
    // Do it!
    if (allOK) {
-      if (myDisk.OpenForWrite(device)) {
+      if (myDisk.OpenForWrite(filename)) {
          // As per UEFI specs, write the secondary table and GPT first....
          allOK = SavePartitionTable(myDisk, secondHeader.partitionEntriesLBA);
          if (!allOK)
@@ -971,7 +974,7 @@ int GPTData::SaveGPTData(int quiet) {
 
          myDisk.Close();
       } else {
-         cerr << "Unable to open device " << device << " for writing! Errno is "
+         cerr << "Unable to open device " << filename << " for writing! Errno is "
               << errno << "! Aborting write!\n";
          allOK = 0;
       } // if/else

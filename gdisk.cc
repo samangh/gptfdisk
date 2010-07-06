@@ -314,10 +314,10 @@ void ShowRecoveryCommands(void) {
 // Accept an experts' menu command. Returns only after the user
 // selects an exit command, such as 'w' or 'q'.
 void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
-   char command, line[255];
+   char command, line[255], *device;
    char* junk;
    uint32_t pn, temp1, temp2;
-   int goOn = 1;
+   int goOn = 1, i;
    GUIDData aGUID;
    ostringstream prompt;
 
@@ -395,6 +395,20 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
 	      case 't': case 'T':
 	         theGPT->SwapPartitions();
 	         break;
+         case 'u': case 'U':
+            cout << "Type device filename, or press <Enter> to exit: ";
+            device = new char[255];
+            junk = fgets(device, 255, stdin);
+            if (device[0] != '\n') {
+               i = strlen(device);
+               if (i > 0)
+                  if (device[i - 1] == '\n')
+                     device[i - 1] = '\0';
+            } // if
+            if (strlen(device) > 0)
+               theGPT->SaveGPTData(0, device);
+            delete[] device;
+            break;
          case 'v': case 'V':
             theGPT->Verify();
             break;
@@ -432,6 +446,7 @@ void ShowExpertCommands(void) {
    cout << "r\trecovery and transformation options (experts only)\n";
    cout << "s\tresize partition table\n";
    cout << "t\ttranspose two partition table entries\n";
+   cout << "u\tReplicate partition table on new device\n";
    cout << "v\tverify disk\n";
    cout << "w\twrite table to disk and exit\n";
    cout << "z\tzap (destroy) GPT data structures and exit\n";

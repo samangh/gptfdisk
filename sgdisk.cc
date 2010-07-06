@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
    char *device = NULL;
    char *newPartInfo = NULL, *typeCode = NULL, *partName = NULL;
    char *backupFile = NULL, *twoParts = NULL, *hybrids = NULL, *mbrParts;
-   char *partGUID = NULL, *diskGUID = NULL;
+   char *partGUID = NULL, *diskGUID = NULL, *outDevice = NULL;
    PartType typeHelper;
 
    poptContext poptCon;
@@ -70,6 +70,7 @@ int main(int argc, char *argv[]) {
       {"print", 'p', POPT_ARG_NONE, NULL, 'p', "print partition table", ""},
       {"pretend", 'P', POPT_ARG_NONE, NULL, 'P', "make changes in memory, but don't write them", ""},
       {"transpose", 'r', POPT_ARG_STRING, &twoParts, 'r', "transpose two partitions", "partnum:partnum"},
+      {"replicate", 'R', POPT_ARG_STRING, &outDevice, 'R', "replicate partition table", "device_filename"},
       {"sort", 's', POPT_ARG_NONE, NULL, 's', "sort partition table entries", ""},
       {"resize-table", 'S', POPT_ARG_INT, &tableSize, 'S', "resize partition table", "numparts"},
       {"typecode", 't', POPT_ARG_STRING, &typeCode, 't', "change partition type code", "partnum:hexcode"},
@@ -142,6 +143,11 @@ int main(int argc, char *argv[]) {
                      neverSaveData = 1;
                   } // if/else
                   free(partName);
+                  break;
+               case 'C':
+                  theGPT.JustLooking(0);
+                  theGPT.RecomputeCHS();
+                  saveData = 1;
                   break;
                case 'd':
                   theGPT.JustLooking(0);
@@ -256,8 +262,7 @@ int main(int argc, char *argv[]) {
                   break;
                case 'R':
                   theGPT.JustLooking(0);
-                  theGPT.RecomputeCHS();
-                  saveData = 1;
+                  theGPT.SaveGPTData(1, outDevice);
                   break;
                case 's':
                   theGPT.JustLooking(0);

@@ -1,3 +1,9 @@
+0.6.10 (??/??/2010):
+--------------------
+
+- Added ability to save partition table from one device to another
+  (gdisk: 'u' on experts' menu; sgdisk: -R or --replicate option)
+
 0.6.9 (7/4/2010):
 ------------------
 
