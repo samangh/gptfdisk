@@ -266,7 +266,6 @@ void GPTDataTextUI::SetAttributes(uint32_t partNum) {
    Attributes theAttr;
 
    theAttr.SetAttributes(partitions[partNum].GetAttributes());
-   theAttr.DisplayAttributes();
    theAttr.ChangeAttributes();
    partitions[partNum].SetAttributes(theAttr.GetAttributes());
 } // GPTDataTextUI::SetAttributes()

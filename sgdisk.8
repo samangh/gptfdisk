@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.9" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.6.10" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -153,6 +153,20 @@ freshly formatted disks. This alignment value is necessary to obtain optimum
 performance with Western Digital Advanced Format and similar drives with larger
 physical than logical sector sizes and with some types of RAID arrays.
 
+.TP
+.B \-A, \-\-attributes=list|[partnum:show|or|nand|xor|=|set|clear|toggle|get[:bitnum|hexbitmask]]
+View or set partition attributes. Use \fIlist\fR to see defined (known)
+attribute values. Omit the partition number (and even the device filename)
+when using this option. The others require a partition number. The
+\fIshow\fR and \fIget\fR options show the current attribute settings
+(all attributes or for a particular bit, respectively). The \fIor\fR,
+\fInand\fR, \fIxor\fR, \fI\=\fR, \fIset\fR, \fIclear\fR, and
+\fItoggle\fR options enable you to change the attribute bit value. The
+\fIset\fR, \fIclear\fR, \fItoggle\fR, and \fIget\fR options work on a
+bit number; the others work on a hexadecimal bit mask. For example, type 
+\fBsgdisk -A 4:set:2 /dev/sdc\fR to set the bit 2 attribute (legacy BIOS
+bootable) on partition 4 on \fI/dev/sdc\fR.
+
 .TP 
 .B \-b, \-\-backup=file
 Save partition data to a backup file. You can back up your current
@@ -210,7 +224,7 @@ that follows the backup GPT data structures. This command moves the backup
 GPT data structures to the end of the disk, where they belong.
 
 .TP 
-.B E, \-\-end\-of\-largest
+.B \-E, \-\-end\-of\-largest
 Displays the sector number of the end of the largest available block of
 sectors on the disk. A script may store this value and pass it back as
 part of \fI\-n\fR's option to create a partition. If no unallocated
@@ -338,6 +352,13 @@ instance, if partitions 1\-4 are defined, transposing 1 and 5 results in a
 table with partitions numbered from 2\-5. Transposing partitions in this
 way has no effect on their disk space allocation; it only alters their
 order in the partition table.
+
+.TP
+.B \-R, \-\-replicate=second_device_filename
+Replicate the main device's partition table on the specified second device.
+Note that the replicated partition table is an exact copy, including all
+GUIDs; if the device should have its own unique GUIDs, you should use the
+\-G option on the new disk.
 
 .TP 
 .B \-s, \-\-sort

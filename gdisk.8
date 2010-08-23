@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.6.9" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.6.10" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -523,6 +523,15 @@ empty. For instance, if partitions 1\-4 are defined, transposing 1 and 5
 results in a table with partitions numbered from 2\-5. Transposing
 partitions in this way has no effect on their disk space allocation; it
 only alters their order in the partition table.
+
+.TP
+.B u
+Replicate the current device's partition table on another device. You will
+be prompted to type the new device's filename. After the write operation
+completes, you can continue editing the original device's partition table.
+Note that the replicated partition table is an exact copy, including all
+GUIDs; if the device should have its own unique GUIDs, you should use the
+\fBf\fR option on the new disk.
 
 .TP 
 .B v

@@ -244,16 +244,35 @@ void ReverseBytes(void* theValue, int numBytes) {
    } // if
 } // ReverseBytes()
 
-// Compute (2 ^ value). Given the return type, value must be 63 or less.
-// Used in some bit-fiddling functions
-uint64_t PowerOf2(uint32_t value) {
-   uint64_t retval = 1;
-   uint32_t i;
+// Extract integer data from argument string, which should be colon-delimited
+uint64_t GetInt(const string & argument, int itemNum) {
+   int startPos = -1, endPos = -1;
+   uint64_t retval = 0;
 
-   if (value < 64) {
-      for (i = 0; i < value; i++) {
-         retval *= 2;
-      } // for
-   } else retval = 0;
+   while (itemNum-- > 0) {
+      startPos = endPos + 1;
+      endPos = argument.find(':', startPos);
+   }
+   if (endPos == (int) string::npos)
+      endPos = argument.length();
+   endPos--;
+
+   istringstream inString(argument.substr(startPos, endPos - startPos + 1));
+   inString >> retval;
    return retval;
-} // PowerOf2()
+} // GetInt()
+
+// Extract string data from argument string, which should be colon-delimited
+string GetString(const string & argument, int itemNum) {
+   int startPos = -1, endPos = -1;
+
+   while (itemNum-- > 0) {
+      startPos = endPos + 1;
+      endPos = argument.find(':', startPos);
+   }
+   if (endPos == (int) string::npos)
+      endPos = argument.length();
+   endPos--;
+
+   return argument.substr(startPos, endPos - startPos + 1);
+} // GetString()

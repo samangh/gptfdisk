@@ -55,6 +55,9 @@ string BytesToSI(uint64_t size);
 unsigned char StrToHex(const string & input, unsigned int position);
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
-uint64_t PowerOf2(uint32_t value);
+
+// Extract colon-separated fields from a string....
+uint64_t GetInt(const string & argument, int itemNum);
+string GetString(const string & Info, int itemNum);
 
 #endif

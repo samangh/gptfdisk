@@ -1,8 +1,22 @@
-0.6.10 (??/??/2010):
---------------------
+0.6.10 (8/22/2010):
+-------------------
 
-- Added ability to save partition table from one device to another
-  (gdisk: 'u' on experts' menu; sgdisk: -R or --replicate option)
+- Enable disk-wipe (-z and -Z) and verification (-v) operations in
+  sgdisk even if the disk is badly damaged.
+
+- Added support for setting attributes in sgdisk (-A/--attributes option)
+  in sgdisk.
+
+- Fixed bug that created backwards attribute field values (bit #2 was
+  entered as bit #61, etc.).
+
+- Fixed bug that caused creation of hybrid MBR to wipe out the MBR's boot
+  code.
+
+- Added ability to save partition table from one device to another (gdisk:
+  'u' on experts' menu; sgdisk: -R or --replicate option).
+
+- Fixed inaccessible -C/--recompute-chs option in sgdisk.
 
 0.6.9 (7/4/2010):
 ------------------

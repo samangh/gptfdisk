@@ -645,7 +645,7 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
             break;
          case use_abort:
             allOK = 0;
-            cerr << "Aborting because of invalid partition data!\n";
+            cerr << "Invalid partition data!\n";
             break;
       } // switch
 
@@ -1510,7 +1510,7 @@ int GPTData::PartsToMBR(PartNotes & notes) {
    int mbrNum = 0, numConverted = 0;
    struct PartInfo convInfo;
 
-   protectiveMBR.EmptyMBR();
+   protectiveMBR.EmptyMBR(0);
    protectiveMBR.SetDiskSize(diskSize);
    notes.Rewind();
    while (notes.GetNextInfo(&convInfo) >= 0) {
@@ -2205,7 +2205,7 @@ uint32_t GPTData::ComputeAlignment(void) {
       if (partitions[i].IsUsed()) {
          found = 0;
          while (!found) {
-            align = PowerOf2(exponent);
+            align = UINT64_C(1)<<exponent;
             if ((partitions[i].GetFirstLBA() % align) == 0) {
                found = 1;
             } else {
@@ -2251,6 +2251,53 @@ void GPTData::ReversePartitionBytes() {
       partitions[i].ReversePartBytes();
    } // for
 } // GPTData::ReversePartitionBytes()
+
+// Validate partition number
+bool GPTData::ValidPartNum (const uint32_t partNum) {
+   if (partNum >= numParts) {
+      cerr << "Partition number out of range: " << (signed) partNum << endl;
+      return false;
+   } // if
+   return true;
+} // GPTData::ValidPartNum
+
+// Manage attributes for a partition, based on commands passed to this function.
+// (Function is non-interactive.)
+// Returns 1 if a modification command succeeded, 0 if the command should not have
+// modified data, and -1 if a modification command failed.
+int GPTData::ManageAttributes(int partNum, const string & command, const string & bits) {
+   int retval = 0;
+   Attributes theAttr;
+
+   if (command == "show") {
+      ShowAttributes(partNum);
+   } else if (command == "get") {
+      GetAttribute(partNum, bits);
+   } else {
+      theAttr = partitions[partNum].GetAttributes();
+      if (theAttr.OperateOnAttributes(partNum, command, bits)) {
+         partitions[partNum].SetAttributes(theAttr.GetAttributes());
+         retval = 1;
+      } else {
+         retval = -1;
+      } // if/else
+   } // if/elseif/else
+
+   return retval;
+} // GPTData::ManageAttributes()
+
+// Show all attributes for a specified partition....
+void GPTData::ShowAttributes(const uint32_t partNum) {
+   Attributes theAttr (partitions[partNum].GetAttributes());
+   theAttr.ShowAttributes(partNum);
+} // GPTData::ShowAttributes
+
+// Show whether a single attribute bit is set (terse output)...
+void GPTData::GetAttribute(const uint32_t partNum, const string& attributeBits) {
+   Attributes theAttr (partitions[partNum].GetAttributes());
+   theAttr.OperateOnAttributes(partNum, "get", attributeBits);
+} // GPTData::GetAttribute
+
 
 /******************************************
  *                                        *

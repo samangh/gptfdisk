@@ -19,13 +19,12 @@
 #include "gpt.h"
 #include "support.h"
 #include "parttypes.h"
+#include "attributes.h"
 
 using namespace std;
 
 #define MAX_OPTIONS 50
 
-uint64_t GetInt(char* Info, int itemNum);
-string GetString(char* Info, int itemNum);
 int BuildMBR(GPTData* theGPT, char* argument, int isHybrid);
 int CountColons(char* argument);
 
@@ -39,15 +38,18 @@ int main(int argc, char *argv[]) {
    unsigned int hexCode;
    uint32_t tableSize = 128;
    uint64_t startSector, endSector;
+   char *attributeOperation = NULL;
    char *device = NULL;
    char *newPartInfo = NULL, *typeCode = NULL, *partName = NULL;
    char *backupFile = NULL, *twoParts = NULL, *hybrids = NULL, *mbrParts;
    char *partGUID = NULL, *diskGUID = NULL, *outDevice = NULL;
+   string cmd;
    PartType typeHelper;
 
    poptContext poptCon;
    struct poptOption theOptions[] =
    {
+      {"attributes", 'A', POPT_ARG_STRING, &attributeOperation, 'A', "operate on partition attributes", "list|[partnum:show|or|nand|xor|=|set|clear|toggle|get[:bitnum|hexbitmask]]"},
       {"set-alignment", 'a', POPT_ARG_INT, &alignment, 'a', "set sector alignment", "value"},
       {"backup", 'b', POPT_ARG_STRING, &backupFile, 'b', "backup GPT to file", "file"},
       {"change-name", 'c', POPT_ARG_STRING, &partName, 'c', "change partition's name", "partnum:name"},
@@ -98,6 +100,11 @@ int main(int argc, char *argv[]) {
    // with options that don't require a device filename....
    while ((opt = poptGetNextOpt(poptCon)) > 0) {
       switch (opt) {
+         case 'A':
+            cmd = GetString(attributeOperation, 1);
+            if (cmd == "list")
+               Attributes::ListAttributes();
+            break;
          case 'L':
             typeHelper.ShowAllTypes();
             break;
@@ -125,6 +132,25 @@ int main(int argc, char *argv[]) {
             saveNonGPT = 0; // flag so we don't overwrite unless directed to do so
          while ((opt = poptGetNextOpt(poptCon)) > 0) {
             switch (opt) {
+               case 'A': {
+                  if (cmd != "list") {
+                     partNum = (int) GetInt(attributeOperation, 1) - 1;
+                     switch (theGPT.ManageAttributes(partNum, GetString(attributeOperation, 2),
+                           GetString(attributeOperation, 3))) {
+                        case -1:
+                           saveData = 0;
+                           neverSaveData = 1;
+                           break;
+                        case 1:
+                           theGPT.JustLooking(0);
+                           saveData = 1;
+                           break;
+                        default:
+                           break;
+                     } // switch
+                  } // if
+                  break;
+               } // case 'A':
                case 'a':
                   theGPT.SetAlignment(alignment);
                   break;
@@ -339,6 +365,31 @@ int main(int argc, char *argv[]) {
             retval = 4;
          } // if
       } else { // if loaded OK
+         poptResetContext(poptCon);
+         // Do a few types of operations even if there are problems....
+         while ((opt = poptGetNextOpt(poptCon)) > 0) {
+            switch (opt) {
+               case 'v':
+                  cout << "Verification may miss some problems!\n";
+                  theGPT.Verify();
+                  break;
+               case 'z':
+                  if (!pretend) {
+                     theGPT.DestroyGPT();
+                  } // if
+                  saveNonGPT = 0;
+                  saveData = 0;
+                  break;
+               case 'Z':
+                  if (!pretend) {
+                     theGPT.DestroyGPT();
+                     theGPT.DestroyMBR();
+                  } // if
+                  saveNonGPT = 0;
+                  saveData = 0;
+                  break;
+            } // switch
+         } // while
          retval = 2;
       } // if/else loaded OK
    } // if (device != NULL)
@@ -346,43 +397,6 @@ int main(int argc, char *argv[]) {
 
    return retval;
 } // main
-
-// Extract integer data from argument string, which should be colon-delimited
-uint64_t GetInt(char* argument, int itemNum) {
-   int startPos = -1, endPos = -1;
-   uint64_t retval = 0;
-   string Info;
-
-   Info = argument;
-   while (itemNum-- > 0) {
-      startPos = endPos + 1;
-      endPos = Info.find(':', startPos);
-   }
-   if (endPos == (int) string::npos)
-      endPos = Info.length();
-   endPos--;
-
-   istringstream inString(Info.substr(startPos, endPos - startPos + 1));
-   inString >> retval;
-   return retval;
-} // GetInt()
-
-// Extract string data from argument string, which should be colon-delimited
-string GetString(char* argument, int itemNum) {
-   int startPos = -1, endPos = -1;
-   string Info;
-
-   Info = argument;
-   while (itemNum-- > 0) {
-      startPos = endPos + 1;
-      endPos = Info.find(':', startPos);
-   }
-   if (endPos == (int) string::npos)
-      endPos = Info.length();
-   endPos--;
-
-   return Info.substr(startPos, endPos - startPos + 1);
-} // GetString()
 
 // Create a hybrid or regular MBR from GPT data structures
 int BuildMBR(GPTData* theGPT, char* argument, int isHybrid) {
