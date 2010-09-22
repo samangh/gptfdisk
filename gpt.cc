@@ -227,6 +227,9 @@ int GPTData::Verify(void) {
    // Check for mismatched MBR and GPT partitions...
    problems += FindHybridMismatches();
 
+   // Check for MBR-specific problems....
+   problems += VerifyMBR();
+
    // Verify that partitions don't run into GPT data areas....
    problems += CheckGPTSize();
 
@@ -1512,6 +1515,7 @@ int GPTData::PartsToMBR(PartNotes & notes) {
 
    protectiveMBR.EmptyMBR(0);
    protectiveMBR.SetDiskSize(diskSize);
+   notes.MakeItLegal();
    notes.Rewind();
    while (notes.GetNextInfo(&convInfo) >= 0) {
       if ((convInfo.gptPartNum >= 0) && (convInfo.type == PRIMARY)) {
@@ -1856,6 +1860,17 @@ int GPTData::ChangePartType(uint32_t partNum, uint16_t hexCode) {
 
    if (!IsFreePartNum(partNum)) {
       partitions[partNum].SetType(hexCode);
+   } else retval = 0;
+   return retval;
+} // GPTData::ChangePartType()
+
+// Change partition type code non-interactively. Returns 1 if
+// successful, 0 if not....
+int GPTData::ChangePartType(uint32_t partNum, PartType theGUID) {
+   int retval = 1;
+
+   if (!IsFreePartNum(partNum)) {
+      partitions[partNum].SetType(theGUID);
    } else retval = 0;
    return retval;
 } // GPTData::ChangePartType()

@@ -89,6 +89,7 @@ class PartNotes {
       int IsLegal(void); // returns boolean
 
       // Manipulate data or metadata
+      void RemoveDuplicates(void);
       int MakeItLegal(void);
       void TrimSmallestExtended(void);
 

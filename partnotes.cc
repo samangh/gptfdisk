@@ -451,14 +451,36 @@ int PartNotes::IsLegal(void) {
  *                                                                       *
  *************************************************************************/
 
+// Remove duplicate partitions from the list.
+void PartNotes::RemoveDuplicates(void) {
+   struct PartInfo *n1, *n2;
+
+   n1 = notes;
+   while (n1 != NULL) {
+      n2 = n1->next;
+      while (n2 != NULL) {
+         if ((n1->firstLBA == n2->firstLBA) && (n1->lastLBA == n2->lastLBA)) {
+            n1->next = n2->next;
+            delete n2;
+            n2 = n1->next;
+         } else {
+            n2 = n2->next;
+         } // if/else
+      } // while (n2 != NULL)
+      n1 = n1->next;
+   } // while (n1 != NULL)
+} // PartNotes::RemoveDuplicates()
+
 // Creates a legal mix of primaries and logicals, maximizing the number
-// of included partitions.
+// of included partitions. Also removes duplicates.
 // Returns 1 if successful, 0 if not (if missing notes list, say)
 int PartNotes::MakeItLegal(void) {
    struct PartInfo *theNote, *lastPrimary;
 
    if (notes == NULL)
       return 0;
+
+   RemoveDuplicates();
 
    if (!IsLegal()) {
       // Start by eliminating or converting excessive extended partitions...

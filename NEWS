@@ -1,7 +1,24 @@
 0.6.11 (??/??/2010):
 --------------------
 
-- 
+- The -t option to sgdisk now accepts GUID values as well as the
+  sgdisk/gdisk-specific two-byte hex codes.
+
+- Added check that the protective 0xEE MBR partition begins on sector 1
+  to the verify function. If it doesn't, a warning message is displayed,
+  but it doesn't count as an error.
+
+- Added check for overlapping MBR partitions to verify function (gdisk "v"
+  function on all menus; sgdisk -v/--verify function). Also warns about
+  multiple MBR 0xEE partitions (causes problems in some OSes).
+
+- Added check to GPT-to-MBR and hybrid MBR creation options to prevent
+  creation of disks with duplicate partitions. When told to create a disk
+  with duplicates, sgdisk now aborts with the error message "Problem
+  creating MBR!" When attempting to create a hybrid MBR with duplicates,
+  gdisk silently drops duplicate partitions, leaving fewer than requested.
+  Creating duplicates should not be possible in sgdisk when converting to
+  MBR form.
 
 0.6.10 (8/22/2010):
 -------------------

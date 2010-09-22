@@ -535,6 +535,44 @@ int MBRData::LBAtoCHS(uint64_t lba, uint8_t * chs) {
    return (retval);
 } // MBRData::LBAtoCHS()
 
+// Look for problems -- overlapping partitions, etc.
+int MBRData::Verify(void) {
+   int i, j, theyOverlap, numProbs = 0, numEE = 0;
+   uint32_t firstLBA1, firstLBA2, lastLBA1, lastLBA2;
+
+   for (i = 0; i < MAX_MBR_PARTS; i++) {
+      for (j = i + 1; j < MAX_MBR_PARTS; j++) {
+         theyOverlap = 0;
+         firstLBA1 = partitions[i].firstLBA;
+         firstLBA2 = partitions[j].firstLBA;
+         if ((firstLBA1 != 0) && (firstLBA2 != 0)) {
+            lastLBA1 = partitions[i].firstLBA + partitions[i].lengthLBA - 1;
+            lastLBA2 = partitions[j].firstLBA + partitions[j].lengthLBA - 1;
+            if ((firstLBA1 < lastLBA2) && (lastLBA1 >= firstLBA2))
+               theyOverlap = 1;
+            if ((firstLBA2 < lastLBA1) && (lastLBA2 >= firstLBA1))
+               theyOverlap = 1;
+         } // if
+         if (theyOverlap) {
+            numProbs++;
+            cout << "\nProblem: MBR partitions " << i + 1 << " and " << j + 1
+                 << " overlap!\n";
+         } // if
+      } // for (j...)
+      if (partitions[i].partitionType == 0xEE) {
+         numEE++;
+         if (partitions[i].firstLBA != 1)
+            cout << "\nWarning: 0xEE partition doesn't start on sector 1. This can cause problems\n"
+                 << "in some OSes.\n";
+      } // if
+   } // for (i...)
+   if (numEE > 1)
+      cout << "\nCaution: More than one 0xEE MBR partition found. This can cause problems\n"
+           << "in some OSes.\n";
+
+   return numProbs;
+} // MBRData::Verify()
+
 /*****************************************************
  *                                                   *
  * Functions to create, delete, or change partitions *

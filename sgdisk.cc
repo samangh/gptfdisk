@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
    char *newPartInfo = NULL, *typeCode = NULL, *partName = NULL;
    char *backupFile = NULL, *twoParts = NULL, *hybrids = NULL, *mbrParts;
    char *partGUID = NULL, *diskGUID = NULL, *outDevice = NULL;
-   string cmd;
+   string cmd, typeGUID;
    PartType typeHelper;
 
    poptContext poptCon;
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
       {"replicate", 'R', POPT_ARG_STRING, &outDevice, 'R', "replicate partition table", "device_filename"},
       {"sort", 's', POPT_ARG_NONE, NULL, 's', "sort partition table entries", ""},
       {"resize-table", 'S', POPT_ARG_INT, &tableSize, 'S', "resize partition table", "numparts"},
-      {"typecode", 't', POPT_ARG_STRING, &typeCode, 't', "change partition type code", "partnum:hexcode"},
+      {"typecode", 't', POPT_ARG_STRING, &typeCode, 't', "change partition type code", "partnum:{hexcode|GUID}"},
       {"transform-bsd", 'T', POPT_ARG_INT, &bsdPartNum, 'T', "transform BSD disklabel partition to GPT", "partnum"},
       {"partition-guid", 'u', POPT_ARG_STRING, &partGUID, 'u', "set partition GUID", "partnum:guid"},
       {"disk-guid", 'U', POPT_ARG_STRING, &diskGUID, 'U', "set disk GUID", "guid"},
@@ -305,12 +305,18 @@ int main(int argc, char *argv[]) {
                case 't':
                   theGPT.JustLooking(0);
                   partNum = (int) GetInt(typeCode, 1) - 1;
-                  sscanf(GetString(typeCode, 2).c_str(), "%x", &hexCode);
-                  if (theGPT.ChangePartType(partNum, hexCode)) {
+                  cout << "Got string '" << GetString(typeCode, 2) << "'\n";
+                  if (GetString(typeCode, 2).length() < 10) {
+                     sscanf(GetString(typeCode, 2).c_str(), "%x", &hexCode);
+                     typeHelper = hexCode;
+                  } else {
+                     typeHelper = GetString(typeCode, 2);
+                  } // if/else hexCode or GUID
+                  if (theGPT.ChangePartType(partNum, typeHelper)) {
                      saveData = 1;
                   } else {
                      cerr << "Could not change partition " << partNum + 1
-                          << "'s type code to " << hex << hexCode << "!\n" << dec;
+                          << "'s type code to " << GetString(typeCode, 2) << "!\n";
                      neverSaveData = 1;
                   } // if/else
                   free(typeCode);
@@ -370,7 +376,7 @@ int main(int argc, char *argv[]) {
          while ((opt = poptGetNextOpt(poptCon)) > 0) {
             switch (opt) {
                case 'v':
-                  cout << "Verification may miss some problems!\n";
+                  cout << "Verification may miss some problems or report too many!\n";
                   theGPT.Verify();
                   break;
                case 'z':

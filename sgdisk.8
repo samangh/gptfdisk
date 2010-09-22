@@ -369,9 +369,10 @@ changes. Such changes will be reflected in your device filenames, so you
 may need to edit \fI/etc/fstab\fR if you use this option.
 
 .TP 
-.B \-t, \-\-typecode=partnum:hexcode
-Change a single partition's type code. You enter the type code using a
-two\-byte hexadecimal number, as described earlier.
+.B \-t, \-\-typecode=partnum:{hexcode|GUID}
+Change a single partition's type code. You enter the type code using either
+a two\-byte hexadecimal number, as described earlier, or a fully-specified
+GUID value, such as EBD0A0A2-B9E5-4433-87C0-68B6B72699C7.
 
 .TP 
 .B \-T, \-\-transform\-bsd=partnum

@@ -110,6 +110,7 @@ public:
    void SetHybrid(void) {state = hybrid;} // Set hybrid flag
    void SetCHSGeom(uint32_t h, uint32_t s);
    int LBAtoCHS(uint64_t lba, uint8_t * chs); // Convert LBA to CHS
+   int Verify(void);
 
    // Functions to create, delete, or change partitions
    // Pass EmptyMBR 1 to clear the boot loader code, 0 to leave it intact
