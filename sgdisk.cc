@@ -35,7 +35,6 @@ int main(int argc, char *argv[]) {
    int saveNonGPT = 1;
    uint32_t gptPartNum = 0;
    int alignment = DEFAULT_ALIGNMENT, retval = 0, pretend = 0;
-   unsigned int hexCode;
    uint32_t tableSize = 128;
    uint64_t startSector, endSector;
    char *attributeOperation = NULL;
@@ -305,14 +304,9 @@ int main(int argc, char *argv[]) {
                case 't':
                   theGPT.JustLooking(0);
                   partNum = (int) GetInt(typeCode, 1) - 1;
-                  cout << "Got string '" << GetString(typeCode, 2) << "'\n";
-                  if (GetString(typeCode, 2).length() < 10) {
-                     sscanf(GetString(typeCode, 2).c_str(), "%x", &hexCode);
-                     typeHelper = hexCode;
-                  } else {
-                     typeHelper = GetString(typeCode, 2);
-                  } // if/else hexCode or GUID
-                  if (theGPT.ChangePartType(partNum, typeHelper)) {
+                  typeHelper = GetString(typeCode, 2);
+                  if ((typeHelper != (GUIDData) "00000000-0000-0000-0000-000000000000") &&
+                      (theGPT.ChangePartType(partNum, typeHelper))) {
                      saveData = 1;
                   } else {
                      cerr << "Could not change partition " << partNum + 1

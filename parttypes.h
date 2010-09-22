@@ -39,10 +39,12 @@ public:
    // Set up type information
    int AddType(uint16_t mbrType, const char * guidData, const char * name, int toDisplay = 1);
 
+   // New assignment operators....
+   PartType & operator=(const string & orig);
+   PartType & operator=(const char * orig);
+
    // Assignment operators based on base class....
    GUIDData & operator=(const GUIDData & orig) {return GUIDData::operator=(orig);}
-   GUIDData & operator=(const string & orig) {return GUIDData::operator=(orig);}
-   GUIDData & operator=(const char * orig) {return GUIDData::operator=(orig);}
 
    // New data assignment
    PartType & operator=(uint16_t ID); // Use MBR type code times 0x0100 to assign GUID

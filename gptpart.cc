@@ -243,26 +243,26 @@ void GPTPart::ReversePartBytes(void) {
 void GPTPart::ChangeType(void) {
    char line[255];
    char* junk;
-   unsigned int typeNum = 0xFFFF, changeName = 0;
+   unsigned int changeName = 0;
+   PartType tempType = (GUIDData) "00000000-0000-0000-0000-000000000000";
 
    if (GetDescription() == GetTypeName())
-      changeName = 1;
+      changeName = UINT16_C(1);
 
    cout << "Current type is '" << GetTypeName() << "'\n";
-   while ((!partitionType.Valid(typeNum)) && (typeNum != 0)) {
-      cout << "Hex code (L to show codes, 0 to enter raw code, Enter = 0700): ";
+   do {
+      cout << "Hex code or GUID (L to show codes, Enter = 0700): ";
       junk = fgets(line, 255, stdin);
-      sscanf(line, "%X", &typeNum);
-      if ((line[0] == 'L') || (line[0] == 'l'))
+      if ((line[0] == 'L') || (line[0] == 'l')) {
          partitionType.ShowAllTypes();
-      if (line[0] == '\n') {
-         typeNum = 0x0700;
-      } // if
-   } // while
-   if (typeNum != 0) // user entered a code, so convert it
-      partitionType = typeNum;
-   else // user wants to enter the GUID directly, so do that
-      partitionType.GetGUIDFromUser();
+      } else {
+         if (strlen(line) == 1)
+            tempType = 0x0700;
+         else
+            tempType = line;
+      } // if/else
+   } while (tempType == (GUIDData) "00000000-0000-0000-0000-000000000000");
+   partitionType = tempType;
    cout << "Changed type of partition to '" << partitionType.TypeName() << "'\n";
    if (changeName) {
       SetDefaultDescription();

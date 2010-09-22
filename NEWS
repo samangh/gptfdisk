@@ -1,6 +1,9 @@
 0.6.11 (??/??/2010):
 --------------------
 
+- Changed partition type code entry in gdisk so that it directly
+  accepts GUID values rather than requiring typing "0" to do so.
+
 - The -t option to sgdisk now accepts GUID values as well as the
   sgdisk/gdisk-specific two-byte hex codes.
 

@@ -1855,17 +1855,6 @@ void GPTData::RandomizeGUIDs(void) {
 
 // Change partition type code non-interactively. Returns 1 if
 // successful, 0 if not....
-int GPTData::ChangePartType(uint32_t partNum, uint16_t hexCode) {
-   int retval = 1;
-
-   if (!IsFreePartNum(partNum)) {
-      partitions[partNum].SetType(hexCode);
-   } else retval = 0;
-   return retval;
-} // GPTData::ChangePartType()
-
-// Change partition type code non-interactively. Returns 1 if
-// successful, 0 if not....
 int GPTData::ChangePartType(uint32_t partNum, PartType theGUID) {
    int retval = 1;
 

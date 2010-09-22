@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.11-pre1"
+#define GPTFDISK_VERSION "0.6.11-pre2"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -162,7 +162,6 @@ public:
    void SetDiskGUID(GUIDData newGUID);
    int SetPartitionGUID(uint32_t pn, GUIDData theGUID);
    void RandomizeGUIDs(void);
-   int ChangePartType(uint32_t pn, uint16_t hexCode);
    int ChangePartType(uint32_t pn, PartType theGUID);
    void MakeProtectiveMBR(void) {protectiveMBR.MakeProtectiveMBR();}
    void RecomputeCHS(void);
