@@ -44,16 +44,17 @@ class GUIDData {
       GUIDData & operator=(const GUIDData & orig);
       GUIDData & operator=(const string & orig);
       GUIDData & operator=(const char * orig);
-      GUIDData & GetGUIDFromUser(void);
       void Zero(void);
       void Randomize(void);
 
       // Data tests....
-      int operator==(const GUIDData & orig);
-      int operator!=(const GUIDData & orig);
+      int operator==(const GUIDData & orig) const;
+      int operator!=(const GUIDData & orig) const;
 
       // Data retrieval....
-      string AsString(void);
+      string AsString(void) const;
 }; // class GUIDData
+
+ostream & operator<<(ostream & os, const GUIDData & data);
 
 #endif

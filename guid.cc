@@ -15,6 +15,7 @@
 #define __STDC_CONSTANT_MACROS
 
 #include <stdio.h>
+#include <time.h>
 #include <string>
 #include <iostream>
 #include "guid.h"
@@ -23,6 +24,7 @@
 using namespace std;
 
 GUIDData::GUIDData(void) {
+   srand(time(0));
    Zero();
 } // constructor
 
@@ -119,52 +121,6 @@ GUIDData & GUIDData::operator=(const char * orig) {
    return operator=((string) orig);
 } // GUIDData::operator=(const char * orig)
 
-// Read a GUIDData from stdin, prompting the user along the way for the
-// correct form. This is a bit more flexible than it claims; it parses
-// any entry of 32 or 36 characters as a GUID (
-GUIDData & GUIDData::GetGUIDFromUser(void) {
-   string part1, part2, part3, part4, part5;
-   char line[255];
-   int entered = 0;
-
-   cout << "\nA GUID is entered in five segments of from two to six bytes, with\n"
-        << "dashes between segments.\n";
-   cout << "Enter the entire GUID, a four-byte hexadecimal number for the first segment, or\n"
-        << "'R' to generate the entire GUID randomly: ";
-   cin.get(line, 255);
-   part1 = DeleteSpaces(line);
-
-   // If user entered 'r' or 'R', generate GUID randomly....
-   if ((part1[0] == 'r') || (part1[0] == 'R')) {
-      Randomize();
-      entered = 1;
-   } // if user entered 'R' or 'r'
-
-   // If string length is right for whole entry, try to parse it....
-   if (((part1.length() == 36) || (part1.length() == 32)) && (entered == 0)) {
-      operator=(part1);
-      entered = 1;
-   } // if
-
-   // If neither of the above methods of entry was used, use prompted
-   // entry....
-   if (entered == 0) {
-      cout << "Enter a two-byte hexadecimal number for the second segment: ";
-      cin >> part2;
-      cout << "Enter a two-byte hexadecimal number for the third segment: ";
-      cin >> part3;
-      cout << "Enter a two-byte hexadecimal number for the fourth segment: ";
-      cin >> part4;
-      cout << "Enter a six-byte hexadecimal number for the fifth segment: ";
-      cin >> part5;
-      operator=(part1 += (string) "-" += part2 += (string) "-" += part3
-                += (string) "-" += part4 += (string) "-" += part5);
-   } // if/else
-   cin.ignore(255, '\n');
-   cout << "New GUID: " << AsString() << "\n";
-   return *this;
-} // GUIDData::GetGUIDData(void)
-
 // Erase the contents of the GUID
 void GUIDData::Zero(void) {
    int i;
@@ -189,12 +145,12 @@ void GUIDData::Randomize(void) {
 #else
    int i;
    for (i = 0; i < 16; i++)
-      uuidData[i] = rand();
+      uuidData[i] = (unsigned char) (256.0 * (rand() / (RAND_MAX + 1.0)));
 #endif
 } // GUIDData::Randomize
 
 // Equality operator; returns 1 if the GUIDs are equal, 0 if they're unequal
-int GUIDData::operator==(const GUIDData & orig) {
+int GUIDData::operator==(const GUIDData & orig) const {
    int retval = 1; // assume they're equal
    int i;
 
@@ -206,12 +162,12 @@ int GUIDData::operator==(const GUIDData & orig) {
 } // GUIDData::operator==
 
 // Inequality operator; returns 1 if the GUIDs are unequal, 0 if they're equal
-int GUIDData::operator!=(const GUIDData & orig) {
+int GUIDData::operator!=(const GUIDData & orig) const {
    return !operator==(orig);
 } // GUIDData::operator!=
 
 // Return the GUID as a string, suitable for display to the user.
-string GUIDData::AsString(void) {
+string GUIDData::AsString(void) const {
    char theString[40];
 
    sprintf(theString,
@@ -237,3 +193,17 @@ string GUIDData::DeleteSpaces(string s) {
    } // if
    return s;
 } // GUIDData::DeleteSpaces()
+
+/*******************************
+ *                             *
+ * Non-class support functions *
+ *                             *
+ *******************************/
+
+// Display a GUID as a string....
+ostream & operator<<(ostream & os, const GUIDData & data) {
+   string asString;
+
+   os << data.AsString();
+   return os;
+} // GUIDData::operator<<()

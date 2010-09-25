@@ -25,7 +25,7 @@ using namespace std;
 
 #define MAX_OPTIONS 50
 
-int BuildMBR(GPTData* theGPT, char* argument, int isHybrid);
+int BuildMBR(GPTData& theGPT, char* argument, int isHybrid);
 int CountColons(char* argument);
 
 int main(int argc, char *argv[]) {
@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
    int alignment = DEFAULT_ALIGNMENT, retval = 0, pretend = 0;
    uint32_t tableSize = 128;
    uint64_t startSector, endSector;
+   uint64_t temp; // temporary variable; free to use in any case
    char *attributeOperation = NULL;
    char *device = NULL;
    char *newPartInfo = NULL, *typeCode = NULL, *partName = NULL;
@@ -58,6 +59,7 @@ int main(int argc, char *argv[]) {
       {"move-second-header", 'e', POPT_ARG_NONE, NULL, 'e', "move second header to end of disk", ""},
       {"end-of-largest", 'E', POPT_ARG_NONE, NULL, 'E', "show end of largest free block", ""},
       {"first-in-largest", 'f', POPT_ARG_NONE, NULL, 'f', "show start of the largest free block", ""},
+      {"first-aligned-in-largest", 'F', POPT_ARG_NONE, NULL, 'F', "show start of the largest free block, aligned", ""},
       {"mbrtogpt", 'g', POPT_ARG_NONE, NULL, 'g', "convert MBR to GPT", ""},
       {"randomize-guids", 'G', POPT_ARG_NONE, NULL, 'G', "randomize disk and partition GUIDs", ""},
       {"hybrid", 'h', POPT_ARG_STRING, &hybrids, 'h', "create hybrid MBR", "partnum[:partnum...]"},
@@ -195,6 +197,11 @@ int main(int argc, char *argv[]) {
                case 'f':
                   cout << theGPT.FindFirstInLargest() << "\n";
                   break;
+               case 'F':
+                  temp = theGPT.FindFirstInLargest();
+                  theGPT.Align(&temp);
+                  cout << temp << "\n";
+                  break;
                case 'g':
                   theGPT.JustLooking(0);
                   saveData = 1;
@@ -207,7 +214,7 @@ int main(int argc, char *argv[]) {
                   break;
                case 'h':
                   theGPT.JustLooking(0);
-                  if (BuildMBR(&theGPT, hybrids, 1) == 1)
+                  if (BuildMBR(theGPT, hybrids, 1) == 1)
                      saveData = 1;
                   break;
                case 'i':
@@ -227,7 +234,7 @@ int main(int argc, char *argv[]) {
                   break;
                case 'm':
                   theGPT.JustLooking(0);
-                  if (BuildMBR(&theGPT, mbrParts, 0) == 1) {
+                  if (BuildMBR(theGPT, mbrParts, 0) == 1) {
                      if (!pretend) {
                         if (theGPT.SaveMBR())
                            theGPT.DestroyGPT();
@@ -399,12 +406,12 @@ int main(int argc, char *argv[]) {
 } // main
 
 // Create a hybrid or regular MBR from GPT data structures
-int BuildMBR(GPTData* theGPT, char* argument, int isHybrid) {
+int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
    int numParts, allOK = 1, i;
    PartNotes notes;
    struct PartInfo *newNote;
 
-   if ((theGPT != NULL) && (argument != NULL)) {
+   if ((&theGPT != NULL) && (argument != NULL)) {
       numParts = CountColons(argument) + 1;
       if (numParts <= (4 - isHybrid)) {
          for (i = 0; i < numParts; i++) {
@@ -413,8 +420,8 @@ int BuildMBR(GPTData* theGPT, char* argument, int isHybrid) {
             newNote->active = 0;
             newNote->hexCode = 0; // code to compute it from default
             newNote->type = PRIMARY;
-            newNote->firstLBA = theGPT->GetPartFirstLBA(newNote->gptPartNum);
-            newNote->lastLBA = theGPT->GetPartLastLBA(newNote->gptPartNum);
+            newNote->firstLBA = theGPT[newNote->gptPartNum].GetFirstLBA();
+            newNote->lastLBA = theGPT[newNote->gptPartNum].GetLastLBA();
             notes.AddToEnd(newNote);
          } // for
          if (isHybrid) {
@@ -426,7 +433,7 @@ int BuildMBR(GPTData* theGPT, char* argument, int isHybrid) {
             // newNote firstLBA and lastLBA are computed later...
             notes.AddToStart(newNote);
          } // if
-         if (theGPT->PartsToMBR(notes) != numParts)
+         if (theGPT.PartsToMBR(notes) != numParts)
             allOK = 0;
       } else allOK = 0;
    } else allOK = 0;

@@ -53,9 +53,9 @@ class GPTPart {
       PartType & GetType(void) {return partitionType;}
       uint16_t GetHexType(void);
       string GetTypeName(void);
-      GUIDData GetUniqueGUID(void) {return uniqueGUID;}
-      uint64_t GetFirstLBA(void) {return firstLBA;}
-      uint64_t GetLastLBA(void) {return lastLBA;}
+      const GUIDData GetUniqueGUID(void) const {return uniqueGUID;}
+      uint64_t GetFirstLBA(void) const {return firstLBA;}
+      uint64_t GetLastLBA(void) const {return lastLBA;}
       uint64_t GetLengthLBA(void);
       uint64_t GetAttributes(void) {return attributes;}
       string GetDescription(void);

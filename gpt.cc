@@ -185,9 +185,9 @@ int GPTData::Verify(void) {
    } // if
    if ((mainHeader.diskGUID != secondHeader.diskGUID)) {
       problems++;
-      cout << "\nProblem: main header's disk GUID (" << mainHeader.diskGUID.AsString()
+      cout << "\nProblem: main header's disk GUID (" << mainHeader.diskGUID
            << ") doesn't\nmatch the backup GPT header's disk GUID ("
-           << secondHeader.diskGUID.AsString() << ")\n"
+           << secondHeader.diskGUID << ")\n"
            << "You should use the 'b' or 'd' option on the recovery & transformation menu to\n"
            << "select one or the other header.\n";
    } // if
@@ -1268,7 +1268,7 @@ void GPTData::DisplayGPTData(void) {
    cout << "Disk " << device << ": " << diskSize << " sectors, "
         << BytesToSI(diskSize * blockSize) << "\n";
    cout << "Logical sector size: " << blockSize << " bytes\n";
-   cout << "Disk identifier (GUID): " << mainHeader.diskGUID.AsString() << "\n";
+   cout << "Disk identifier (GUID): " << mainHeader.diskGUID << "\n";
    cout << "Partition table holds up to " << numParts << " entries\n";
    cout << "First usable sector is " << mainHeader.firstUsableLBA
         << ", last usable sector is " << mainHeader.lastUsableLBA << "\n";
@@ -1661,9 +1661,14 @@ int GPTData::DeletePartition(uint32_t partNum) {
 // Returns 1 if the operation was successful, 0 if a problem was discovered.
 uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector) {
    int retval = 1; // assume there'll be no problems
+   uint64_t origSector = startSector;
 
    if (IsFreePartNum(partNum)) {
-      Align(&startSector); // Align sector to correct multiple
+      if (Align(&startSector)) {
+         cout << "Information: Moved requested sector from " << origSector << " to "
+              << startSector << " in\norder to align on " << sectorAlignment
+              << "-sector boundaries.\n";
+      } // if
       if (IsFree(startSector) && (startSector <= endSector)) {
          if (FindLastInFree(startSector) >= endSector) {
             partitions[partNum].SetFirstLBA(startSector);
@@ -1891,7 +1896,6 @@ int GPTData::Align(uint64_t* sector) {
 
    if ((*sector % sectorAlignment) != 0) {
       original = *sector;
-      retval = 1;
       earlier = (*sector / sectorAlignment) * sectorAlignment;
       later = earlier + (uint64_t) sectorAlignment;
 
@@ -1905,6 +1909,7 @@ int GPTData::Align(uint64_t* sector) {
          } while ((sectorOK == 1) && (testSector < *sector));
          if (sectorOK == 1) {
             *sector = earlier;
+            retval = 1;
          } // if
       } // if firstUsableLBA check
 
@@ -1917,25 +1922,9 @@ int GPTData::Align(uint64_t* sector) {
          } while ((sectorOK == 1) && (testSector > *sector));
          if (sectorOK == 1) {
             *sector = later;
+            retval = 1;
          } // if
       } // if
-
-      // If sector was changed successfully, inform the user of this fact.
-      // Otherwise, notify the user that it couldn't be done....
-      if (sectorOK == 1) {
-         cout << "Information: Moved requested sector from " << original << " to "
-              << *sector << " in\norder to align on " << sectorAlignment
-              << "-sector boundaries.\n";
-         if (!beQuiet)
-            cout << "Use 'l' on the experts' menu to adjust alignment\n";
-      } else {
-         cout << "Information: Sector not aligned on " << sectorAlignment
-              << "-sector boundary and could not be moved.\n"
-              << "If you're using a Western Digital Advanced Format or similar disk with\n"
-              << "underlying 4096-byte sectors or certain types of RAID array, performance\n"
-              << "may suffer.\n";
-         retval = 0;
-      } // if/else
    } // if
    return retval;
 } // GPTData::Align()
@@ -2259,11 +2248,26 @@ void GPTData::ReversePartitionBytes() {
 // Validate partition number
 bool GPTData::ValidPartNum (const uint32_t partNum) {
    if (partNum >= numParts) {
-      cerr << "Partition number out of range: " << (signed) partNum << endl;
+      cerr << "Partition number out of range: " << partNum << "\n";
       return false;
    } // if
    return true;
 } // GPTData::ValidPartNum
+
+// Return a single partition for inspection (not modification!) by other
+// functions.
+const GPTPart & GPTData::operator[](uint32_t partNum) const {
+   if (partNum >= numParts) {
+      cerr << "Partition number out of range: " << partNum << "\n";
+      partNum = 0;
+   } // if
+   return partitions[partNum];
+} // operator[]
+
+// Return (not for modification!) the disk's GUID value
+const GUIDData & GPTData::GetDiskGUID(void) const {
+   return mainHeader.diskGUID;
+} // GPTData::GetDiskGUID()
 
 // Manage attributes for a partition, based on commands passed to this function.
 // (Function is non-interactive.)

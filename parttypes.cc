@@ -238,7 +238,7 @@ PartType & PartType::operator=(uint16_t ID) {
 } // PartType::operator=(uint16_t ID)
 
 // Return the English description of the partition type (e.g., "Linux/Windows data")
-string PartType::TypeName(void) {
+string PartType::TypeName(void) const {
    AType* theItem = allTypes;
    int found = 0;
    string typeName;
@@ -262,7 +262,7 @@ string PartType::TypeName(void) {
 // is set to 0. This enables control of which values get returned when
 // there are multiple possibilities, but opens the algorithm up to the
 // potential for problems should the data in the list be bad.
-uint16_t PartType::GetHexType() {
+uint16_t PartType::GetHexType() const {
    AType* theItem = allTypes;
    int found = 0;
    uint16_t theID = 0xFFFF;
@@ -285,7 +285,7 @@ uint16_t PartType::GetHexType() {
 // Note: This function assumes an 80-column display. On wider displays,
 // it stops at under 80 columns; on narrower displays, lines will wrap
 // in an ugly way.
-void PartType::ShowAllTypes(void) {
+void PartType::ShowAllTypes(void) const {
    int colCount = 1; // column count
    size_t i;
    AType* thisType = allTypes;
@@ -312,7 +312,7 @@ void PartType::ShowAllTypes(void) {
 } // PartType::ShowTypes()
 
 // Returns 1 if code is a valid extended MBR code, 0 if it's not
-int PartType::Valid(uint16_t code) {
+int PartType::Valid(uint16_t code) const {
    AType* thisType = allTypes;
    int found = 0;
 

@@ -318,6 +318,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
    char* junk;
    uint32_t pn, temp1, temp2;
    int goOn = 1, i;
+   char guidStr[255];
    GUIDData aGUID;
    ostringstream prompt;
 
@@ -337,8 +338,14 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
          case 'c': case 'C':
             if (theGPT->GetPartRange(&temp1, &temp2) > 0) {
                pn = theGPT->GetPartNum();
-               cout << "Enter the partition's new unique GUID:\n";
-               theGPT->SetPartitionGUID(pn, aGUID.GetGUIDFromUser());
+               cout << "Enter the partition's new unique GUID ('R' to randomize): ";
+               junk = fgets(guidStr, 255, stdin);
+               if ((strlen(guidStr) >= 33) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
+                  theGPT->SetPartitionGUID(pn, (GUIDData) guidStr);
+                  cout << "New GUID is " << theGPT->operator[](pn).GetUniqueGUID() << "\n";
+               } else {
+                  cout << "GUID is too short!\n";
+               } // if/else
             } else cout << "No partitions\n";
             break;
          case 'd': case 'D':
@@ -353,8 +360,13 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             theGPT->RandomizeGUIDs();
             break;
          case 'g': case 'G':
-            cout << "Enter the disk's unique GUID:\n";
-            theGPT->SetDiskGUID(aGUID.GetGUIDFromUser());
+            cout << "Enter the disk's unique GUID ('R' to randomize): ";
+            junk = fgets(guidStr, 255, stdin);
+            if ((strlen(guidStr) >= 33) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
+               theGPT->SetDiskGUID((GUIDData) guidStr);
+               cout << "The new disk GUID is " << theGPT->GetDiskGUID() << "\n";
+            } else
+               cout << "GUID is too short!\n";
             break;
          case 'h': case 'H':
             theGPT->RecomputeCHS();

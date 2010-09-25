@@ -177,9 +177,9 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
    uint64_t size;
 
    if (firstLBA != 0) {
-      cout << "Partition GUID code: " << partitionType.AsString();
+      cout << "Partition GUID code: " << partitionType;
       cout << " (" << partitionType.TypeName() << ")\n";
-      cout << "Partition unique GUID: " << uniqueGUID.AsString() << "\n";
+      cout << "Partition unique GUID: " << uniqueGUID << "\n";
 
       cout << "First sector: " << firstLBA << " (at "
             << BytesToSI(firstLBA * blockSize) << ")\n";

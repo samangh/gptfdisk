@@ -32,6 +32,9 @@ class GPTDataTextUI : public GPTData {
       GPTDataTextUI(string filename);
       ~GPTDataTextUI(void);
 
+      // This one needs to be explicitly defined, even though it does nothing new....
+      const GPTPart & operator[](uint32_t partNum) {return GPTData::operator[](partNum);}
+
       // Extended (interactive) versions of some base-class functions
       WhichToUse UseWhichPartitions(void);
       int XFormDisklabel(void);

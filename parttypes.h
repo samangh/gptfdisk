@@ -50,12 +50,12 @@ public:
    PartType & operator=(uint16_t ID); // Use MBR type code times 0x0100 to assign GUID
 
    // Retrieve transformed GUID data based on type code matches
-   string TypeName(void);
-   uint16_t GetHexType();
+   string TypeName(void) const;
+   uint16_t GetHexType() const;
 
    // Information relating to all type data
-   void ShowAllTypes(void);
-   int Valid(uint16_t);
+   void ShowAllTypes(void) const;
+   int Valid(uint16_t code) const;
 };
 
 #endif

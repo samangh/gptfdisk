@@ -180,7 +180,7 @@ void GPTDataTextUI::ResizePartitionTable(void) {
 
 // Interactively create a partition
 void GPTDataTextUI::CreatePartition(void) {
-   uint64_t firstBlock, firstInLargest, lastBlock, sector;
+   uint64_t firstBlock, firstInLargest, lastBlock, sector, origSector;
    uint32_t firstFreePart = 0;
    ostringstream prompt1, prompt2, prompt3;
    int partNum;
@@ -211,7 +211,15 @@ void GPTDataTextUI::CreatePartition(void) {
       do {
          sector = GetSectorNum(firstBlock, lastBlock, firstInLargest, prompt2.str());
       } while (IsFree(sector) == 0);
-      Align(&sector); // Align sector to correct multiple
+      origSector = sector;
+      if (Align(&sector)) {
+         cout << "Information: Moved requested sector from " << origSector << " to "
+              << sector << " in\norder to align on " << sectorAlignment
+              << "-sector boundaries.\n";
+         if (!beQuiet)
+            cout << "Use 'l' on the experts' menu to adjust alignment\n";
+      } // if
+      //      Align(&sector); // Align sector to correct multiple
       firstBlock = sector;
 
       // Get last block for new partitions...

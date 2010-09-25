@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.11-pre2"
+#define GPTFDISK_VERSION "0.6.11-pre3"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -177,10 +177,10 @@ public:
    uint64_t GetSecondPartsLBA(void) {return secondHeader.partitionEntriesLBA;}
    uint64_t GetFirstUsableLBA(void) {return mainHeader.firstUsableLBA;}
    uint64_t GetLastUsableLBA(void) {return mainHeader.lastUsableLBA;}
-   uint64_t GetPartFirstLBA(uint32_t i) {return partitions[i].GetFirstLBA();}
-   uint64_t GetPartLastLBA(uint32_t i) {return partitions[i].GetLastLBA();}
    uint32_t CountParts(void);
    bool ValidPartNum (const uint32_t partNum);
+   const GPTPart & operator[](uint32_t partNum) const;
+   const GUIDData & GetDiskGUID(void) const;
 
    // Find information about free space
    uint64_t FindFirstAvailable(uint64_t start = 0);
