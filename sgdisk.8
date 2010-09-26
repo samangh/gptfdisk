@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.10" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.6.11" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -235,7 +235,17 @@ sectors are available, this function returns the value 0.
 Displays the sector number of the start of the largest available block of
 sectors on the disk. A script may store this value and pass it back as
 part of \fI\-n\fR's option to create a partition. If no unallocated
-sectors are available, this function returns the value 0.
+sectors are available, this function returns the value 0. Note that this
+parameter is blind to partition alignment; when you actually create a
+partition, its start point might be changed from this value.
+
+.TP
+.B \-F, \-\-first\-aligned\-in\-largest
+Similar to \fI\-f\fR (\fI\-\-first\-in\-largest\fR), except returns the
+sector number with the current alignment correction applied. Use this
+function if you need to compute the actual partition start point rather
+than a theoretical start point or the actual start point if you set the
+alignment value to 1.
 
 .TP 
 .B \-g, \-\-mbrtogpt

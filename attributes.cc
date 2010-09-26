@@ -180,8 +180,8 @@ bool Attributes::OperateOnAttributes(const uint32_t partNum, const string& attri
 
       // display a single attribute
       case ao_get: {
-         cout << partNum+1 << ":" << bitNum << ":" <<
-              bool (attributeBitMask & attributes) << endl;
+         cout << partNum+1 << ":" << bitNum << ":"
+              << bool (attributeBitMask & attributes) << endl;
          break;
       } // case ao_get
 

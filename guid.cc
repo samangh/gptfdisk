@@ -24,7 +24,7 @@
 using namespace std;
 
 GUIDData::GUIDData(void) {
-   srand(time(0));
+   srand((unsigned int) time(0));
    Zero();
 } // constructor
 

@@ -251,10 +251,10 @@ uint64_t GetInt(const string & argument, int itemNum) {
 
    while (itemNum-- > 0) {
       startPos = endPos + 1;
-      endPos = argument.find(':', startPos);
+      endPos = (int) argument.find(':', startPos);
    }
    if (endPos == (int) string::npos)
-      endPos = argument.length();
+      endPos = (int) argument.length();
    endPos--;
 
    istringstream inString(argument.substr(startPos, endPos - startPos + 1));
@@ -268,10 +268,10 @@ string GetString(const string & argument, int itemNum) {
 
    while (itemNum-- > 0) {
       startPos = endPos + 1;
-      endPos = argument.find(':', startPos);
+      endPos = (int) argument.find(':', startPos);
    }
    if (endPos == (int) string::npos)
-      endPos = argument.length();
+      endPos = (int) argument.length();
    endPos--;
 
    return argument.substr(startPos, endPos - startPos + 1);

@@ -106,7 +106,7 @@ void GPTPart::SetName(const string & theName) {
       junk = fgets(newName, NAME_SIZE / 2, stdin);
 
       // Input is likely to include a newline, so remove it....
-      i = strlen(newName);
+      i = (int) strlen(newName);
       if ((i > 0) && (i <= NAME_SIZE))
          if (newName[i - 1] == '\n')
             newName[i - 1] = '\0';

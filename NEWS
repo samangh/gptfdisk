@@ -1,5 +1,10 @@
-0.6.11 (??/??/2010):
---------------------
+0.6.11 (9/25/2010):
+-------------------
+
+- Added -F (--first-aligned-in-largest) option to sgdisk. This option is a
+  variant on -f (--first-in-largest); it returns the number of the first
+  sector that will be used in the largest free area, given the current
+  alignment value (set via -a/--set-alignment).
 
 - Streamlined GUID code entry in gdisk; it no longer offers the option
   to enter GUIDs in separate segments.

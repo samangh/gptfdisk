@@ -2191,7 +2191,7 @@ void GPTData::SetAlignment(uint32_t n) {
 // Returns the computed alignment value.
 uint32_t GPTData::ComputeAlignment(void) {
    uint32_t i = 0, found, exponent = 31;
-   uint64_t align = DEFAULT_ALIGNMENT;
+   uint32_t align = DEFAULT_ALIGNMENT;
 
    exponent = (uint32_t) log2(DEFAULT_ALIGNMENT);
    for (i = 0; i < numParts; i++) {

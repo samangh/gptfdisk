@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
          device = new char[255];
          junk = fgets(device, 255, stdin);
          if (device[0] != '\n') {
-            i = strlen(device);
+            i = (int) strlen(device);
             if (i > 0)
                if (device[i - 1] == '\n')
                   device[i - 1] = '\0';
@@ -412,7 +412,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             device = new char[255];
             junk = fgets(device, 255, stdin);
             if (device[0] != '\n') {
-               i = strlen(device);
+               i = (int) strlen(device);
                if (i > 0)
                   if (device[i - 1] == '\n')
                      device[i - 1] = '\0';
