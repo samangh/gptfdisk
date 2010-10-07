@@ -150,7 +150,7 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
    int i;
 
    if (firstLBA != 0) {
-      sizeInSI = BytesToSI(blockSize * (lastLBA - firstLBA + 1));
+      sizeInSI = BytesToSI(lastLBA - firstLBA + 1, blockSize);
       cout.fill(' ');
       cout.width(4);
       cout << partNum + 1 << "  ";
@@ -158,7 +158,7 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout << firstLBA << "  ";
       cout.width(14);
       cout << lastLBA  << "   ";
-      cout << BytesToSI(blockSize * (lastLBA - firstLBA + 1)) << "  ";
+      cout << BytesToSI(lastLBA - firstLBA + 1, blockSize) << "  ";
       for (i = 0; i < 10 - (int) sizeInSI.length(); i++)
          cout << " ";
       cout.fill('0');
@@ -182,12 +182,12 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
       cout << "Partition unique GUID: " << uniqueGUID << "\n";
 
       cout << "First sector: " << firstLBA << " (at "
-            << BytesToSI(firstLBA * blockSize) << ")\n";
+            << BytesToSI(firstLBA, blockSize) << ")\n";
       cout << "Last sector: " << lastLBA << " (at "
-            << BytesToSI(lastLBA * blockSize) << ")\n";
+            << BytesToSI(lastLBA, blockSize) << ")\n";
       size = (lastLBA - firstLBA + 1);
       cout << "Partition size: " << size << " sectors ("
-            << BytesToSI(size * ((uint64_t) blockSize)) << ")\n";
+            << BytesToSI(size, blockSize) << ")\n";
       cout << "Attribute flags: ";
       cout.fill('0');
       cout.width(16);

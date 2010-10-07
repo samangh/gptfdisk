@@ -2,7 +2,6 @@
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdint.h>
-//#include <unistd.h>
 #include <stdlib.h>
 #include <string>
 
@@ -50,9 +49,10 @@ using namespace std;
 
 int GetNumber(int low, int high, int def, const string & prompt);
 char GetYN(void);
-uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & prompt);
-string BytesToSI(uint64_t size);
+uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const std::string& prompt);
+string BytesToSI(uint64_t size, uint32_t sectorSize = 1);
 unsigned char StrToHex(const string & input, unsigned int position);
+int IsHex(const string & input); // Returns 1 if input can be hexadecimal number....
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
 

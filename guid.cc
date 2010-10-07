@@ -202,7 +202,7 @@ string GUIDData::DeleteSpaces(string s) {
 
 // Display a GUID as a string....
 ostream & operator<<(ostream & os, const GUIDData & data) {
-   string asString;
+//   string asString;
 
    os << data.AsString();
    return os;

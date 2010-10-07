@@ -41,8 +41,7 @@ int GetNumber(int low, int high, int def, const string & prompt) {
    char line[255];
 
    if (low != high) { // bother only if low and high differ...
-      response = low - 1; // force one loop by setting response outside range
-      while ((response < low) || (response > high)) {
+      do {
          cout << prompt;
          cin.getline(line, 255);
          num = sscanf(line, "%d", &response);
@@ -52,7 +51,7 @@ int GetNumber(int low, int high, int def, const string & prompt) {
          } else { // user hit enter; return default
             response = def;
          } // if/else
-      } // while
+      } while ((response < low) || (response > high));
    } else { // low == high, so return this value
       cout << "Using " << low << "\n";
       response = low;
@@ -63,33 +62,40 @@ int GetNumber(int low, int high, int def, const string & prompt) {
 // Gets a Y/N response (and converts lowercase to uppercase)
 char GetYN(void) {
    char line[255];
-   char response = '\0';
+   char response;
    char *junk;
 
-   while ((response != 'Y') && (response != 'N')) {
+   do {
       cout << "(Y/N): ";
       junk = fgets(line, 255, stdin);
       sscanf(line, "%c", &response);
-      if (response == 'y') response = 'Y';
-      if (response == 'n') response = 'N';
-   } // while
+      if (response == 'y')
+         response = 'Y';
+      if (response == 'n')
+         response = 'N';
+   } while ((response != 'Y') && (response != 'N'));
    return response;
 } // GetYN(void)
 
 // Obtains a sector number, between low and high, from the
 // user, accepting values prefixed by "+" to add sectors to low,
-// or the same with "K", "M", "G", or "T" as suffixes to add
-// kilobytes, megabytes, gigabytes, or terabytes, respectively.
-// If a "-" prefix is used, use the high value minus the user-
-// specified number of sectors (or KiB, MiB, etc.). Use the def
- //value as the default if the user just hits Enter
-uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & prompt) {
-   uint64_t response, mult = 1;
+// or the same with "K", "M", "G", "T", or "P" as suffixes to add
+// kilobytes, megabytes, gigabytes, terabytes, or petabytes,
+// respectively. If a "-" prefix is used, use the high value minus
+// the user-specified number of sectors (or KiB, MiB, etc.). Use the
+// def value as the default if the user just hits Enter. The sSize is
+// the sector size of the device.
+uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const string & prompt) {
+   uint64_t response, mult = 1, divide = 1;
    int plusFlag = 0;
    char suffix, line[255];
 
-   response = low - 1; // Ensure one pass by setting a too-low initial value
-   while ((response < low) || (response > high)) {
+   if (sSize == 0) {
+      sSize = SECTOR_SIZE;
+      cerr << "Bug: Sector size invalid in GetSectorNum()!\n";
+   } // if
+
+   do {
       cout << prompt;
       cin.getline(line, 255);
 
@@ -124,26 +130,36 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & 
       switch (suffix) {
          case 'K':
          case 'k':
-            mult = (uint64_t) 1024 / SECTOR_SIZE;
+            mult = UINT64_C(1024) / sSize;
+            divide = sSize / UINT64_C(1024);
+            break;
 	    break;
          case 'M':
-	 case 'm':
-	    mult = (uint64_t) 1048576 / SECTOR_SIZE;
+	      case 'm':
+            mult = UINT64_C(1048576) / sSize;
+            divide = sSize / UINT64_C(1048576);
             break;
          case 'G':
          case 'g':
-            mult = (uint64_t) 1073741824 / SECTOR_SIZE;
+            mult = UINT64_C(1073741824) / sSize;
             break;
          case 'T':
-	 case 't':
-            mult = ((uint64_t) 1073741824 * (uint64_t) 1024) / (uint64_t) SECTOR_SIZE;
+	      case 't':
+            mult = UINT64_C(1099511627776) / sSize;
+            break;
+         case 'P':
+         case 'p':
+            mult = UINT64_C(1125899906842624) / sSize;
             break;
          default:
             mult = 1;
       } // switch
 
       // Adjust response based on multiplier and plus flag, if present
-      response *= mult;
+      if (mult > 1)
+         response *= mult;
+      else if (divide > 1)
+         response /= divide;
       if (plusFlag == 1) {
          // Recompute response based on low part of range (if default = high
          // value, which should be the case when prompting for the end of a
@@ -157,19 +173,20 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & 
       if (plusFlag == -1) {
          response = high - response;
       } // if
-   } // while
+   } while ((response < low) || (response > high));
    return response;
 } // GetSectorNum()
 
-// Takes a size in bytes (in size) and converts this to a size in
-// SI units (KiB, MiB, GiB, TiB, or PiB), returned in C++ string
-// form
-string BytesToSI(uint64_t size) {
+// Takes a size and converts this to a size in SI units (KiB, MiB, GiB,
+// TiB, or PiB), returned in C++ string form. The size is either in units
+// of the sector size or, if that parameter is omitted, in bytes.
+// (sectorSize defaults to 1).
+string BytesToSI(uint64_t size, uint32_t sectorSize) {
    string units;
    ostringstream theValue;
    float sizeInSI;
 
-   sizeInSI = (float) size;
+   sizeInSI = (float) size * (float) sectorSize;
    units = " bytes";
    if (sizeInSI > 1024.0) {
       sizeInSI /= 1024.0;
@@ -214,6 +231,29 @@ unsigned char StrToHex(const string & input, unsigned int position) {
    } // if
    return retval;
 } // StrToHex()
+
+// Returns 1 if input can be interpreted as a hexadecimal number --
+// all characters must be spaces, digits, or letters A-F (upper- or
+// lower-case), with at least one valid hexadecimal digit; otherwise
+// returns 0.
+int IsHex(const string & input) {
+   int isHex = 1, foundHex = 0, i;
+
+   for (i = 0; i < (int) input.length(); i++) {
+      if ((input[i] < '0') || (input[i] > '9')) {
+         if ((input[i] < 'A') || (input[i] > 'F')) {
+            if ((input[i] < 'a') || (input[i] > 'f')) {
+               if ((input[i] != ' ') && (input[i] != '\n')) {
+                  isHex = 0;
+               }
+            } else foundHex = 1;
+         } else foundHex = 1;
+      } else foundHex = 1;
+   } // for
+   if (!foundHex)
+      isHex = 0;
+   return isHex;
+} // IsHex()
 
 // Return 1 if the CPU architecture is little endian, 0 if it's big endian....
 int IsLittleEndian(void) {

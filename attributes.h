@@ -13,27 +13,29 @@
 using namespace std;
 
 class Attributes {
-
-private:
-   class staticInit {public: staticInit (void);};
-   static string atNames[NUM_ATR];
-   static Attributes::staticInit staticInitializer;
-
 protected:
+   static string atNames[NUM_ATR];
+   static int numAttrs;
+   void Setup(void);
    uint64_t attributes;
 
 public:
-   Attributes(const uint64_t a = 0) {SetAttributes (a);}
+   Attributes(void);
+   Attributes(const uint64_t a);
    ~Attributes(void);
-   void SetAttributes(const uint64_t a) {attributes = a;}
-   uint64_t GetAttributes(void) {return attributes;}
+   void operator=(uint64_t a) {attributes = a;}
+
+   uint64_t GetAttributes(void) const {return attributes;}
    void DisplayAttributes(void);
-   void ChangeAttributes(void);
    void ShowAttributes(const uint32_t partNum);
+
+   void ChangeAttributes(void);
    bool OperateOnAttributes(const uint32_t partNum, const string& attributeOperator, const string& attributeBits);
 
    static const string& GetAttributeName(const uint32_t bitNum) {return atNames [bitNum];}
    static void ListAttributes(void);
 }; // class Attributes
+
+ostream & operator<<(ostream & os, const Attributes & data);
 
 #endif

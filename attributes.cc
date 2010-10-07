@@ -19,11 +19,33 @@
 using namespace std;
 
 string Attributes::atNames[NUM_ATR];
-Attributes::staticInit Attributes::staticInitializer;
+int Attributes::numAttrs = 0;
+//Attributes::staticInit Attributes::staticInitializer;
 
-Attributes::staticInit::staticInit (void) {
+// Default constructor
+Attributes::Attributes(void) {
+   numAttrs++;
+   if (numAttrs == 1)
+      Setup();
+   attributes = 0;
+} // constructor
+
+// Alternate constructor
+Attributes::Attributes(const uint64_t a) {
+   numAttrs++;
+   if (numAttrs == 1)
+      Setup();
+   attributes = a;
+} // alternate constructor
+
+// Destructor.
+Attributes::~Attributes(void) {
+   numAttrs--;
+} // Attributes destructor
+
+void Attributes::Setup(void) {
    ostringstream temp;
- 
+
    // Most bits are undefined, so start by giving them an
    // appropriate name
    for (int i = 0; i < NUM_ATR; i++) {
@@ -33,17 +55,13 @@ Attributes::staticInit::staticInit (void) {
    } // for
 
    // Now reset those names that are defined....
-   Attributes::atNames[0] = "system partition"; // required for computer to operate
-   Attributes::atNames[1] = "hide from EFI";
-   Attributes::atNames[2] = "legacy BIOS bootable";
-   Attributes::atNames[60] = "read-only";
-   Attributes::atNames[62] = "hidden";
-   Attributes::atNames[63] = "do not automount";
-}  // Attributes::staticInit::staticInit
-
-// Destructor.
-Attributes::~Attributes(void) {
-} // Attributes destructor
+   atNames[0] = "system partition"; // required for computer to operate
+   atNames[1] = "hide from EFI";
+   atNames[2] = "legacy BIOS bootable";
+   atNames[60] = "read-only";
+   atNames[62] = "hidden";
+   atNames[63] = "do not automount";
+}  // Attributes::Setup()
 
 // Display current attributes to user
 void Attributes::DisplayAttributes(void) {
@@ -57,7 +75,7 @@ void Attributes::DisplayAttributes(void) {
    cout << hex << attributes << dec << ". Set fields are:\n";
    for (i = 0; i < NUM_ATR; i++) {
       if ((UINT64_C(1) << i) & attributes) {
-         cout << i << " (" << Attributes::GetAttributeName(i) << ")" << "\n";
+         cout << i << " (" << GetAttributeName(i) << ")" << "\n";
          numSet++;
       } // if
    } // for
@@ -66,6 +84,21 @@ void Attributes::DisplayAttributes(void) {
       cout << "  No fields set\n";
    cout << "\n";
 } // Attributes::DisplayAttributes()
+
+// Display attributes for a partition. Note that partNum is just passed for
+// immediate display; it's not used to access a particular partition.
+void Attributes::ShowAttributes(const uint32_t partNum) {
+   uint32_t bitNum;
+   bool bitset;
+
+   for (bitNum = 0; bitNum < 64; bitNum++) {
+      bitset = (UINT64_C(1) << bitNum) & attributes;
+      if (bitset) {
+         cout << partNum+1 << ":" << bitNum << ":" << bitset
+         << " (" << GetAttributeName(bitNum) << ")" << endl;
+      } // if
+   } // for
+} // Attributes::ShowAttributes
 
 // Prompt user for attribute changes
 void Attributes::ChangeAttributes(void) {
@@ -78,7 +111,8 @@ void Attributes::ChangeAttributes(void) {
 
    do {
       DisplayAttributes();
-      response = GetNumber(0, NUM_ATR, -1, "Toggle which attribute field (0-63, 64 to exit): ");
+      response = GetNumber(0, NUM_ATR, 64,
+                           "Toggle which attribute field (0-63, 64 or <Enter> to exit): ");
       if (response != 64) {
          bitValue = UINT64_C(1) << response; // Find the integer value of the bit
          if (bitValue & attributes) { // bit is set
@@ -103,19 +137,6 @@ void Attributes::ListAttributes(void) {
          cout << bitNum << ": " << Attributes::GetAttributeName(bitNum) << "\n";
    } // for
 } // Attributes::ListAttributes
-
-void Attributes::ShowAttributes(const uint32_t partNum) {
-   uint32_t bitNum;
-   bool bitset;
-
-   for (bitNum = 0; bitNum < 64; bitNum++) {
-      bitset = (UINT64_C(1) << bitNum) & attributes;
-      if (bitset) {
-         cout << partNum+1 << ":" << bitNum << ":" << bitset
-              << " (" << Attributes::GetAttributeName(bitNum) << ")" << endl;
-      } // if
-   } // for
-} // Attributes::ShowAttributes
 
 // multifaceted attributes access
 // returns true upon success, false upon failure
@@ -190,3 +211,15 @@ bool Attributes::OperateOnAttributes(const uint32_t partNum, const string& attri
 
    return true;
 } // Attributes::OperateOnAttributes()
+
+/*******************************
+*                             *
+* Non-class support functions *
+*                             *
+*******************************/
+
+// Display attributes
+ostream & operator<<(ostream & os, const Attributes & data) {
+   os << data.GetAttributes();
+   return os;
+} // operator<<()

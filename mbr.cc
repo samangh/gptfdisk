@@ -444,7 +444,7 @@ void MBRData::DisplayMBRData(int maxParts) {
       cout.fill(' ');
    } // for
    cout << "\nDisk size is " << diskSize << " sectors ("
-        << BytesToSI(diskSize * (uint64_t) blockSize) << ")\n";
+        << BytesToSI(diskSize, blockSize) << ")\n";
 } // MBRData::DisplayMBRData()
 
 // Displays the state, as a word, on stdout. Used for debugging & to

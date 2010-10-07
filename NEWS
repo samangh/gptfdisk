@@ -1,3 +1,26 @@
+0.6.12 (10/7/2010):
+-------------------
+
+- Adjusted alignment code to use 1 MiB alignment by default for drives with
+  other than 512-byte sector sizes. (Previous versions increased this --
+  for instance, to 4 MiB for drives with 2048-byte logical sector size.)
+
+- Entry of non-hexadecimal value for partition type code now causes
+  re-prompting for a new value, fixing a recently-introduced minor bug.
+
+- Fixed bug in sector entry using K/M/G/T/P suffixes on disks with
+  other-than-512-byte sector numbers.
+
+- Added "P" (PiB, pebibyte) suffix to suffixes accepted in entering
+  partition sizes.
+
+- Fixed bug that caused sgdisk to segfault if fed the (invalid)
+  "-A show" parameter. Now it terminates with a complaint about an invalid
+  partition number 0.
+
+- Removed warning when running on big-endian hardware, since this
+  support has been present for quite a while with no bug reports.
+
 0.6.11 (9/25/2010):
 -------------------
 

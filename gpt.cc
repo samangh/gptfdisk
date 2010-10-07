@@ -58,7 +58,7 @@ GPTData::GPTData(void) {
    secondPartsCrcOk = 0;
    apmFound = 0;
    bsdFound = 0;
-   sectorAlignment = 8; // Align partitions on 4096-byte boundaries by default
+   sectorAlignment = MIN_AF_ALIGNMENT; // Align partitions on 4096-byte boundaries by default
    beQuiet = 0;
    whichWasUsed = use_new;
    srand((unsigned int) time(NULL));
@@ -81,7 +81,7 @@ GPTData::GPTData(string filename) {
    secondPartsCrcOk = 0;
    apmFound = 0;
    bsdFound = 0;
-   sectorAlignment = 8; // Align partitions on 4096-byte boundaries by default
+   sectorAlignment = MIN_AF_ALIGNMENT; // Align partitions on 4096-byte boundaries by default
    beQuiet = 0;
    whichWasUsed = use_new;
    srand((unsigned int) time(NULL));
@@ -248,9 +248,9 @@ int GPTData::Verify(void) {
    if (problems == 0) {
       totalFree = FindFreeBlocks(&numSegments, &largestSegment);
       cout << "No problems found. " << totalFree << " free sectors ("
-           << BytesToSI(totalFree * (uint64_t) blockSize) << ") available in "
+           << BytesToSI(totalFree, blockSize) << ") available in "
            << numSegments << "\nsegments, the largest of which is "
-           << largestSegment << " (" << BytesToSI(largestSegment * (uint64_t) blockSize)
+           << largestSegment << " (" << BytesToSI(largestSegment, blockSize)
            << ") in size.\n";
    } else {
       cout << "\nIdentified " << problems << " problems!\n";
@@ -551,7 +551,7 @@ int GPTData::FindInsanePartitions(void) {
       } // if
       if (partitions[i].GetLastLBA() >= diskSize) {
          problems++;
-      cout << "\nProblem: partition " << i + 1<< " is too big for the disk.\n";
+      cout << "\nProblem: partition " << i + 1 << " is too big for the disk.\n";
       } // if
    } // for
    return problems;
@@ -876,11 +876,10 @@ int GPTData::SaveGPTData(int quiet, string filename) {
    int allOK = 1, littleEndian;
    char answer;
 
-   if (filename == "")
-      filename = device;
-
    littleEndian = IsLittleEndian();
 
+   if (filename == "")
+      filename = device;
    if (filename == "") {
       cerr << "Device not defined.\n";
    } // if
@@ -1113,15 +1112,11 @@ int GPTData::LoadGPTBackup(const string & filename) {
       if ((val = CheckHeaderValidity()) > 0) {
          if (val == 2) { // only backup header seems to be good
             SetGPTSize(secondHeader.numParts);
-//            numParts = secondHeader.numParts;
             sizeOfEntries = secondHeader.sizeOfPartitionEntries;
          } else { // main header is OK
             SetGPTSize(mainHeader.numParts);
-//            numParts = mainHeader.numParts;
             sizeOfEntries = mainHeader.sizeOfPartitionEntries;
          } // if/else
-
-//         SetGPTSize(numParts);
 
          if (secondHeader.currentLBA != diskSize - UINT64_C(1)) {
             cout << "Warning! Current disk size doesn't match that of the backup!\n"
@@ -1266,7 +1261,7 @@ void GPTData::DisplayGPTData(void) {
    uint64_t temp, totalFree;
 
    cout << "Disk " << device << ": " << diskSize << " sectors, "
-        << BytesToSI(diskSize * blockSize) << "\n";
+        << BytesToSI(diskSize, blockSize) << "\n";
    cout << "Logical sector size: " << blockSize << " bytes\n";
    cout << "Disk identifier (GUID): " << mainHeader.diskGUID << "\n";
    cout << "Partition table holds up to " << numParts << " entries\n";
@@ -1275,7 +1270,7 @@ void GPTData::DisplayGPTData(void) {
    totalFree = FindFreeBlocks(&i, &temp);
    cout << "Partitions will be aligned on " << sectorAlignment << "-sector boundaries\n";
    cout << "Total free space is " << totalFree << " sectors ("
-        << BytesToSI(totalFree * (uint64_t) blockSize) << ")\n";
+        << BytesToSI(totalFree, blockSize) << ")\n";
    cout << "\nNumber  Start (sector)    End (sector)  Size       Code  Name\n";
    for (i = 0; i < numParts; i++) {
       partitions[i].ShowSummary(i, blockSize);
@@ -1284,7 +1279,7 @@ void GPTData::DisplayGPTData(void) {
 
 // Show detailed information on the specified partition
 void GPTData::ShowPartDetails(uint32_t partNum) {
-   if (partitions[partNum].GetFirstLBA() != 0) {
+   if (!IsFreePartNum(partNum)) {
       partitions[partNum].ShowDetails(blockSize);
    } else {
       cout << "Partition #" << partNum + 1 << " does not exist.";
@@ -1780,7 +1775,10 @@ int GPTData::ClearGPTData(void) {
    for (i = 0; i < GPT_RESERVED; i++) {
       mainHeader.reserved2[i] = '\0';
    } // for
-   sectorAlignment = DEFAULT_ALIGNMENT;
+   if (blockSize > 0)
+      sectorAlignment = DEFAULT_ALIGNMENT * SECTOR_SIZE / blockSize;
+   else
+      sectorAlignment = DEFAULT_ALIGNMENT;
 
    // Now some semi-static items (computed based on end of disk)
    mainHeader.backupLBA = diskSize - UINT64_C(1);
@@ -2174,31 +2172,37 @@ int GPTData::IsFreePartNum(uint32_t partNum) {
 // Set partition alignment value; partitions will begin on multiples of
 // the specified value
 void GPTData::SetAlignment(uint32_t n) {
-   sectorAlignment = n;
+   if (n > 0)
+      sectorAlignment = n;
+   else
+      cerr << "Attempt to set partition alignment to 0!\n";
 } // GPTData::SetAlignment()
 
 // Compute sector alignment based on the current partitions (if any). Each
 // partition's starting LBA is examined, and if it's divisible by a power-of-2
-// value less than or equal to the DEFAULT_ALIGNMENT value, but not by the
-// previously-located alignment value, then the alignment value is adjusted
-// down. If the computed alignment is less than 8 and the disk is bigger than
-// SMALLEST_ADVANCED_FORMAT, resets it to 8. This is a safety measure for WD
-// Advanced Format and similar drives. If no partitions are defined, the
-// alignment value is set to DEFAULT_ALIGNMENT (2048). The result is that new
+// value less than or equal to the DEFAULT_ALIGNMENT value (adjusted for the
+// sector size), but not by the previously-located alignment value, then the
+// alignment value is adjusted down. If the computed alignment is less than 8
+// and the disk is bigger than SMALLEST_ADVANCED_FORMAT, resets it to 8. This
+// is a safety measure for WD Advanced Format and similar drives. If no partitions
+// are defined, the alignment value is set to DEFAULT_ALIGNMENT (2048) (or an
+// adjustment of that based on the current sector size). The result is that new
 // drives are aligned to 2048-sector multiples but the program won't complain
 // about other alignments on existing disks unless a smaller-than-8 alignment
-// is used on small disks (as safety for WD Advanced Format drives).
+// is used on big disks (as safety for WD Advanced Format drives).
 // Returns the computed alignment value.
 uint32_t GPTData::ComputeAlignment(void) {
    uint32_t i = 0, found, exponent = 31;
    uint32_t align = DEFAULT_ALIGNMENT;
 
-   exponent = (uint32_t) log2(DEFAULT_ALIGNMENT);
+   if (blockSize > 0)
+      align = DEFAULT_ALIGNMENT * SECTOR_SIZE / blockSize;
+   exponent = (uint32_t) log2(align);
    for (i = 0; i < numParts; i++) {
       if (partitions[i].IsUsed()) {
          found = 0;
          while (!found) {
-            align = UINT64_C(1)<<exponent;
+            align = UINT64_C(1) << exponent;
             if ((partitions[i].GetFirstLBA() % align) == 0) {
                found = 1;
             } else {
@@ -2207,9 +2211,9 @@ uint32_t GPTData::ComputeAlignment(void) {
          } // while
       } // if
    } // for
-   if ((align < 8) && (diskSize >= SMALLEST_ADVANCED_FORMAT))
-      align = 8;
-   SetAlignment(align);
+   if ((align < MIN_AF_ALIGNMENT) && (diskSize >= SMALLEST_ADVANCED_FORMAT))
+      align = MIN_AF_ALIGNMENT;
+   sectorAlignment = align;
    return align;
 } // GPTData::ComputeAlignment()
 
@@ -2296,14 +2300,12 @@ int GPTData::ManageAttributes(int partNum, const string & command, const string 
 
 // Show all attributes for a specified partition....
 void GPTData::ShowAttributes(const uint32_t partNum) {
-   Attributes theAttr (partitions[partNum].GetAttributes());
-   theAttr.ShowAttributes(partNum);
+   partitions[partNum].ShowAttributes(partNum);
 } // GPTData::ShowAttributes
 
 // Show whether a single attribute bit is set (terse output)...
 void GPTData::GetAttribute(const uint32_t partNum, const string& attributeBits) {
-   Attributes theAttr (partitions[partNum].GetAttributes());
-   theAttr.OperateOnAttributes(partNum, "get", attributeBits);
+   partitions[partNum].GetAttributes().OperateOnAttributes(partNum, "get", attributeBits);
 } // GPTData::GetAttribute
 
 
@@ -2361,10 +2363,10 @@ int SizesOK(void) {
       allOK = 0;
    } // if
    // Determine endianness; warn user if running on big-endian (PowerPC, etc.) hardware
-   if (IsLittleEndian() == 0) {
-      cerr << "\aRunning on big-endian hardware. Big-endian support is new and poorly"
-            " tested!\n";
-   } // if
+//   if (IsLittleEndian() == 0) {
+//      cerr << "\aRunning on big-endian hardware. Big-endian support is new and poorly"
+//            " tested!\n";
+//   } // if
    return (allOK);
 } // SizesOK()
 

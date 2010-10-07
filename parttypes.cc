@@ -192,13 +192,16 @@ int PartType::AddType(uint16_t mbrType, const char * guidData, const char * name
 
 // Assignment operator by string. If the original string is short,
 // interpret it as a gdisk hex code; if it's longer, interpret it as
-// a direct entry of a GUID value....
+// a direct entry of a GUID value. If a short string isn't a hex
+// number, do nothing.
 PartType & PartType::operator=(const string & orig) {
    uint32_t hexCode;
 
    if (orig.length() < 32) {
-      sscanf(orig.c_str(), "%x", &hexCode);
-      *this = hexCode;
+      if (IsHex(orig)) {
+         sscanf(orig.c_str(), "%x", &hexCode);
+         *this = hexCode;
+      } // if
    } else {
       GUIDData::operator=(orig);
    } // if/else hexCode or GUID

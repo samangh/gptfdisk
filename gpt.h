@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.11"
+#define GPTFDISK_VERSION "0.6.12"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -27,11 +27,10 @@
 // Default values for sector alignment
 #define DEFAULT_ALIGNMENT 2048
 #define MAX_ALIGNMENT 65536
+#define MIN_AF_ALIGNMENT 8
 
-// Below constant corresponds to an 800GB disk -- a somewhat arbitrary
-// cutoff
-//#define SMALLEST_ADVANCED_FORMAT UINT64_C(1677721600)
-// Now ~596GiB (640MB), since WD has introduced a smaller Advanced Format drive
+// Below constant corresponds to a ~596GiB (640MB) disk, since WD has
+// introduced a smaller Advanced Format drive
 #define SMALLEST_ADVANCED_FORMAT UINT64_C(1250263728)
 
 using namespace std;
@@ -90,7 +89,7 @@ protected:
    int secondPartsCrcOk;
    int apmFound; // set to 1 if APM detected
    int bsdFound; // set to 1 if BSD disklabel detected in MBR
-   uint32_t sectorAlignment; // Start & end partitions at multiples of sectorAlignment
+   uint32_t sectorAlignment; // Start partitions at multiples of sectorAlignment
    int beQuiet;
    WhichToUse whichWasUsed;
 

@@ -21,6 +21,7 @@
 #include "support.h"
 #include "parttypes.h"
 #include "guid.h"
+#include "attributes.h"
 
 using namespace std;
 
@@ -43,7 +44,8 @@ class GPTPart {
       GUIDData uniqueGUID;
       uint64_t firstLBA;
       uint64_t lastLBA;
-      uint64_t attributes;
+      Attributes attributes;
+//      uint64_t attributes;
       unsigned char name[NAME_SIZE];
    public:
       GPTPart(void);
@@ -57,7 +59,8 @@ class GPTPart {
       uint64_t GetFirstLBA(void) const {return firstLBA;}
       uint64_t GetLastLBA(void) const {return lastLBA;}
       uint64_t GetLengthLBA(void);
-      uint64_t GetAttributes(void) {return attributes;}
+      Attributes GetAttributes(void) {return attributes;}
+      void ShowAttributes(uint32_t partNum) {attributes.ShowAttributes(partNum);}
       string GetDescription(void);
       int IsUsed(void);
 
@@ -69,6 +72,7 @@ class GPTPart {
       void SetFirstLBA(uint64_t f) {firstLBA = f;}
       void SetLastLBA(uint64_t l) {lastLBA = l;}
       void SetAttributes(uint64_t a) {attributes = a;}
+      void SetAttributes(void) {attributes.ChangeAttributes();}
       void SetName(const string & n);
       void SetDefaultDescription(void);
 

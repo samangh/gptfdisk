@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.6.11" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.6.12" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -197,15 +197,16 @@ Create a new partition. This command is modelled after the equivalent
 \fBfdisk\fR option, although some differences exist. You enter a partition
 number, starting sector, and an ending sector. Both start and end sectors
 can be specified in absolute terms as sector numbers or as positions
-measured in kilobytes (K), megabytes (M), gigabytes (G), or terabytes (T);
-for instance, \fI\fB40M\fR\fR specifies a position 40MiB from the start of
-the disk. You can specify locations relative to the start or end of the
-specified default range by preceding the number by a '+' or '\-' symbol, as
-in \fI\fB+2G\fR\fR to specify a point 2GiB after the default start sector,
-or \fI\fB\-200M\fR\fR to specify a point 200MiB before the last available
-sector. Pressing the Enter key with no input specifies the default value,
-which is the start of the largest available block for the start sector and
-the end of the same block for the end sector.
+measured in kibibytes (K), mebibytes (M), gibibytes (G), tebibytes (T), or
+pebibytes (P); for instance, \fI\fB40M\fR\fR specifies a position 40MiB
+from the start of the disk. You can specify locations relative to the start
+or end of the specified default range by preceding the number by a '+' or
+'\-' symbol, as in \fI\fB+2G\fR\fR to specify a point 2GiB after the
+default start sector, or \fI\fB\-200M\fR\fR to specify a point 200MiB
+before the last available sector. Pressing the Enter key with no input
+specifies the default value, which is the start of the largest available
+block for the start sector and the end of the same block for the end
+sector.
 
 .TP 
 .B o

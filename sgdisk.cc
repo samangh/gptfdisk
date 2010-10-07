@@ -136,20 +136,26 @@ int main(int argc, char *argv[]) {
                case 'A': {
                   if (cmd != "list") {
                      partNum = (int) GetInt(attributeOperation, 1) - 1;
-                     switch (theGPT.ManageAttributes(partNum, GetString(attributeOperation, 2),
-                           GetString(attributeOperation, 3))) {
-                        case -1:
-                           saveData = 0;
-                           neverSaveData = 1;
-                           break;
-                        case 1:
-                           theGPT.JustLooking(0);
-                           saveData = 1;
-                           break;
-                        default:
-                           break;
-                     } // switch
-                  } // if
+                     if ((partNum >= 0) && (partNum < (int) theGPT.GetNumParts())) {
+                        switch (theGPT.ManageAttributes(partNum, GetString(attributeOperation, 2),
+                              GetString(attributeOperation, 3))) {
+                           case -1:
+                              saveData = 0;
+                              neverSaveData = 1;
+                              break;
+                           case 1:
+                              theGPT.JustLooking(0);
+                              saveData = 1;
+                              break;
+                           default:
+                              break;
+                        } // switch
+                     } else {
+                        cerr << "Error: Invalid partition number " << partNum + 1 << "\n";
+                        saveData = 0;
+                        neverSaveData = 1;
+                     } // if/else reasonable partition #
+                  } // if (cmd != "list")
                   break;
                } // case 'A':
                case 'a':

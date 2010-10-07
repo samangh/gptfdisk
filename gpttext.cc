@@ -207,9 +207,9 @@ void GPTDataTextUI::CreatePartition(void) {
 
       // Get first block for new partition...
       prompt2 << "First sector (" << firstBlock << "-" << lastBlock << ", default = "
-              << firstInLargest << ") or {+-}size{KMGT}: ";
+              << firstInLargest << ") or {+-}size{KMGTP}: ";
       do {
-         sector = GetSectorNum(firstBlock, lastBlock, firstInLargest, prompt2.str());
+         sector = GetSectorNum(firstBlock, lastBlock, firstInLargest, blockSize, prompt2.str());
       } while (IsFree(sector) == 0);
       origSector = sector;
       if (Align(&sector)) {
@@ -225,9 +225,9 @@ void GPTDataTextUI::CreatePartition(void) {
       // Get last block for new partitions...
       lastBlock = FindLastInFree(firstBlock);
       prompt3 << "Last sector (" << firstBlock << "-" << lastBlock << ", default = "
-            << lastBlock << ") or {+-}size{KMGT}: ";
+            << lastBlock << ") or {+-}size{KMGTP}: ";
       do {
-         sector = GetSectorNum(firstBlock, lastBlock, lastBlock, prompt3.str());
+         sector = GetSectorNum(firstBlock, lastBlock, lastBlock, blockSize, prompt3.str());
       } while (IsFree(sector) == 0);
       lastBlock = sector;
 
@@ -271,11 +271,13 @@ void GPTDataTextUI::ChangePartType(void) {
 // Partition attributes seem to be rarely used, but I want a way to
 // adjust them for completeness....
 void GPTDataTextUI::SetAttributes(uint32_t partNum) {
-   Attributes theAttr;
+//   Attributes theAttr;
 
-   theAttr.SetAttributes(partitions[partNum].GetAttributes());
+   partitions[partNum].SetAttributes();
+/*   theAttr = partitions[partNum].GetAttributes();
+//   theAttr.SetAttributes(partitions[partNum].GetAttributes());
    theAttr.ChangeAttributes();
-   partitions[partNum].SetAttributes(theAttr.GetAttributes());
+   partitions[partNum].SetAttributes(theAttr.GetAttributes()); */
 } // GPTDataTextUI::SetAttributes()
 
 // Ask user for two partition numbers and swap them in the table. Note that

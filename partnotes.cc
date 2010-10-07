@@ -600,8 +600,8 @@ void PartNotes::ShowSummary(void) {
                cout << "   *    ";
             else
                cout << "        ";
-            sizeInSI = BytesToSI(blockSize * (gptParts[theNote->gptPartNum].GetLastLBA() -
-                                 gptParts[theNote->gptPartNum].GetFirstLBA() + 1));
+            sizeInSI = BytesToSI((gptParts[theNote->gptPartNum].GetLastLBA() -
+                                 gptParts[theNote->gptPartNum].GetFirstLBA() + 1), blockSize);
             cout << " " << sizeInSI;
             for (j = 0; j < 12 - (int) sizeInSI.length(); j++)
                cout << " ";
