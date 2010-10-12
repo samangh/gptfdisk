@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.12"
+#define GPTFDISK_VERSION "0.6.13"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -145,7 +145,7 @@ public:
    virtual int XFormDisklabel(uint32_t partNum);
    int XFormDisklabel(BSDData* disklabel);
    int OnePartToMBR(uint32_t gptPart, int mbrPart); // add one partition to MBR. Returns 1 if successful
-   int PartsToMBR(PartNotes & notes);
+   int PartsToMBR(PartNotes * notes);
 
    // Adjust GPT structures WITHOUT user interaction...
    int SetGPTSize(uint32_t numEntries);

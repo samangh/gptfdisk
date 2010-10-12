@@ -439,7 +439,7 @@ int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
             // newNote firstLBA and lastLBA are computed later...
             notes.AddToStart(newNote);
          } // if
-         if (theGPT.PartsToMBR(notes) != numParts)
+         if (theGPT.PartsToMBR(&notes) != numParts)
             allOK = 0;
       } else allOK = 0;
    } else allOK = 0;

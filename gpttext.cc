@@ -360,9 +360,9 @@ void GPTDataTextUI::MakeHybrid(void) {
    PartNotes notes;
    char eeFirst = 'Y'; // Whether EFI GPT (0xEE) partition comes first in table
 
-   cout << "\nWARNING! Hybrid MBRs are flaky and potentially dangerous! If you decide not\n"
-        << "to use one, just hit the Enter key at the below prompt and your MBR\n"
-        << "partition table will be untouched.\n\n\a";
+   cout << "\nWARNING! Hybrid MBRs are flaky and dangerous! If you decide not to use one,\n"
+        << "just hit the Enter key at the below prompt and your MBR partition table will\n"
+        << "be untouched.\n\n\a";
 
    // Now get the numbers of up to three partitions to add to the
    // hybrid MBR....
@@ -379,19 +379,24 @@ void GPTDataTextUI::MakeHybrid(void) {
    for (i = 0; i < numPartsToCvt; i++) {
       newNote = new struct PartInfo;
       j = newNote->gptPartNum = partNums[i] - 1;
-      mbrNum = i + (eeFirst == 'Y');
-      cout << "\nCreating entry for GPT partition #" << j + 1
-           << " (MBR partition #" << mbrNum + 1 << ")\n";
-      newNote->hexCode = GetMBRTypeCode(partitions[j].GetHexType() / 256);
-      newNote->firstLBA = partitions[j].GetFirstLBA();
-      newNote->lastLBA = partitions[j].GetLastLBA();
-      newNote->type = PRIMARY;
-      cout << "Set the bootable flag? ";
-      if (GetYN() == 'Y')
-         newNote->active = 1;
-      else
-         newNote->active = 0;
-      notes.AddToEnd(newNote);
+      if (partitions[j].IsUsed()) {
+         mbrNum = i + (eeFirst == 'Y');
+         cout << "\nCreating entry for GPT partition #" << j + 1
+              << " (MBR partition #" << mbrNum + 1 << ")\n";
+         newNote->hexCode = GetMBRTypeCode(partitions[j].GetHexType() / 256);
+         newNote->firstLBA = partitions[j].GetFirstLBA();
+         newNote->lastLBA = partitions[j].GetLastLBA();
+         newNote->type = PRIMARY;
+         cout << "Set the bootable flag? ";
+         if (GetYN() == 'Y')
+            newNote->active = 1;
+         else
+            newNote->active = 0;
+         notes.AddToEnd(newNote);
+      } else {
+         delete newNote;
+         cerr << "\nGPT partition #" << j + 1 << " does not exist; skipping.\n";
+      } // if/else
    } // for
 
    if (numPartsToCvt > 0) { // User opted to create a hybrid MBR....
@@ -436,7 +441,7 @@ void GPTDataTextUI::MakeHybrid(void) {
             notes.AddToEnd(newNote);
          } // if (GetYN() == 'Y')
       } // if unused entry
-      PartsToMBR(notes);
+      PartsToMBR(&notes);
       if (bootable > 0)
          protectiveMBR.SetPartBootable(bootable);
    } // if (numPartsToCvt > 0)
@@ -533,10 +538,11 @@ int GPTDataTextUI::XFormToMBR(void) {
    for (i = 0; i < numParts; i++)
       tempGptParts[i] = partitions[i];
 
+   notes.MakeItLegal();
    numToConvert = AssignPrimaryOrLogical(notes);
 
    if (numToConvert > 0) {
-      numReallyConverted = PartsToMBR(notes);
+      numReallyConverted = PartsToMBR(&notes);
       if (numReallyConverted != numToConvert) {
          cerr << "Error converting partitions to MBR; tried to convert "
               << numToConvert << " partitions,\nbut converted " << numReallyConverted

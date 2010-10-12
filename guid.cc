@@ -92,24 +92,24 @@ GUIDData & GUIDData::operator=(const string & orig) {
          uuidData[0] = StrToHex(copy, 6);
       } // if
       if (len >= segStart[2]) {
-         uuidData[5] = StrToHex(copy, segStart[1]);
-         uuidData[4] = StrToHex(copy, segStart[1] + 2);
+         uuidData[5] = StrToHex(copy, (unsigned int) segStart[1]);
+         uuidData[4] = StrToHex(copy, (unsigned int) segStart[1] + 2);
       } // if
       if (len >= segStart[3]) {
-         uuidData[7] = StrToHex(copy, segStart[2]);
-         uuidData[6] = StrToHex(copy, segStart[2] + 2);
+         uuidData[7] = StrToHex(copy, (unsigned int) segStart[2]);
+         uuidData[6] = StrToHex(copy, (unsigned int) segStart[2] + 2);
       } // if
       if (len >= segStart[4]) {
-         uuidData[8] = StrToHex(copy, segStart[3]);
-         uuidData[9] = StrToHex(copy, segStart[3] + 2);
+         uuidData[8] = StrToHex(copy, (unsigned int) segStart[3]);
+         uuidData[9] = StrToHex(copy, (unsigned int) segStart[3] + 2);
       } // if
       if (len >= segStart[5]) {
-         uuidData[10] = StrToHex(copy, segStart[4]);
-         uuidData[11] = StrToHex(copy, segStart[4] + 2);
-         uuidData[12] = StrToHex(copy, segStart[4] + 4);
-         uuidData[13] = StrToHex(copy, segStart[4] + 6);
-         uuidData[14] = StrToHex(copy, segStart[4] + 8);
-         uuidData[15] = StrToHex(copy, segStart[4] + 10);
+         uuidData[10] = StrToHex(copy, (unsigned int) segStart[4]);
+         uuidData[11] = StrToHex(copy, (unsigned int) segStart[4] + 2);
+         uuidData[12] = StrToHex(copy, (unsigned int) segStart[4] + 4);
+         uuidData[13] = StrToHex(copy, (unsigned int) segStart[4] + 6);
+         uuidData[14] = StrToHex(copy, (unsigned int) segStart[4] + 8);
+         uuidData[15] = StrToHex(copy, (unsigned int) segStart[4] + 10);
       } // if
    } // if/else randomize/set value
 

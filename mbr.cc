@@ -830,14 +830,14 @@ void MBRData::RecomputeCHS(int partNum) {
 // entries are written to disk; that is left for the WriteMBRData()
 // function.
 // Returns number of converted partitions
-int MBRData::CreateLogicals(PartNotes& notes) {
+int MBRData::CreateLogicals(PartNotes * notes) {
    uint64_t extEndLBA = 0, extStartLBA = UINT64_MAX;
    int i = 4, numLogicals = 0;
    struct PartInfo aPart;
 
    // Find bounds of the extended partition....
-   notes.Rewind();
-   while (notes.GetNextInfo(&aPart) >= 0) {
+   notes->Rewind();
+   while (notes->GetNextInfo(&aPart) >= 0) {
       if (aPart.type == LOGICAL) {
          if (extStartLBA > aPart.firstLBA)
             extStartLBA = aPart.firstLBA;
@@ -849,9 +849,9 @@ int MBRData::CreateLogicals(PartNotes& notes) {
    extStartLBA--;
 
    if ((extStartLBA < UINT32_MAX) && ((extEndLBA - extStartLBA + 1) < UINT32_MAX)) {
-      notes.Rewind();
+      notes->Rewind();
       i = 4;
-      while ((notes.GetNextInfo(&aPart) >= 0) && (i < MAX_MBR_PARTS)) {
+      while ((notes->GetNextInfo(&aPart) >= 0) && (i < MAX_MBR_PARTS)) {
          if (aPart.type == LOGICAL) {
             partitions[i].partitionType = aPart.hexCode;
             partitions[i].firstLBA = (uint32_t) (aPart.firstLBA - extStartLBA);

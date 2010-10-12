@@ -1,3 +1,15 @@
+0.6.13 (10/12/2010):
+--------------------
+
+- Added notification about nonexistent partitions to hybrid MBR creation
+  in gdisk.
+
+- Fixed bug in GPT-to-MBR conversion that could sometimes enable creation
+  of an extended partition that overlaps a preceding partition.
+
+- Fixed bug in GPT-to-MBR conversion that prevented creation of an MBR
+  table with logical partitions if there were four or fewer partitions.
+
 0.6.12 (10/7/2010):
 -------------------
 

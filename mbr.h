@@ -126,7 +126,7 @@ public:
    int DeleteByLocation(uint64_t start64, uint64_t length64);
    void OptimizeEESize(void);
    void RecomputeCHS(int partNum);
-   int CreateLogicals(PartNotes& notes);
+   int CreateLogicals(PartNotes * notes);
 
    // Functions to find information on free space....
    uint32_t FindFirstAvailable(uint32_t start = 1);

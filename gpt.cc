@@ -1504,15 +1504,16 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
 // is 0, a default entry is used, based on the GPT partition type code.
 // Returns the number of partitions converted, NOT counting EFI GPT
 // protective partitions or extended partitions.
-int GPTData::PartsToMBR(PartNotes & notes) {
+int GPTData::PartsToMBR(PartNotes * notes) {
    int mbrNum = 0, numConverted = 0;
    struct PartInfo convInfo;
 
    protectiveMBR.EmptyMBR(0);
    protectiveMBR.SetDiskSize(diskSize);
-   notes.MakeItLegal();
-   notes.Rewind();
-   while (notes.GetNextInfo(&convInfo) >= 0) {
+   if (!notes->IsLegal())
+      notes->MakeItLegal();
+   notes->Rewind();
+   while (notes->GetNextInfo(&convInfo) >= 0) {
       if ((convInfo.gptPartNum >= 0) && (convInfo.type == PRIMARY)) {
          numConverted += OnePartToMBR((uint32_t) convInfo.gptPartNum, mbrNum);
          if (convInfo.hexCode != 0)
@@ -1525,9 +1526,9 @@ int GPTData::PartsToMBR(PartNotes & notes) {
          mbrNum++;
    } // for
    // Now go through and set sizes for MBR_EFI_GPT partitions....
-   notes.Rewind();
+   notes->Rewind();
    mbrNum = 0;
-   while (notes.GetNextInfo(&convInfo) >= 0) {
+   while (notes->GetNextInfo(&convInfo) >= 0) {
       if ((convInfo.gptPartNum >= 0) && (convInfo.type == PRIMARY))
          mbrNum++;
       if (convInfo.gptPartNum == MBR_EFI_GPT) {

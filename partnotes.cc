@@ -437,11 +437,18 @@ int PartNotes::IsSorted(void) {
 // Returns 1 if the set as a whole makes a legal MBR partition table
 // (possibly with logicals), 0 if not
 int PartNotes::IsLegal(void) {
-   int p, e;
+   int p, e, legalLogicals = 1;
+   struct PartInfo *theNote;
 
    p = GetNumPrimary();
    e = GetNumExtended();
-   return (((p+e) <= 4) && (e <= 1));
+   theNote = notes;
+   while (theNote != NULL) {
+      if ((!theNote->spaceBefore) && (theNote->type == LOGICAL))
+         legalLogicals = 0;
+      theNote = theNote->next;
+   } // while
+   return (((p+e) <= 4) && (e <= 1) && legalLogicals);
 } // PartNotes::IsLegal()
 
 /*************************************************************************
@@ -475,7 +482,7 @@ void PartNotes::RemoveDuplicates(void) {
 // of included partitions. Also removes duplicates.
 // Returns 1 if successful, 0 if not (if missing notes list, say)
 int PartNotes::MakeItLegal(void) {
-   struct PartInfo *theNote, *lastPrimary;
+   struct PartInfo *theNote, *lastPrimary, *firstPart;
 
    if (notes == NULL)
       return 0;
@@ -483,6 +490,7 @@ int PartNotes::MakeItLegal(void) {
    RemoveDuplicates();
 
    if (!IsLegal()) {
+      cout << "Isn't legal!\n";
       // Start by eliminating or converting excessive extended partitions...
       while (GetNumExtended() > 1)
          TrimSmallestExtended();
@@ -514,11 +522,14 @@ int PartNotes::MakeItLegal(void) {
    // Try to make the first partition a primary...
    if ((GetNumExtended() + GetNumPrimary()) < 4) {
       theNote = notes;
-      do {
+      firstPart = notes;
+      while ((theNote != NULL) && (firstPart != NULL)) {
+         if ((theNote->firstLBA < firstPart->firstLBA) && (theNote->type != WILL_NOT_CONVERT))
+            firstPart = theNote;
          theNote = theNote->next;
-      } while ((theNote != NULL) && (theNote->type != WILL_NOT_CONVERT));
-      if ((theNote != NULL) && (theNote->type == LOGICAL))
-         theNote->type = PRIMARY;
+      };
+      if (firstPart->spaceBefore)
+         firstPart->type = PRIMARY;
    } // if
 
    return IsLegal();
