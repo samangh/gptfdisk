@@ -344,10 +344,9 @@ int GPTData::CheckHeaderValidity(void) {
       cout << UINT32_C(0x00010000) << dec << "\n";
    } // if/else/if
 
-   // If MBR bad, check for an Apple disk signature
-   if ((protectiveMBR.GetValidity() == invalid) &&
-        (((mainHeader.signature << 32) == APM_SIGNATURE1) ||
-        (mainHeader.signature << 32) == APM_SIGNATURE2)) {
+   // Check for an Apple disk signature
+   if (((mainHeader.signature << 32) == APM_SIGNATURE1) ||
+        (mainHeader.signature << 32) == APM_SIGNATURE2) {
       apmFound = 1; // Will display warning message later
    } // if
    cout.fill(' ');

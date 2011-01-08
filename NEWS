@@ -1,3 +1,25 @@
+0.6.14 (1/8/2011):
+------------------
+
+- Made small change to the way the start sector is interpreted if you use a
+  "+" specification, as in "+2G" to locate a partition 2 GiB into the
+  default range. This change makes adjustments for sector alignment less
+  likely.
+
+- Modified sgdisk's -n (--new) option to work with relative start and end
+  values (which the man page incorrectly stated it already did). Values of
+  0 for the start and end sectors refer to the first and last available
+  sectors in the largest free block, and a partition number of 0 refers to
+  the first available partition.
+
+- Added ChromeOS GUID values to list of recognized partition type GUIDs.
+  7F00 = ChromeOS kernel, 7501 = ChromeOS root, 7502 = ChromeOS reserved.
+  Untested on actual ChromeOS system.
+
+- Tweaked APM detection to look for APM signature even if an MBR
+  signature has already been found. Helps in diagnosis of cases
+  in which an MBR has overwritten an APM disk.
+
 0.6.13 (10/12/2010):
 --------------------
 

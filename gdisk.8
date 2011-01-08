@@ -1,6 +1,6 @@
 .\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.6.13" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.6.14" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -560,7 +560,7 @@ entering data. When only one option is possible, \fBgdisk\fR
 usually bypasses the prompt entirely.
 
 .SH "BUGS"
-As of March 2010 (version 0.6.6), \fBgdisk\fR
+As of January 2011 (version 0.6.14), \fBgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
@@ -569,7 +569,8 @@ The program compiles correctly only on Linux, FreeBSD, Mac OS X, and Windows.
 Linux versions for x86\-64 (64\-bit), x86 (32\-bit), and PowerPC (32\-bit) have been
 tested, with the x86\-64 version having seen the most testing. Under FreeBSD,
 32\-bit (x86) and 64\-bit (x86\-64) versions have been tested. Only 32\-bit
-versions for Mac OS X and Windows have been tested.
+versions for Mac OS X and Windows have been tested by the author, although
+I've heard of 64-bit versions being successfully compiled.
 
 .TP 
 .B *
@@ -645,9 +646,9 @@ options in this case.
 
 .PP 
 
-The support for big\-endian CPUs (PowerPC, for example) is new, as of version
-0.3.5. I advise using caution on that platform, particularly with the more
-obscure features of the program.
+The support for big\-endian CPUs (PowerPC, for example) is new, as of
+version 0.3.5. I advise using caution on such CPUs, particularly with the
+more obscure features of the program.
 
 .SH "AUTHORS"
 Primary author: Roderick W. Smith (rodsmith@rodsbooks.com)

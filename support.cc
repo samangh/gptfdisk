@@ -85,97 +85,117 @@ char GetYN(void) {
 // the user-specified number of sectors (or KiB, MiB, etc.). Use the
 // def value as the default if the user just hits Enter. The sSize is
 // the sector size of the device.
-uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const string & prompt) {
-   uint64_t response, mult = 1, divide = 1;
-   int plusFlag = 0;
-   char suffix, line[255];
-
-   if (sSize == 0) {
-      sSize = SECTOR_SIZE;
-      cerr << "Bug: Sector size invalid in GetSectorNum()!\n";
-   } // if
+uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize,
+                      const string & prompt) {
+   uint64_t response;
+   char line[255];
 
    do {
       cout << prompt;
       cin.getline(line, 255);
-
-      // Remove leading spaces, if present
-      while (line[0] == ' ')
-         strcpy(line, &line[1]);
-
-      // If present, flag and remove leading plus sign
-      if (line[0] == '+') {
-         plusFlag = 1;
-         strcpy(line, &line[1]);
-      } // if
-
-      // If present, flag and remove leading minus sign
-      if (line[0] == '-') {
-         plusFlag = -1;
-         strcpy(line, &line[1]);
-      } // if
-
-      // Extract numeric response and, if present, suffix
-      istringstream inString(line);
-      inString >> response >> suffix;
-
-      // If no response, use default (def)
-      if (strlen(line) == 0) {
-         response = def;
-	      suffix = ' ';
-         plusFlag = 0;
-      } // if
-
-      // Set multiplier based on suffix
-      switch (suffix) {
-         case 'K':
-         case 'k':
-            mult = UINT64_C(1024) / sSize;
-            divide = sSize / UINT64_C(1024);
-            break;
-	    break;
-         case 'M':
-	      case 'm':
-            mult = UINT64_C(1048576) / sSize;
-            divide = sSize / UINT64_C(1048576);
-            break;
-         case 'G':
-         case 'g':
-            mult = UINT64_C(1073741824) / sSize;
-            break;
-         case 'T':
-	      case 't':
-            mult = UINT64_C(1099511627776) / sSize;
-            break;
-         case 'P':
-         case 'p':
-            mult = UINT64_C(1125899906842624) / sSize;
-            break;
-         default:
-            mult = 1;
-      } // switch
-
-      // Adjust response based on multiplier and plus flag, if present
-      if (mult > 1)
-         response *= mult;
-      else if (divide > 1)
-         response /= divide;
-      if (plusFlag == 1) {
-         // Recompute response based on low part of range (if default = high
-         // value, which should be the case when prompting for the end of a
-         // range) or the defaut value (if default != high, which should be
-         // the case for the first sector of a partition).
-         if (def == high)
-            response = response + low - UINT64_C(1);
-         else
-            response = response + def - UINT64_C(1);
-      } // if
-      if (plusFlag == -1) {
-         response = high - response;
-      } // if
+      response = SIToInt(line, sSize, low, high, def);
    } while ((response < low) || (response > high));
    return response;
 } // GetSectorNum()
+
+// Convert an SI value (K, M, G, T, or P) to its equivalent in
+// number of sectors. If no units are appended, interprets as the number
+// of sectors; otherwise, interprets as number of specified units and
+// converts to sectors. For instance, with 512-byte sectors, "1K" converts
+// to 2. If value includes a "+", adds low and subtracts 1; if SIValue
+// inclues a "-", subtracts from high. If SIValue is empty, returns def.
+// Returns integral sector value.
+uint64_t SIToInt(string SIValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def) {
+   int plusFlag = 0, badInput = 0;
+   uint64_t response = def, mult = 1, divide = 1;
+   char suffix;
+
+   if (sSize == 0) {
+      sSize = SECTOR_SIZE;
+      cerr << "Bug: Sector size invalid in SIToInt()!\n";
+   } // if
+
+   // Remove leading spaces, if present
+   while (SIValue[0] == ' ')
+      SIValue.erase(0, 1);
+
+   // If present, flag and remove leading plus sign
+   if (SIValue[0] == '+') {
+      plusFlag = 1;
+      SIValue.erase(0, 1);
+   } // if
+
+   // If present, flag and remove leading minus sign
+   if (SIValue[0] == '-') {
+      plusFlag = -1;
+      SIValue.erase(0, 1);
+   } // if
+
+   // Extract numeric response and, if present, suffix
+   istringstream inString(SIValue);
+   if (((inString.peek() < '0') || (inString.peek() > '9')) && (inString.peek() != -1))
+      badInput = 1;
+   inString >> response >> suffix;
+
+   // If no response, or if response == 0, use default (def)
+   if ((SIValue.length() == 0) || (response == 0)) {
+      response = def;
+      suffix = ' ';
+      plusFlag = 0;
+   } // if
+
+    // Set multiplier based on suffix
+   switch (suffix) {
+      case 'K':
+      case 'k':
+         mult = UINT64_C(1024) / sSize;
+         divide = sSize / UINT64_C(1024);
+         break;
+      case 'M':
+      case 'm':
+         mult = UINT64_C(1048576) / sSize;
+         divide = sSize / UINT64_C(1048576);
+         break;
+      case 'G':
+      case 'g':
+         mult = UINT64_C(1073741824) / sSize;
+         break;
+      case 'T':
+      case 't':
+         mult = UINT64_C(1099511627776) / sSize;
+         break;
+      case 'P':
+      case 'p':
+         mult = UINT64_C(1125899906842624) / sSize;
+         break;
+      default:
+         mult = 1;
+   } // switch
+
+   // Adjust response based on multiplier and plus flag, if present
+   if (mult > 1)
+      response *= mult;
+   else if (divide > 1)
+      response /= divide;
+   if (plusFlag == 1) {
+      // Recompute response based on low part of range (if default = high
+      // value, which should be the case when prompting for the end of a
+      // range) or the defaut value (if default != high, which should be
+      // the case for the first sector of a partition).
+      if (def == high)
+         response = response + low - UINT64_C(1);
+      else
+         response = response + def;
+   } // if
+   if (plusFlag == -1) {
+      response = high - response;
+   } // if
+
+   if (badInput)
+      response = high + UINT64_C(1);
+
+   return response;
+} // SIToInt()
 
 // Takes a size and converts this to a size in SI units (KiB, MiB, GiB,
 // TiB, or PiB), returned in C++ string form. The size is either in units

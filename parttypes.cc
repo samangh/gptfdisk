@@ -95,6 +95,16 @@ void PartType::AddAllTypes(void) {
    // An oddball IBM filesystem....
    AddType(0x7501, "37AFFC90-EF7D-4E96-91C3-2D7AE055B174", "IBM GPFS"); // General Parallel File System (GPFS)
 
+   // ChromeOS-specific partition types...
+   // Values taken from vboot_reference/firmware/lib/cgptlib/include/gpt.h in
+   // ChromeOS source code, retrieved 12/23/2010. They're also at
+   // http://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format.
+   // These have no MBR equivalents, AFAIK, so I'm using 0x7Fxx values, since they're close
+   // to the Linux values.
+   AddType(0x7f00, "FE3A2A5D-4F32-41A7-B725-ACCC3285A309", "ChromeOS kernel");
+   AddType(0x7f01, "3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC", "ChromeOS root");
+   AddType(0x7f02, "2E0A753D-9E48-43B0-8337-B15192CB1B5E", "ChromeOS reserved");
+
    // Linux-specific partition types....
    AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris)
    AddType(0x8300, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Linux native

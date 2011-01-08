@@ -10,9 +10,10 @@
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdio.h>
-#include <string>
 #include <popt.h>
 #include <errno.h>
+#include <stdint.h>
+#include <string>
 #include <iostream>
 #include <sstream>
 #include "mbr.h"
@@ -30,6 +31,8 @@ int CountColons(char* argument);
 
 int main(int argc, char *argv[]) {
    GPTData theGPT;
+   uint32_t sSize;
+   uint64_t low, high;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
    int partNum = 0, deletePartNum = 0, infoPartNum = 0, bsdPartNum = 0, largestPartNum = 0;
    int saveNonGPT = 1;
@@ -131,6 +134,7 @@ int main(int argc, char *argv[]) {
       if (theGPT.LoadPartitions((string) device)) {
          if ((theGPT.WhichWasUsed() == use_mbr) || (theGPT.WhichWasUsed() == use_bsd))
             saveNonGPT = 0; // flag so we don't overwrite unless directed to do so
+         sSize = theGPT.GetBlockSize();
          while ((opt = poptGetNextOpt(poptCon)) > 0) {
             switch (opt) {
                case 'A': {
@@ -254,12 +258,16 @@ int main(int argc, char *argv[]) {
                case 'n':
                   theGPT.JustLooking(0);
                   partNum = (int) GetInt(newPartInfo, 1) - 1;
-                  startSector = GetInt(newPartInfo, 2);
-                  endSector = GetInt(newPartInfo, 3);
+                  if (partNum < 0)
+                     partNum = theGPT.FindFirstFreePart();
+                  low = theGPT.FindFirstInLargest();
+                  high = theGPT.FindLastInFree(low);
+                  startSector = SIToInt(GetString(newPartInfo, 2), sSize, low, high, low);
+                  endSector = SIToInt(GetString(newPartInfo, 3), sSize, startSector, high, high);
                   if (theGPT.CreatePartition(partNum, startSector, endSector)) {
                      saveData = 1;
                   } else {
-                     cerr << "Could not create partition " << partNum << " from "
+                     cerr << "Could not create partition " << partNum + 1 << " from "
                           << startSector << " to " << endSector << "\n";
                      neverSaveData = 1;
                   } // if/else
@@ -269,6 +277,8 @@ int main(int argc, char *argv[]) {
                   theGPT.JustLooking(0);
                   startSector = theGPT.FindFirstInLargest();
                   endSector = theGPT.FindLastInFree(startSector);
+                  if (largestPartNum < 0)
+                     largestPartNum = theGPT.FindFirstFreePart();
                   if (theGPT.CreatePartition(largestPartNum - 1, startSector, endSector)) {
                      saveData = 1;
                   } else {

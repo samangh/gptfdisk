@@ -50,6 +50,7 @@ using namespace std;
 int GetNumber(int low, int high, int def, const string & prompt);
 char GetYN(void);
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const std::string& prompt);
+uint64_t SIToInt(string SIValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def = 0);
 string BytesToSI(uint64_t size, uint32_t sectorSize = 1);
 unsigned char StrToHex(const string & input, unsigned int position);
 int IsHex(const string & input); // Returns 1 if input can be hexadecimal number....

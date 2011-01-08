@@ -16,7 +16,7 @@
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.13"
+#define GPTFDISK_VERSION "0.6.14"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -180,6 +180,7 @@ public:
    bool ValidPartNum (const uint32_t partNum);
    const GPTPart & operator[](uint32_t partNum) const;
    const GUIDData & GetDiskGUID(void) const;
+   uint32_t GetBlockSize(void) {return blockSize;}
 
    // Find information about free space
    uint64_t FindFirstAvailable(uint64_t start = 0);
