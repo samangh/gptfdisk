@@ -1,8 +1,9 @@
 // attributes.cc
 // Class to manage partition attribute codes. These are binary bit fields,
-// of which only three are currently (2/2009) documented on Wikipedia.
+// of which only four are currently (2/2011) documented on Wikipedia, and
+// two others found from other sources.
 
-/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS

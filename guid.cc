@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 #include <string>
 #include <iostream>
 #include "guid.h"
@@ -29,10 +30,7 @@ GUIDData::GUIDData(void) {
 } // constructor
 
 GUIDData::GUIDData(const GUIDData & orig) {
-   int i;
-
-   for (i = 0; i < 16; i++)
-      uuidData[i] = orig.uuidData[i];
+   memcpy(uuidData, orig.uuidData, sizeof(uuidData));
 } // copy constructor
 
 GUIDData::GUIDData(const char * orig) {
@@ -43,10 +41,7 @@ GUIDData::~GUIDData(void) {
 } // destructor
 
 GUIDData & GUIDData::operator=(const GUIDData & orig) {
-   int i;
-
-   for (i = 0; i < 16; i++)
-      uuidData[i] = orig.uuidData[i];
+   memcpy(uuidData, orig.uuidData, sizeof(uuidData));
    return *this;
 } // GUIDData::operator=(const GUIDData & orig)
 
@@ -123,11 +118,7 @@ GUIDData & GUIDData::operator=(const char * orig) {
 
 // Erase the contents of the GUID
 void GUIDData::Zero(void) {
-   int i;
-
-   for (i = 0; i < 16; i++) {
-      uuidData[i] = 0;
-   } // for
+   memset(uuidData, 0, sizeof(uuidData));
 } // GUIDData::Zero()
 
 // Set a completely random GUID value....
@@ -151,14 +142,7 @@ void GUIDData::Randomize(void) {
 
 // Equality operator; returns 1 if the GUIDs are equal, 0 if they're unequal
 int GUIDData::operator==(const GUIDData & orig) const {
-   int retval = 1; // assume they're equal
-   int i;
-
-   for (i = 0; i < 16; i++)
-      if (uuidData[i] != orig.uuidData[i])
-         retval = 0;
-
-   return retval;
+   return !memcmp(uuidData, orig.uuidData, sizeof(uuidData));
 } // GUIDData::operator==
 
 // Inequality operator; returns 1 if the GUIDs are unequal, 0 if they're equal

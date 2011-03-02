@@ -2,7 +2,7 @@
 // Class to manage partition type codes -- a slight variant on MBR type
 // codes, GUID type codes, and associated names.
 
-/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -163,7 +163,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xc002, "E2A1E728-32E3-11D6-A682-7B03A0000000", "HP-UX service");
 
    // EFI system and related partitions
-   AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted marks Linux boot partitions as this
+   AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted identifies these as having the "boot flag" set
    AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
    AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Boot loader
 

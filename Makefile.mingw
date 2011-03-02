@@ -1,10 +1,10 @@
-CC=/usr/bin/i586-mingw32msvc-gcc
-CXX=/usr/bin/i586-mingw32msvc-g++
-STRIP=/usr/bin/i586-mingw32msvc-strip
+CC=/usr/bin/i686-pc-mingw32-gcc
+CXX=/usr/bin/i686-pc-mingw32-g++
+STRIP=/usr/bin/i686-pc-mingw32-strip
 CFLAGS=-O2 -D_FILE_OFFSET_BITS=64 -g
 CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -g
 #CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -I /usr/local/include -I/opt/local/include -g
-LIB_NAMES=guid gptpart partnotes bsd parttypes attributes crc32 mbr gpt support diskio diskio-windows
+LIB_NAMES=guid gptpart bsd parttypes partnotes gptpartnotes attributes crc32 basicmbr mbr gpt support diskio diskio-windows
 LIB_SRCS=$(NAMES:=.cc)
 LIB_OBJS=$(LIB_NAMES:=.o)
 LIB_HEADERS=$(LIB_NAMES:=.h)
@@ -12,8 +12,8 @@ DEPEND= makedepend $(CFLAGS)
 
 all:	gdisk
 
-gdisk:	$(LIB_OBJS) gpttext.o gdisk.o
-	$(CXX) $(LIB_OBJS) gpttext.o gdisk.o -luuid -o gdisk.exe
+gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
+	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o -luuid -static-libgcc -o gdisk.exe
 
 sgdisk: $(LIB_OBJS) sgdisk.o
 	$(CXX) $(LIB_OBJS) sgdisk.o -lpopt -o sgdisk.exe

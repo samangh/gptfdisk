@@ -69,7 +69,7 @@ class DiskIO {
       int GetBlockSize(void);
       int IsOpen(void) {return isOpen;}
       int IsOpenForWrite(void) {return openForWrite;}
-      string GetName(void) {return realFilename;}
+      string GetName(void) const {return realFilename;}
 
       uint64_t DiskSize(int* err);
 }; // struct GPTPart

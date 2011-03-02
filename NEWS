@@ -1,3 +1,26 @@
+0.6.15 (?/?/2011):
+------------------
+
+- Enhanced disk replication features ('u' on the experts' menu in gdisk; -R
+  or --replicate in sgdisk). It's now possible to replicate the partition
+  table from a larger to a smaller disk, so long as all the partitions fit
+  on the smaller disk. In sgdisk, the secondary GPT data are moved
+  automatically if disk sizes don't match. In gdisk, the secondary GPT data
+  are moved automatically if the target disk is smaller than the source
+  disk; if the target disk is larger than the source disk, the user is
+  given the option of making this adjustment.
+
+- Fixed --load-backup (-l) option to sgdisk, which was broken.
+
+- Changed largest drive that's not given a minimum 4 KiB alignment even
+  when smaller alignment is detected on the disk to 300 GB.
+
+- Fixed bug that preventing a partition table backup ('u' on the
+  experts' menu) by hitting the Enter key for the device filename.
+
+- Implemented a number of code cleanups provided by an anonymous
+  contributor.
+
 0.6.14 (1/8/2011):
 ------------------
 

@@ -63,11 +63,13 @@ int GetNumber(int low, int high, int def, const string & prompt) {
 char GetYN(void) {
    char line[255];
    char response;
-   char *junk;
 
    do {
       cout << "(Y/N): ";
-      junk = fgets(line, 255, stdin);
+      if (!fgets(line, 255, stdin)) {
+         cerr << "Critical error! Failed fgets() in GetYN()\n";
+         exit(1);
+      } // if
       sscanf(line, "%c", &response);
       if (response == 'y')
          response = 'Y';
@@ -306,32 +308,23 @@ void ReverseBytes(void* theValue, int numBytes) {
 
 // Extract integer data from argument string, which should be colon-delimited
 uint64_t GetInt(const string & argument, int itemNum) {
-   int startPos = -1, endPos = -1;
-   uint64_t retval = 0;
+   uint64_t retval;
 
-   while (itemNum-- > 0) {
-      startPos = endPos + 1;
-      endPos = (int) argument.find(':', startPos);
-   }
-   if (endPos == (int) string::npos)
-      endPos = (int) argument.length();
-   endPos--;
-
-   istringstream inString(argument.substr(startPos, endPos - startPos + 1));
+   istringstream inString(GetString(argument, itemNum));
    inString >> retval;
    return retval;
 } // GetInt()
 
 // Extract string data from argument string, which should be colon-delimited
 string GetString(const string & argument, int itemNum) {
-   int startPos = -1, endPos = -1;
+   size_t startPos = -1, endPos = -1;
 
    while (itemNum-- > 0) {
       startPos = endPos + 1;
-      endPos = (int) argument.find(':', startPos);
+      endPos = argument.find(':', startPos);
    }
-   if (endPos == (int) string::npos)
-      endPos = (int) argument.length();
+   if (endPos == string::npos)
+      endPos = argument.length();
    endPos--;
 
    return argument.substr(startPos, endPos - startPos + 1);

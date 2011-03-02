@@ -3,7 +3,7 @@
 
 /* By Rod Smith, initial coding January to February, 2009 */
 
-/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -96,6 +96,45 @@ GPTData::~GPTData(void) {
    delete[] partitions;
 } // GPTData destructor
 
+// Assignment operator
+GPTData & GPTData::operator=(const GPTData & orig) {
+   uint32_t i;
+
+   mainHeader = orig.mainHeader;
+   numParts = orig.numParts;
+   secondHeader = orig.secondHeader;
+   protectiveMBR = orig.protectiveMBR;
+   device = orig.device;
+   blockSize = orig.blockSize;
+   diskSize = orig.diskSize;
+   state = orig.state;
+   justLooking = orig.justLooking;
+   mainCrcOk = orig.mainCrcOk;
+   secondCrcOk = orig.secondCrcOk;
+   mainPartsCrcOk = orig.mainPartsCrcOk;
+   secondPartsCrcOk = orig.secondPartsCrcOk;
+   apmFound = orig.apmFound;
+   bsdFound = orig.bsdFound;
+   sectorAlignment = orig.sectorAlignment;
+   beQuiet = orig.beQuiet;
+   whichWasUsed = orig.whichWasUsed;
+
+   myDisk.OpenForRead(orig.myDisk.GetName());
+
+   delete[] partitions;
+   partitions = new GPTPart [numParts * sizeof (GPTPart)];
+   if (partitions != NULL) {
+      for (i = 0; i < numParts; i++) {
+         partitions[i] = orig.partitions[i];
+      }
+   } else {
+      numParts = 0;
+      cerr << "Error! Could not allocate memory for partitions in GPTData::operator=()!\n"
+           << "Continuing, but strange problems may occur!\n";
+   } // if/else
+   return *this;
+} // GPTData::operator=()
+
 /*********************************************************************
  *                                                                   *
  * Begin functions that verify data, or that adjust the verification *
@@ -107,7 +146,7 @@ GPTData::~GPTData(void) {
 // do *NOT* recover from these problems. Returns the total number of
 // problems identified.
 int GPTData::Verify(void) {
-   int problems = 0;
+   int problems = 0, alignProbs = 0;
    uint32_t i, numSegments;
    uint64_t totalFree, largestSegment;
 
@@ -210,11 +249,11 @@ int GPTData::Verify(void) {
 
    // Now check for a few other miscellaneous problems...
    // Check that the disk size will hold the data...
-   if (mainHeader.backupLBA > diskSize) {
+   if (mainHeader.backupLBA >= diskSize) {
       problems++;
       cout << "\nProblem: Disk is too small to hold all the data!\n"
            << "(Disk size is " << diskSize << " sectors, needs to be "
-           << mainHeader.backupLBA << " sectors.)\n"
+           << mainHeader.backupLBA + UINT64_C(1) << " sectors.)\n"
            << "The 'e' option on the experts' menu may fix this problem.\n";
    } // if
 
@@ -240,14 +279,18 @@ int GPTData::Verify(void) {
          cout << "\nCaution: Partition " << i + 1 << " doesn't begin on a "
               << sectorAlignment << "-sector boundary. This may\nresult "
               << "in degraded performance on some modern (2009 and later) hard disks.\n";
+         alignProbs++;
       } // if
    } // for
+   if (alignProbs > 0)
+      cout << "\nConsult http://www.ibm.com/developerworks/linux/library/l-4kb-sector-disks/\n"
+      << "for information on disk alignment.\n";
 
    // Now compute available space, but only if no problems found, since
    // problems could affect the results
    if (problems == 0) {
       totalFree = FindFreeBlocks(&numSegments, &largestSegment);
-      cout << "No problems found. " << totalFree << " free sectors ("
+      cout << "\nNo problems found. " << totalFree << " free sectors ("
            << BytesToSI(totalFree, blockSize) << ") available in "
            << numSegments << "\nsegments, the largest of which is "
            << largestSegment << " (" << BytesToSI(largestSegment, blockSize)
@@ -563,6 +606,24 @@ int GPTData::FindInsanePartitions(void) {
  *                                                                *
  ******************************************************************/
 
+// Change the filename associated with the GPT. Used for duplicating
+// the partition table to a new disk and saving backups.
+// Returns 1 on success, 0 on failure.
+int GPTData::SetFile(const string & deviceFilename) {
+   int err, allOK = 1;
+
+   device = deviceFilename;
+   if (allOK && myDisk.OpenForRead(deviceFilename)) {
+      // store disk information....
+      diskSize = myDisk.DiskSize(&err);
+      blockSize = (uint32_t) myDisk.GetBlockSize();
+   } // if
+   protectiveMBR.SetDisk(&myDisk);
+   protectiveMBR.SetDiskSize(diskSize);
+   protectiveMBR.SetBlockSize(blockSize);
+   return allOK;
+} // GPTData::SetFile()
+
 // Scan for partition data. This function loads the MBR data (regular MBR or
 // protective MBR) and loads BSD disklabel data (which is probably invalid).
 // It also looks for APM data, forces a load of GPT data, and summarizes
@@ -869,19 +930,14 @@ int GPTData::CheckTable(struct GPTHeader *header) {
    return newCrcOk;
 } // GPTData::CheckTable()
 
-// Writes GPT (and protective MBR) to disk. Returns 1 on successful
+// Writes GPT (and protective MBR) to disk. If quiet==1, 
+// Returns 1 on successful
 // write, 0 if there was a problem.
-int GPTData::SaveGPTData(int quiet, string filename) {
+int GPTData::SaveGPTData(int quiet) {
    int allOK = 1, littleEndian;
    char answer;
 
    littleEndian = IsLittleEndian();
-
-   if (filename == "")
-      filename = device;
-   if (filename == "") {
-      cerr << "Device not defined.\n";
-   } // if
 
    // First do some final sanity checks....
 
@@ -891,30 +947,34 @@ int GPTData::SaveGPTData(int quiet, string filename) {
       allOK = 0;
    } // if
 
+   // Check that disk is really big enough to handle the second header...
+   if (mainHeader.backupLBA >= diskSize) {
+      cerr << "Caution! Secondary header was placed beyond the disk's limits! Moving the\n"
+           << "header, but other problems may occur!\n";
+      MoveSecondHeaderToEnd();
+   } // if
+
    // Is there enough space to hold the GPT headers and partition tables,
    // given the partition sizes?
    if (CheckGPTSize() > 0) {
       allOK = 0;
    } // if
 
-   // Check that disk is really big enough to handle this...
-   if (mainHeader.backupLBA > diskSize) {
-      cerr << "Error! Disk is too small! The 'e' option on the experts' menu might fix the\n"
-           << "problem (or it might not). Aborting!\n(Disk size is "
-           << diskSize << " sectors, needs to be " << mainHeader.backupLBA << " sectors.)\n";
-      allOK = 0;
-   } // if
    // Check that second header is properly placed. Warn and ask if this should
    // be corrected if the test fails....
-   if ((mainHeader.backupLBA < (diskSize - UINT64_C(1))) && (quiet == 0)) {
-      cout << "Warning! Secondary header is placed too early on the disk! Do you want to\n"
-           << "correct this problem? ";
-      if (GetYN() == 'Y') {
+   if (mainHeader.backupLBA < (diskSize - UINT64_C(1))) {
+      if (quiet == 0) {
+         cout << "Warning! Secondary header is placed too early on the disk! Do you want to\n"
+              << "correct this problem? ";
+         if (GetYN() == 'Y') {
+            MoveSecondHeaderToEnd();
+            cout << "Have moved second header and partition table to correct location.\n";
+         } else {
+            cout << "Have not corrected the problem. Strange problems may occur in the future!\n";
+         } // if correction requested
+      } else { // Go ahead and do correction automatically
          MoveSecondHeaderToEnd();
-         cout << "Have moved second header and partition table to correct location.\n";
-      } else {
-         cout << "Have not corrected the problem. Strange problems may occur in the future!\n";
-      } // if correction requested
+      } // if/else quiet
    } // if
 
    // Check for overlapping or insane partitions....
@@ -942,7 +1002,7 @@ int GPTData::SaveGPTData(int quiet, string filename) {
 
    // Do it!
    if (allOK) {
-      if (myDisk.OpenForWrite(filename)) {
+      if (myDisk.OpenForWrite()) {
          // As per UEFI specs, write the secondary table and GPT first....
          allOK = SavePartitionTable(myDisk, secondHeader.partitionEntriesLBA);
          if (!allOK)
@@ -975,7 +1035,7 @@ int GPTData::SaveGPTData(int quiet, string filename) {
 
          myDisk.Close();
       } else {
-         cerr << "Unable to open device " << filename << " for writing! Errno is "
+         cerr << "Unable to open device " << myDisk.GetName() << " for writing! Errno is "
               << errno << "! Aborting write!\n";
          allOK = 0;
       } // if/else
@@ -1513,24 +1573,24 @@ int GPTData::PartsToMBR(PartNotes * notes) {
       notes->MakeItLegal();
    notes->Rewind();
    while (notes->GetNextInfo(&convInfo) >= 0) {
-      if ((convInfo.gptPartNum >= 0) && (convInfo.type == PRIMARY)) {
-         numConverted += OnePartToMBR((uint32_t) convInfo.gptPartNum, mbrNum);
+      if ((convInfo.origPartNum >= 0) && (convInfo.type == PRIMARY)) {
+         numConverted += OnePartToMBR((uint32_t) convInfo.origPartNum, mbrNum);
          if (convInfo.hexCode != 0)
             protectiveMBR.SetPartType(mbrNum, convInfo.hexCode);
          if (convInfo.active)
             protectiveMBR.SetPartBootable(mbrNum);
          mbrNum++;
       } // if
-      if (convInfo.gptPartNum == MBR_EFI_GPT)
+      if (convInfo.origPartNum == MBR_EFI_GPT)
          mbrNum++;
    } // for
    // Now go through and set sizes for MBR_EFI_GPT partitions....
    notes->Rewind();
    mbrNum = 0;
    while (notes->GetNextInfo(&convInfo) >= 0) {
-      if ((convInfo.gptPartNum >= 0) && (convInfo.type == PRIMARY))
+      if ((convInfo.origPartNum >= 0) && (convInfo.type == PRIMARY))
          mbrNum++;
-      if (convInfo.gptPartNum == MBR_EFI_GPT) {
+      if (convInfo.origPartNum == MBR_EFI_GPT) {
          if (protectiveMBR.FindFirstAvailable() == UINT32_C(1)) {
             protectiveMBR.MakePart(mbrNum, 1, protectiveMBR.FindLastInFree(1), convInfo.hexCode);
             protectiveMBR.SetHybrid();
@@ -1803,11 +1863,22 @@ int GPTData::ClearGPTData(void) {
 } // GPTData::ClearGPTData()
 
 // Set the location of the second GPT header data to the end of the disk.
+// If the disk size has actually changed, this also adjusts the protective
+// entry in the MBR, since it's probably no longer correct.
 // Used internally and called by the 'e' option on the recovery &
 // transformation menu, to help users of RAID arrays who add disk space
-// to their arrays.
+// to their arrays or to adjust data structures in restore operations
+// involving unequal-sized disks.
 void GPTData::MoveSecondHeaderToEnd() {
    mainHeader.backupLBA = secondHeader.currentLBA = diskSize - UINT64_C(1);
+   if (mainHeader.lastUsableLBA != diskSize - mainHeader.firstUsableLBA) {
+      if (protectiveMBR.GetValidity() == hybrid) {
+         protectiveMBR.OptimizeEESize();
+         RecomputeCHS();
+      } // if
+      if (protectiveMBR.GetValidity() == gpt)
+         MakeProtectiveMBR();
+   } // if
    mainHeader.lastUsableLBA = secondHeader.lastUsableLBA = diskSize - mainHeader.firstUsableLBA;
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
 } // GPTData::FixSecondHeaderLocation()

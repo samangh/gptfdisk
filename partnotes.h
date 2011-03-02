@@ -1,6 +1,6 @@
 /*
     partnotes.h -- Class that takes notes on GPT partitions for purpose of MBR conversion
-    Copyright (C) 2010 Roderick W. Smith
+    Copyright (C) 2010-2011 Roderick W. Smith
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@
 #ifndef __PARTNOTES_H
 #define __PARTNOTES_H
 
-#include "gpt.h"
-#include "gptpart.h"
+#include <stdint.h>
+#include <sys/types.h>
 
 using namespace std;
 
@@ -33,7 +33,7 @@ using namespace std;
 // Data structure used in GPT-to-MBR conversions; holds pointer to GPT
 // partition number, start and end sectors, and a few MBR-specific details
 struct PartInfo {
-   int gptPartNum;
+   int origPartNum;
    int spaceBefore; // boolean; if 1, can theoretically become a logical part.
    int active; // boolean
    int type; // WILL_NOT_CONVERT, PRIMARY, or LOGICAL
@@ -54,22 +54,21 @@ class PartNotes {
       struct PartInfo *notes;
       struct PartInfo *currentNote;
       int currentIndex;
-      GPTPart *gptParts;
-      int gptTableSize;
       int blockSize;
+      int origTableSize;
 
       void DeleteNotes(void);
+
    public:
       PartNotes();
-      PartNotes(GPTPart *parts, GPTData *gpt, int num, int blockSize);
       ~PartNotes();
 
       // Add partition notes (little or no error checking)
-      int PassPartitions(GPTPart *parts, GPTData *gpt, int num, int blockSize);
+//      int PassPartitions(GPTPart *parts, GPTData *gpt, int num, int blockSize);
       int AddToEnd(struct PartInfo* newOne);
       int AddToStart(struct PartInfo* newOne);
       void SetType(int partNum, int type); // type is PRIMARY, LOGICAL, or WILL_NOT_CONVERT
-      void SetMbrHexType(int i, uint8_t type);
+      void SetMbrHexType(int partNum, uint8_t type);
       void ToggleActiveStatus(int partNum);
 
       // Retrieve data or metadata
@@ -81,12 +80,11 @@ class PartNotes {
       int GetNumLogical();
       int GetType(int partNum);
       uint8_t GetMbrHexType(int i);
-      int GetGptNum(int partNum);
+      int GetOrigNum(int partNum);
       int GetActiveStatus(int partNum);
       int CanBeLogical(int partNum); // returns boolean
       int FindExtended(int &start);
-      int IsSorted(void);
-      int IsLegal(void); // returns boolean
+      int IsLegal(void); // returns Boolean
 
       // Manipulate data or metadata
       void RemoveDuplicates(void);
@@ -94,7 +92,7 @@ class PartNotes {
       void TrimSmallestExtended(void);
 
       // Interact with users, possibly changing data with error handling
-      void ShowSummary(void);
+      virtual void ShowSummary(void);
       int MakeChange(int partNum);
       int ChangeType(int partNum, int newType);
 };

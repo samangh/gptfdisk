@@ -471,10 +471,11 @@ physical sectors (such as some Western Digital models introduced in
 December of 2009) and some RAID configurations can suffer performance
 problems if partitions are not aligned properly for their internal data
 structures. On new disks, GPT fdisk attempts to align partitions on
-2048\-sector (1MiB) boundaries by default, which optimizes performance
-for both of these disk types. On pre\-partitioned disks, GPT fdisk
-attempts to identify the alignment value used on that disk. In either
-case, it can be changed by using this option.
+2048\-sector (1MiB) boundaries by default, which optimizes performance for
+both of these disk types. On pre\-partitioned disks, GPT fdisk attempts to
+identify the alignment value used on that disk, but will set 8-sector
+alignment on disks larger than 300 GB even if lesser alignment values are
+detected. In either case, it can be changed by using this option.
 
 .TP 
 .B m
@@ -662,6 +663,8 @@ Contributors:
 * Justin Maggard (justin.maggard@netgear.com)
 
 * Dwight Schauer (dschauer@ti.com)
+
+* Florian Zumbiehl (florz@florz.de)
 
 
 .SH "SEE ALSO"

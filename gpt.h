@@ -1,7 +1,7 @@
 /* gpt.h -- GPT and data structure definitions, types, and
    functions */
 
-/* This program is copyright (c) 2009, 2010 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdint.h>
@@ -11,12 +11,12 @@
 #include "mbr.h"
 #include "bsd.h"
 #include "gptpart.h"
-#include "partnotes.h"
+#include "gptpartnotes.h"
 
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
 
-#define GPTFDISK_VERSION "0.6.14"
+#define GPTFDISK_VERSION "0.6.15-pre1"
 
 // Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
 // numbered value to refer to partition numbers. (Most will be 0 or positive,
@@ -29,9 +29,9 @@
 #define MAX_ALIGNMENT 65536
 #define MIN_AF_ALIGNMENT 8
 
-// Below constant corresponds to a ~596GiB (640MB) disk, since WD has
-// introduced a smaller Advanced Format drive
-#define SMALLEST_ADVANCED_FORMAT UINT64_C(1250263728)
+// Below constant corresponds to a ~279GiB (300GB) disk, since the
+// smallest Advanced Format drive I know of is 320GB in size
+#define SMALLEST_ADVANCED_FORMAT UINT64_C(585937500)
 
 using namespace std;
 
@@ -103,6 +103,7 @@ public:
    GPTData(void);
    GPTData(string deviceFilename);
    virtual ~GPTData(void);
+   GPTData & operator=(const GPTData & orig);
 
    // Verify (or update) data integrity
    int Verify(void);
@@ -118,6 +119,7 @@ public:
    int FindInsanePartitions(void);
 
    // Load or save data from/to disk
+   int SetFile(const string & deviceFilename);
    int LoadMBR(const string & f) {return protectiveMBR.ReadMBRData(f);}
    int WriteProtectiveMBR(void) {return protectiveMBR.WriteMBRData(&myDisk);}
    void PartitionScan(void);
@@ -125,7 +127,7 @@ public:
    int ForceLoadGPTData(void);
    int LoadMainTable(void);
    int LoadSecondTableAsMain(void);
-   int SaveGPTData(int quiet = 0, string filename = "");
+   int SaveGPTData(int quiet = 0);
    int SaveGPTBackup(const string & filename);
    int LoadGPTBackup(const string & filename);
    int SaveMBR(void);

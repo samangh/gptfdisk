@@ -6,7 +6,7 @@
 //
 // by Rod Smith, project began February 2009; sgdisk begun January 2010.
 
-/* This program is copyright (c) 2009, 2010 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdio.h>
@@ -20,6 +20,7 @@
 #include "gpt.h"
 #include "support.h"
 #include "parttypes.h"
+#include "gptpartnotes.h"
 #include "attributes.h"
 
 using namespace std;
@@ -30,7 +31,7 @@ int BuildMBR(GPTData& theGPT, char* argument, int isHybrid);
 int CountColons(char* argument);
 
 int main(int argc, char *argv[]) {
-   GPTData theGPT;
+   GPTData theGPT, secondDevice;
    uint32_t sSize;
    uint64_t low, high;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
@@ -231,9 +232,10 @@ int main(int argc, char *argv[]) {
                   theGPT.ShowPartDetails(infoPartNum - 1);
                   break;
                case 'l':
-                  if (theGPT.LoadGPTBackup((string) backupFile) == 1)
+                  if (theGPT.LoadGPTBackup((string) backupFile) == 1) {
+                     theGPT.JustLooking(0);
                      saveData = 1;
-                  else {
+                  } else {
                      saveData = 0;
                      neverSaveData = 1;
                      cerr << "Error loading backup file!\n";
@@ -309,8 +311,11 @@ int main(int argc, char *argv[]) {
                   } else saveData = 1;
                   break;
                case 'R':
-                  theGPT.JustLooking(0);
-                  theGPT.SaveGPTData(1, outDevice);
+                  secondDevice = theGPT;
+                  secondDevice.SetFile(outDevice);
+                  secondDevice.JustLooking(0);
+//                  secondDevice.FixupMBR();
+                  secondDevice.SaveGPTData(1);
                   break;
                case 's':
                   theGPT.JustLooking(0);
@@ -424,7 +429,7 @@ int main(int argc, char *argv[]) {
 // Create a hybrid or regular MBR from GPT data structures
 int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
    int numParts, allOK = 1, i;
-   PartNotes notes;
+   GptPartNotes notes;
    struct PartInfo *newNote;
 
    if ((&theGPT != NULL) && (argument != NULL)) {
@@ -432,17 +437,17 @@ int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
       if (numParts <= (4 - isHybrid)) {
          for (i = 0; i < numParts; i++) {
             newNote = new struct PartInfo;
-            newNote->gptPartNum = GetInt(argument, i + 1) - 1;
+            newNote->origPartNum = GetInt(argument, i + 1) - 1;
             newNote->active = 0;
             newNote->hexCode = 0; // code to compute it from default
             newNote->type = PRIMARY;
-            newNote->firstLBA = theGPT[newNote->gptPartNum].GetFirstLBA();
-            newNote->lastLBA = theGPT[newNote->gptPartNum].GetLastLBA();
+            newNote->firstLBA = theGPT[newNote->origPartNum].GetFirstLBA();
+            newNote->lastLBA = theGPT[newNote->origPartNum].GetLastLBA();
             notes.AddToEnd(newNote);
          } // for
          if (isHybrid) {
             newNote = new struct PartInfo;
-            newNote->gptPartNum = MBR_EFI_GPT;
+            newNote->origPartNum = MBR_EFI_GPT;
             newNote->active = 0;
             newNote->hexCode = 0xEE;
             newNote->type = PRIMARY;

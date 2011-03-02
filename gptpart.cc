@@ -24,16 +24,12 @@
 using namespace std;
 
 GPTPart::GPTPart(void) {
-   int i;
-
    partitionType.Zero();
    uniqueGUID.Zero();
    firstLBA = 0;
    lastLBA = 0;
    attributes = 0;
-
-   for (i = 0; i < NAME_SIZE; i++)
-      name[i] = '\0';
+   memset(name, 0, NAME_SIZE);
 } // Default constructor
 
 GPTPart::~GPTPart(void) {
@@ -94,35 +90,32 @@ void GPTPart::SetType(PartType t) {
 // string. This function creates a simple-minded copy for this.
 void GPTPart::SetName(const string & theName) {
    char newName[NAME_SIZE];
-   char *junk;
-   int i;
+   size_t i;
 
-   // Blank out new name string, just to be on the safe side....
-   for (i = 0; i < NAME_SIZE; i++)
-      newName[i] = '\0';
+   // Blank out new name string, so that it will terminate in a null
+   // when data are copied to it....
+   memset(newName, 0, NAME_SIZE);
 
    if (theName == "") { // No name specified, so get one from the user
       cout << "Enter name: ";
-      junk = fgets(newName, NAME_SIZE / 2, stdin);
+      if (!fgets(newName, NAME_SIZE / 2 + 1, stdin)) {
+         cerr << "Critical error! Failed fgets() in GPTPart::SetName()!\n";
+         exit(1);
+      }
 
       // Input is likely to include a newline, so remove it....
-      i = (int) strlen(newName);
-      if ((i > 0) && (i <= NAME_SIZE))
-         if (newName[i - 1] == '\n')
-            newName[i - 1] = '\0';
+      i = strlen(newName);
+      if (i && newName[i - 1] == '\n')
+         newName[i - 1] = '\0';
    } else {
       strcpy(newName, theName.substr(0, NAME_SIZE / 2).c_str());
    } // if
 
    // Copy the C-style ASCII string from newName into a form that the GPT
    // table will accept....
-   for (i = 0; i < NAME_SIZE; i++) {
-      if ((i % 2) == 0) {
-         name[i] = newName[(i / 2)];
-      } else {
-         name[i] = '\0';
-      } // if/else
-   } // for
+   memset(name, 0, NAME_SIZE);
+   for (i = 0; i < NAME_SIZE / 2; i++)
+      name[i * 2] = newName[i];
 } // GPTPart::SetName()
 
 // Set the name for the partition based on the current GUID partition type
@@ -132,22 +125,19 @@ void GPTPart::SetDefaultDescription(void) {
 } // GPTPart::SetDefaultDescription()
 
 GPTPart & GPTPart::operator=(const GPTPart & orig) {
-   int i;
-
    partitionType = orig.partitionType;
    uniqueGUID = orig.uniqueGUID;
    firstLBA = orig.firstLBA;
    lastLBA = orig.lastLBA;
    attributes = orig.attributes;
-   for (i = 0; i < NAME_SIZE; i++)
-      name[i] = orig.name[i];
+   memcpy(name, orig.name, NAME_SIZE);
    return *this;
 } // assignment operator
 
 // Display summary information; does nothing if the partition is empty.
 void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
    string sizeInSI;
-   int i;
+   size_t i;
 
    if (firstLBA != 0) {
       sizeInSI = BytesToSI(lastLBA - firstLBA + 1, blockSize);
@@ -159,7 +149,7 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout.width(14);
       cout << lastLBA  << "   ";
       cout << BytesToSI(lastLBA - firstLBA + 1, blockSize) << "  ";
-      for (i = 0; i < 10 - (int) sizeInSI.length(); i++)
+      for (i = 0; i < 10 - sizeInSI.length(); i++)
          cout << " ";
       cout.fill('0');
       cout.width(4);
@@ -201,30 +191,21 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
 
 // Blank (delete) a single partition
 void GPTPart::BlankPartition(void) {
-   int j;
-
    uniqueGUID.Zero();
    partitionType.Zero();
    firstLBA = 0;
    lastLBA = 0;
    attributes = 0;
-   for (j = 0; j < NAME_SIZE; j++)
-      name[j] = '\0';
+   memset(name, 0, NAME_SIZE);
 } // GPTPart::BlankPartition
 
 // Returns 1 if the two partitions overlap, 0 if they don't
 int GPTPart::DoTheyOverlap(const GPTPart & other) {
-   int theyDo = 0;
-
    // Don't bother checking unless these are defined (both start and end points
    // are 0 for undefined partitions, so just check the start points)
-   if ((firstLBA != 0) && (other.firstLBA != 0)) {
-      if ((firstLBA < other.lastLBA) && (lastLBA >= other.firstLBA))
-         theyDo = 1;
-      if ((other.firstLBA < lastLBA) && (other.lastLBA >= firstLBA))
-         theyDo = 1;
-   } // if
-   return (theyDo);
+//   cout << "Entering GPTPart::DoTheyOverlap()\n";
+   return firstLBA && other.firstLBA &&
+          (firstLBA <= other.lastLBA) != (lastLBA < other.firstLBA);
 } // GPTPart::DoTheyOverlap()
 
 // Reverse the bytes of integral data types; used on big-endian systems.
@@ -242,17 +223,18 @@ void GPTPart::ReversePartBytes(void) {
 // name is the generic one for the partition type.
 void GPTPart::ChangeType(void) {
    char line[255];
-   char* junk;
-   unsigned int changeName = 0;
+   int changeName;
    PartType tempType = (GUIDData) "00000000-0000-0000-0000-000000000000";
 
-   if (GetDescription() == GetTypeName())
-      changeName = UINT16_C(1);
+   changeName = (GetDescription() == GetTypeName());
 
    cout << "Current type is '" << GetTypeName() << "'\n";
    do {
       cout << "Hex code or GUID (L to show codes, Enter = 0700): ";
-      junk = fgets(line, 255, stdin);
+      if (!fgets(line, sizeof(line), stdin)) {
+         cerr << "Critical error! Failed fgets() in GPTPart::ChangeType()!\n";
+         exit(1);
+      } // if
       if ((line[0] == 'L') || (line[0] == 'l')) {
          partitionType.ShowAllTypes();
       } else {

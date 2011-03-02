@@ -29,20 +29,15 @@ PartNotes::PartNotes() {
    notes = NULL;
    currentNote = NULL;
    currentIndex = 0;
-   gptParts = NULL;
-   gptTableSize = 0;
+   origTableSize = 0;
    blockSize = 512;
    dummyNote.active = 0;
-   dummyNote.gptPartNum = MBR_EMPTY;
+   dummyNote.origPartNum = MBR_EMPTY;
    dummyNote.hexCode = 0xEE;
    dummyNote.next = NULL;
    dummyNote.spaceBefore = 0;
    dummyNote.type = WILL_NOT_CONVERT;
 } // PartNotes constructor
-
-PartNotes::PartNotes(GPTPart *parts, GPTData *gpt, int num, int s) {
-   PassPartitions(parts, gpt, num, s);
-} // PartNotes constructor passing partition information
 
 // Destructor. Note that we do NOT delete the gptParts array, since we just
 // store a pointer to an array that's allocated by the calling function.
@@ -70,59 +65,6 @@ void PartNotes::DeleteNotes(void) {
  * bogus layouts if used carelessly.                                     *
  *                                                                       *
  *************************************************************************/
-
-// Creates the notes linked list with as many entries as there are
-// in-use GPT partitions. Note that the parts array must be pre-sorted!
-// If not, this function will reject the partition table.
-// Returns the number of partitions -- normally identical to num,
-// unless there were problems, in which case it returns 0.
-int PartNotes::PassPartitions(GPTPart *parts, GPTData *gpt, int num, int s) {
-   int i;
-   struct PartInfo *tempNote = NULL, *lastNote = NULL;
-
-   if ((parts != NULL) && (num > 0)) {
-      blockSize = s;
-      gptParts = parts;
-      gptTableSize = num;
-      if (notes != NULL)
-         DeleteNotes();
-      for (i = 0; i < num; i++) {
-         if (gptParts[i].IsUsed()){
-            tempNote = new struct PartInfo;
-            tempNote->next = NULL;
-            tempNote->firstLBA = gptParts[i].GetFirstLBA();
-            tempNote->lastLBA = gptParts[i].GetLastLBA();
-            if (gpt->IsFree(gptParts[i].GetFirstLBA() - 1)) {
-               tempNote->spaceBefore = 1;
-               tempNote->type = LOGICAL;
-            } else {
-               tempNote->spaceBefore = 0;
-               tempNote->type = PRIMARY;
-            } // if/else
-            tempNote->gptPartNum = i;
-            tempNote->active = 0;
-            if (lastNote == NULL) {
-               lastNote = tempNote;
-               notes = tempNote;
-            } else {
-               lastNote->next = tempNote;
-               lastNote = tempNote;
-            } // if/else
-         } // if GPT partition in use
-      } // for
-      if (!IsSorted()) {
-         DeleteNotes();
-         gptParts = NULL;
-         gptTableSize = 0;
-         cerr << "The partition table must be sorted before calling PartNotes::PassPartitions()!\n";
-      } // if
-   } else {
-      notes = NULL;
-      gptParts = NULL;
-      gptTableSize = 0;
-   } // if/else
-   return gptTableSize;
-} // PartNotes::PassPartitions
 
 // Add a single partition to the end of the linked list.
 // Returns 1 on success, 0 on failures.
@@ -344,10 +286,10 @@ uint8_t PartNotes::GetMbrHexType(int partNum) {
    } // if/else
 } // PartNotes::GetMBRHexType()
 
-// Return the GPT partition number associated with this note, -1 if
-// the notes list is empty, or the GPT partition number of the last
+// Return the original partition number associated with this note, -1 if
+// the notes list is empty, or the original partition number of the last
 // partition if partNum is too high.
-int PartNotes::GetGptNum(int partNum) {
+int PartNotes::GetOrigNum(int partNum) {
    int count = 0;
    struct PartInfo *theNote;
 
@@ -355,11 +297,11 @@ int PartNotes::GetGptNum(int partNum) {
    if (theNote != NULL) {
       while ((count++ < partNum) && (theNote->next != NULL))
          theNote = theNote->next;
-      return theNote->gptPartNum;
+      return theNote->origPartNum;
    } else {
       return -1;
    } // if/else
-} // PartNotes::GetGptNum()
+} // PartNotes::GetOrigNum()
 
 // Return whether or not the partition is flagged as active (bootable)
 int PartNotes::GetActiveStatus(int partNum) {
@@ -416,23 +358,6 @@ int PartNotes::FindExtended(int &start) {
    } // if arrays exist
    return length;
 } // PartNotes::FindExtended()
-
-// Returns 1 if the GPT partition table is sorted, 0 if not (or if the
-// pointer is NULL)
-int PartNotes::IsSorted(void) {
-   int i, sorted = 1;
-   uint64_t lastStartLBA = 0;
-
-   if (gptParts == NULL) {
-      sorted = 0;
-   } else {
-      for (i = 0; i < gptTableSize; i++) {
-         if (lastStartLBA > gptParts[i].GetFirstLBA())
-            sorted = 0;
-      } // for
-   } // if/else
-   return sorted;
-} // PartNotes::IsSorted()
 
 // Returns 1 if the set as a whole makes a legal MBR partition table
 // (possibly with logicals), 0 if not
@@ -557,7 +482,7 @@ void PartNotes::TrimSmallestExtended() {
       } // for
 
       // Find the smallest extended partition....
-      shortestNum = gptTableSize + 1;
+      shortestNum = origTableSize + 1;
       for (i = 0; i < numExtended; i++) {
          if (extendeds[i].numLogicals < shortestNum) {
             shortestNum = extendeds[i].numLogicals;
@@ -593,57 +518,8 @@ void PartNotes::TrimSmallestExtended() {
 
 // Display summary information for the user
 void PartNotes::ShowSummary(void) {
-   int j;
-   string sizeInSI;
-   struct PartInfo *theNote;
-
-   if ((gptParts != NULL) && (notes != NULL)) {
-      theNote = notes;
-      cout << "Sorted GPT partitions and their current conversion status:\n";
-      cout << "                                      Can Be\n";
-      cout << "Number    Boot    Size       Status   Logical   Code   GPT Name\n";
-      while (theNote != NULL) {
-         if (gptParts[theNote->gptPartNum].IsUsed()) {
-            cout.fill(' ');
-            cout.width(4);
-            cout << theNote->gptPartNum + 1 << "    ";
-            if (theNote->active)
-               cout << "   *    ";
-            else
-               cout << "        ";
-            sizeInSI = BytesToSI((gptParts[theNote->gptPartNum].GetLastLBA() -
-                                 gptParts[theNote->gptPartNum].GetFirstLBA() + 1), blockSize);
-            cout << " " << sizeInSI;
-            for (j = 0; j < 12 - (int) sizeInSI.length(); j++)
-               cout << " ";
-            switch (theNote->type) {
-               case PRIMARY:
-                  cout << "primary     ";
-                  break;
-               case LOGICAL:
-                  cout << "logical     ";
-                  break;
-               case WILL_NOT_CONVERT:
-                  cout << "OMITTED     ";
-                  break;
-               default:
-                  cout << "**ERROR**   ";
-                  break;
-            } // switch
-            if (theNote->spaceBefore)
-               cout << "Y       ";
-            else
-               cout << "-       ";
-            cout.fill('0');
-            cout.width(2);
-            cout.setf(ios::uppercase);
-            cout << hex << (int) theNote->hexCode << "    " << dec;
-            cout.fill(' ');
-            cout << gptParts[theNote->gptPartNum].GetDescription().substr(0, 25) << "\n";
-         } // if
-         theNote = theNote->next;
-      } // for
-   } // if
+   cerr << "Program is calling PartNotes::ShowSummary(); this is a virtual base function,\n"
+        << "and should never be called.\n";
 } // PartNotes::ShowSummary()
 
 // Interact with the user to create a change in the specified
@@ -654,7 +530,6 @@ void PartNotes::ShowSummary(void) {
 int PartNotes::MakeChange(int partNum) {
    int allOK = 1;
    int type = 0;
-   char *junk;
    char line[255], command;
 
    if (notes != NULL) {
@@ -676,7 +551,10 @@ int PartNotes::MakeChange(int partNum) {
       } // switch
       cout << " t - change MBR type code\n";
       cout << "Action: ";
-      junk = fgets(line, 255, stdin);
+      if (!fgets(line, 255, stdin)) {
+         cerr << "Critical error! Failed fgets() in PartNotes::MakeChange()!\n";
+         exit(1);
+      } // if
       sscanf(line, "%c", &command);
       switch (command) {
          case 'a': case 'A':
@@ -694,7 +572,10 @@ int PartNotes::MakeChange(int partNum) {
          case 't': case 'T':
             while (type == 0) {
                cout << "Enter a 2-byte hexadecimal MBR type code: ";
-               junk = fgets(line, 255, stdin);
+               if (!fgets(line, 255, stdin)) {
+                  cerr << "Critical error! Failed fgets() in PartNotes::MakeChange()\n";
+                  exit(1);
+               } // if
                sscanf(line, "%x", &type);
             } // while
             SetMbrHexType(partNum, (uint8_t) type);
@@ -711,7 +592,7 @@ int PartNotes::MakeChange(int partNum) {
 // Returns 1 unless there's a dire bug.
 int PartNotes::ChangeType(int partNum, int newType) {
    int origType, allOK = 1;
-   char *junk, line[255];
+   char line[255];
 
    if ((notes != NULL) && IsLegal()) {
       origType = GetType(partNum);
@@ -733,7 +614,10 @@ int PartNotes::ChangeType(int partNum, int newType) {
               << "another\norder, such as deleting partitions before changing others' "
               << "types.\n";
          cout << "\nReverting change.\nPress <Enter> to continue: ";
-         junk = fgets(line, 255, stdin);
+         if (!fgets(line, 255, stdin)) {
+            cerr << "Critical error! Failed fgets() in PartNotes::ChangeType()\n";
+            exit(1);
+         } // if
          SetType(partNum, origType);
       } // if
    } else allOK = 0; // if

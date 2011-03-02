@@ -29,7 +29,7 @@
 #include <cstdio>
 #include "attributes.h"
 #include "gpttext.h"
-#include "partnotes.h"
+#include "gptpartnotes.h"
 #include "support.h"
 
 using namespace std;
@@ -353,7 +353,6 @@ void GPTDataTextUI::ShowDetails(void) {
 void GPTDataTextUI::MakeHybrid(void) {
    uint32_t partNums[3];
    char line[255];
-   char* junk;
    int numPartsToCvt, i, j, mbrNum, bootable = 0;
    unsigned int hexCode = 0;
    struct PartInfo *newNote;
@@ -368,7 +367,10 @@ void GPTDataTextUI::MakeHybrid(void) {
    // hybrid MBR....
    cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
         << "added to the hybrid MBR, in sequence: ";
-   junk = fgets(line, 255, stdin);
+   if (!fgets(line, 255, stdin)) {
+      cerr << "Critical error! Failed fgets() in GPTDataTextUI::MakeHybrid()!\n";
+      exit(1);
+   } // if
    numPartsToCvt = sscanf(line, "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
 
    if (numPartsToCvt > 0) {
@@ -378,7 +380,7 @@ void GPTDataTextUI::MakeHybrid(void) {
 
    for (i = 0; i < numPartsToCvt; i++) {
       newNote = new struct PartInfo;
-      j = newNote->gptPartNum = partNums[i] - 1;
+      j = newNote->origPartNum = partNums[i] - 1;
       if (partitions[j].IsUsed()) {
          mbrNum = i + (eeFirst == 'Y');
          cout << "\nCreating entry for GPT partition #" << j + 1
@@ -404,7 +406,7 @@ void GPTDataTextUI::MakeHybrid(void) {
       // If this location (covering the main GPT data structures) is omitted,
       // Linux won't find any partitions on the disk.
       newNote = new struct PartInfo;
-      newNote->gptPartNum = MBR_EFI_GPT;
+      newNote->origPartNum = MBR_EFI_GPT;
       newNote->firstLBA = 1;
       newNote->active = 0;
       newNote->hexCode = 0xEE;
@@ -427,13 +429,16 @@ void GPTDataTextUI::MakeHybrid(void) {
                cout << "Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ";
                // Comment on above: Mac OS treats disks with more than one
                // 0xEE MBR partition as MBR disks, not as GPT disks.
-               junk = fgets(line, 255, stdin);
+               if (!fgets(line, 255, stdin)) {
+                  cerr << "Critical error! Failed fgets() in GPTDataTextUI::MakeHybrid()\n";
+                  exit(1);
+               } // if
                sscanf(line, "%x", &hexCode);
                if (line[0] == '\n')
                   hexCode = 0x00;
             } // while
             newNote = new struct PartInfo;
-            newNote->gptPartNum = MBR_EFI_GPT;
+            newNote->origPartNum = MBR_EFI_GPT;
             newNote->active = 0;
             newNote->hexCode = hexCode;
             newNote->type = PRIMARY;
@@ -452,7 +457,7 @@ void GPTDataTextUI::MakeHybrid(void) {
 // possible, but gives the user the option to override this suggestion.
 // Returns the number of partitions assigned (0 if problems or if the
 // user aborts)
-int GPTDataTextUI::AssignPrimaryOrLogical(PartNotes & notes) {
+int GPTDataTextUI::AssignPrimaryOrLogical(GptPartNotes& notes) {
    int i, partNum, allOK = 1, changesWanted = 1, countedParts, numPrimary = 0, numLogical = 0;
    int newNumParts; // size of GPT table
 
@@ -527,7 +532,7 @@ int GPTDataTextUI::AssignPrimaryOrLogical(PartNotes & notes) {
 int GPTDataTextUI::XFormToMBR(void) {
    int numToConvert, numReallyConverted = 0;
    int origNumParts;
-   PartNotes notes;
+   GptPartNotes notes;
    GPTPart *tempGptParts;
    uint32_t i;
 
@@ -576,7 +581,6 @@ int GPTDataTextUI::XFormToMBR(void) {
 // Get an MBR type code from the user and return it
 int GetMBRTypeCode(int defType) {
    char line[255];
-   char* junk;
    int typeCode;
 
    cout.setf(ios::uppercase);
@@ -585,7 +589,10 @@ int GetMBRTypeCode(int defType) {
       cout << "Enter an MBR hex code (default " << hex;
       cout.width(2);
       cout << defType << "): " << dec;
-      junk = fgets(line, 255, stdin);
+      if (!fgets(line, 255, stdin)) {
+         cerr << "Critical error! Failed fgets() in GetMBRTypeCode()\n";
+         exit(1);
+      } // if
       if (line[0] == '\n')
          typeCode = defType;
       else

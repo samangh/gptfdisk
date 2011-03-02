@@ -22,7 +22,7 @@
 #ifdef _WIN32
 typedef unsigned char my_uuid_t[16];
 #else
-#include </usr/include/uuid/uuid.h>
+#include <uuid/uuid.h>
 typedef uuid_t my_uuid_t;
 #endif
 

@@ -348,7 +348,7 @@ uint64_t DiskIO::DiskSize(int *err) {
       if (*err) {
          sectors = sz = 0;
       } // if
-      if ((errno == EFBIG) || (!*err)) {
+      if ((!*err) || (errno == EFBIG)) {
          *err = ioctl(fd, BLKGETSIZE64, &b);
          if (*err || b == 0 || b == sz)
             sectors = sz;
