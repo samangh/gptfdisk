@@ -36,7 +36,7 @@ GPTPart::~GPTPart(void) {
 } // destructor
 
 // Return the gdisk-specific two-byte hex code for the partition
-uint16_t GPTPart::GetHexType(void) {
+uint16_t GPTPart::GetHexType(void) const {
    return partitionType.GetHexType();
 } // GPTPart::GetHexType()
 
@@ -48,7 +48,7 @@ string GPTPart::GetTypeName(void) {
 
 // Compute and return the partition's length (or 0 if the end is incorrectly
 // set before the beginning).
-uint64_t GPTPart::GetLengthLBA(void) {
+uint64_t GPTPart::GetLengthLBA(void) const {
    uint64_t length = 0;
 
    if (firstLBA <= lastLBA)
@@ -98,10 +98,7 @@ void GPTPart::SetName(const string & theName) {
 
    if (theName == "") { // No name specified, so get one from the user
       cout << "Enter name: ";
-      if (!fgets(newName, NAME_SIZE / 2 + 1, stdin)) {
-         cerr << "Critical error! Failed fgets() in GPTPart::SetName()!\n";
-         exit(1);
-      }
+      ReadCString(newName, NAME_SIZE / 2 + 1);
 
       // Input is likely to include a newline, so remove it....
       i = strlen(newName);
@@ -203,7 +200,6 @@ void GPTPart::BlankPartition(void) {
 int GPTPart::DoTheyOverlap(const GPTPart & other) {
    // Don't bother checking unless these are defined (both start and end points
    // are 0 for undefined partitions, so just check the start points)
-//   cout << "Entering GPTPart::DoTheyOverlap()\n";
    return firstLBA && other.firstLBA &&
           (firstLBA <= other.lastLBA) != (lastLBA < other.firstLBA);
 } // GPTPart::DoTheyOverlap()
@@ -231,10 +227,7 @@ void GPTPart::ChangeType(void) {
    cout << "Current type is '" << GetTypeName() << "'\n";
    do {
       cout << "Hex code or GUID (L to show codes, Enter = 0700): ";
-      if (!fgets(line, sizeof(line), stdin)) {
-         cerr << "Critical error! Failed fgets() in GPTPart::ChangeType()!\n";
-         exit(1);
-      } // if
+      ReadCString(line, 255);
       if ((line[0] == 'L') || (line[0] == 'l')) {
          partitionType.ShowAllTypes();
       } else {

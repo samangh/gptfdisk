@@ -1,6 +1,6 @@
-.\" Copyright 2010 Roderick W. Smith (rodsmith@rodsbooks.com)
+.\" Copyright 2011 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.6.14" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.7.0" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -470,7 +470,7 @@ Non\-GPT disk detected and no \fI\-g\fR option
 .B 4
 An error prevented saving changes
 .SH "BUGS"
-As of January 2011 (version 0.6.14), \fBsgdisk\fR
+As of March 2011 (version 0.7.00), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
@@ -506,7 +506,7 @@ preserved when loading and saving partitions.
 The program can load only up to 128 partitions (4 primary partitions and
 124 logical partitions) when converting from MBR format. This limit can
 be raised by changing the \fI#define MAX_MBR_PARTS\fR line in the
-\fImbr.h\fR source code file and recompiling; however, such a change
+\fIbasicmbr.h\fR source code file and recompiling; however, such a change
 will require using a larger\-than\-normal partition table. (The limit
 of 128 partitions was chosen because that number equals the 128 partitions
 supported by the most common partition table size.)
@@ -580,6 +580,7 @@ Contributors:
 \fBmkfs (8)\fR,
 \fBparted (8)\fR,
 \fBsfdisk (8)\fR
+\fBfixparts (8)\fR
 
 \fIhttp://en.wikipedia.org/wiki/GUID_Partition_Table\fR
 

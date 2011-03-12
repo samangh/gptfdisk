@@ -8,6 +8,8 @@
 #ifndef __GPTSUPPORT
 #define __GPTSUPPORT
 
+#define GPTFDISK_VERSION "0.7.0"
+
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 // Darwin (Mac OS) only: disk IOCTLs are different, and there is no lseek64
 // This used to use __DARWIN_UNIX03 rather than __APPLE__, but __APPLE__
@@ -20,6 +22,13 @@
 // Linux only....
 #ifdef __linux__
 #include <linux/fs.h>
+#endif
+
+// Microsoft Visual C++ only
+#if defined (_MSC_VER)
+#define sscanf sscanf_s
+#define strcpy strcpy_s
+#define sprintf sprintf_s
 #endif
 
 // Set this as a default
@@ -47,6 +56,7 @@
 
 using namespace std;
 
+char* ReadCString(char *inStr, int numchars);
 int GetNumber(int low, int high, int def, const string & prompt);
 char GetYN(void);
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const std::string& prompt);
@@ -59,6 +69,6 @@ void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theVa
 
 // Extract colon-separated fields from a string....
 uint64_t GetInt(const string & argument, int itemNum);
-string GetString(const string & Info, int itemNum);
+string GetString(string argument, int itemNum);
 
 #endif

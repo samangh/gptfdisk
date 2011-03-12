@@ -143,6 +143,18 @@ int DiskIO::GetBlockSize(void) {
    return (blockSize);
 } // DiskIO::GetBlockSize()
 
+// Returns the number of heads, according to the kernel, or 255 if the
+// correct value can't be determined.
+uint32_t DiskIO::GetNumHeads(void) {
+   return UINT32_C(255);
+} // DiskIO::GetNumHeads();
+
+// Returns the number of sectors per track, according to the kernel, or 63
+// if the correct value can't be determined.
+uint32_t DiskIO::GetNumSecsPerTrack(void) {
+   return UINT32_C(63);
+} // DiskIO::GetNumSecsPerTrack()
+
 // Resync disk caches so the OS uses the new partition table. This code varies
 // a lot from one OS to another.
 void DiskIO::DiskSync(void) {

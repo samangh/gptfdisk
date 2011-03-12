@@ -20,7 +20,7 @@
 #include "gpt.h"
 #include "support.h"
 #include "parttypes.h"
-#include "gptpartnotes.h"
+//#include "gptpartnotes.h"
 #include "attributes.h"
 
 using namespace std;
@@ -248,12 +248,13 @@ int main(int argc, char *argv[]) {
                   theGPT.JustLooking(0);
                   if (BuildMBR(theGPT, mbrParts, 0) == 1) {
                      if (!pretend) {
-                        if (theGPT.SaveMBR())
+                        if (theGPT.SaveMBR()) {
                            theGPT.DestroyGPT();
-                        else
+                        } else
                            cerr << "Problem saving MBR!\n";
                      } // if
                      saveNonGPT = 0;
+                     pretend = 1; // Not really, but works around problem if -g is used with this...
                      saveData = 0;
                   } // if
                   break;
@@ -312,7 +313,7 @@ int main(int argc, char *argv[]) {
                   break;
                case 'R':
                   secondDevice = theGPT;
-                  secondDevice.SetFile(outDevice);
+                  secondDevice.SetDisk(outDevice);
                   secondDevice.JustLooking(0);
 //                  secondDevice.FixupMBR();
                   secondDevice.SaveGPTData(1);
@@ -382,8 +383,9 @@ int main(int argc, char *argv[]) {
                   break;
             } // switch
          } // while
-         if ((saveData) && (!neverSaveData) && (saveNonGPT) && (!pretend))
+         if ((saveData) && (!neverSaveData) && (saveNonGPT) && (!pretend)) {
             theGPT.SaveGPTData(1);
+         }
          if (saveData && (!saveNonGPT)) {
             cout << "Non-GPT disk; not saving changes. Use -g to override.\n";
             retval = 3;
@@ -428,34 +430,33 @@ int main(int argc, char *argv[]) {
 
 // Create a hybrid or regular MBR from GPT data structures
 int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
-   int numParts, allOK = 1, i;
-   GptPartNotes notes;
-   struct PartInfo *newNote;
+   int numParts, allOK = 1, i, origPartNum;
+//   GptPartNotes notes;
+//   struct PartInfo *newNote;
+   MBRPart newPart;
+   BasicMBRData newMBR;
 
    if ((&theGPT != NULL) && (argument != NULL)) {
       numParts = CountColons(argument) + 1;
       if (numParts <= (4 - isHybrid)) {
+         newMBR.SetDisk(theGPT.GetDisk());
          for (i = 0; i < numParts; i++) {
-            newNote = new struct PartInfo;
-            newNote->origPartNum = GetInt(argument, i + 1) - 1;
-            newNote->active = 0;
-            newNote->hexCode = 0; // code to compute it from default
-            newNote->type = PRIMARY;
-            newNote->firstLBA = theGPT[newNote->origPartNum].GetFirstLBA();
-            newNote->lastLBA = theGPT[newNote->origPartNum].GetLastLBA();
-            notes.AddToEnd(newNote);
+            origPartNum = GetInt(argument, i + 1) - 1;
+            newPart.SetInclusion(PRIMARY);
+            newPart.SetLocation(theGPT[origPartNum].GetFirstLBA(),
+                                theGPT[origPartNum].GetLengthLBA());
+            newPart.SetStatus(0);
+            newPart.SetType((uint8_t)(theGPT[origPartNum].GetHexType() / 0x0100));
+            newMBR.AddPart(i + isHybrid, newPart);
          } // for
          if (isHybrid) {
-            newNote = new struct PartInfo;
-            newNote->origPartNum = MBR_EFI_GPT;
-            newNote->active = 0;
-            newNote->hexCode = 0xEE;
-            newNote->type = PRIMARY;
-            // newNote firstLBA and lastLBA are computed later...
-            notes.AddToStart(newNote);
+            newPart.SetInclusion(PRIMARY);
+            newPart.SetLocation(1, newMBR.FindLastInFree(1));
+            newPart.SetStatus(0);
+            newPart.SetType(0xEE);
+            newMBR.AddPart(0, newPart);
          } // if
-         if (theGPT.PartsToMBR(&notes) != numParts)
-            allOK = 0;
+         theGPT.SetProtectiveMBR(newMBR);
       } else allOK = 0;
    } else allOK = 0;
    if (!allOK)

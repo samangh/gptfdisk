@@ -53,12 +53,12 @@ class GPTPart {
 
       // Simple data retrieval:
       PartType & GetType(void) {return partitionType;}
-      uint16_t GetHexType(void);
+      uint16_t GetHexType(void) const;
       string GetTypeName(void);
       const GUIDData GetUniqueGUID(void) const {return uniqueGUID;}
       uint64_t GetFirstLBA(void) const {return firstLBA;}
       uint64_t GetLastLBA(void) const {return lastLBA;}
-      uint64_t GetLengthLBA(void);
+      uint64_t GetLengthLBA(void) const;
       Attributes GetAttributes(void) {return attributes;}
       void ShowAttributes(uint32_t partNum) {attributes.ShowAttributes(partNum);}
       string GetDescription(void);

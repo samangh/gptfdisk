@@ -50,7 +50,6 @@ class GPTDataTextUI : public GPTData {
       int DestroyGPTwPrompt(void); // Returns 1 if user proceeds
       void ShowDetails(void);
       void MakeHybrid(void);
-      int AssignPrimaryOrLogical(GptPartNotes& notes);
       int XFormToMBR(void); // convert GPT to MBR, wiping GPT afterwards. Returns 1 if successful
 }; // class GPTDataTextUI
 

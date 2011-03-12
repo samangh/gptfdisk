@@ -26,11 +26,11 @@ using namespace std;
 // Full data in tweaked MBR format
 class MBRData : public BasicMBRData {
 protected:
-   int foo;
 public:
    MBRData(void) {}
    MBRData(string deviceFilename) : BasicMBRData(deviceFilename) {}
-   MBRData & operator=(const MBRData & orig);
+   MBRData & operator=(const BasicMBRData & orig);
+//   MBRData & operator=(const MBRData & orig);
 
    // Functions to create, delete, or change partitions
    // Pass EmptyMBR 1 to clear the boot loader code, 0 to leave it intact

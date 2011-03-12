@@ -29,7 +29,7 @@
 #include <cstdio>
 #include "attributes.h"
 #include "gpttext.h"
-#include "gptpartnotes.h"
+//#include "gptpartnotes.h"
 #include "support.h"
 
 using namespace std;
@@ -235,7 +235,10 @@ void GPTDataTextUI::CreatePartition(void) {
       partitions[partNum].ChangeType();
       partitions[partNum].SetDefaultDescription();
    } else {
-      cout << "No free sectors available\n";
+      if (firstFreePart >= numParts)
+         cout << "No table partition entries left\n";
+      else
+         cout << "No free sectors available\n";
    } // if/else
 } // GPTDataTextUI::CreatePartition()
 
@@ -353,24 +356,22 @@ void GPTDataTextUI::ShowDetails(void) {
 void GPTDataTextUI::MakeHybrid(void) {
    uint32_t partNums[3];
    char line[255];
-   int numPartsToCvt, i, j, mbrNum, bootable = 0;
+   int numPartsToCvt, i, j, mbrNum = 0;
    unsigned int hexCode = 0;
-   struct PartInfo *newNote;
-   PartNotes notes;
+   MBRPart hybridPart;
+   MBRData hybridMBR;
    char eeFirst = 'Y'; // Whether EFI GPT (0xEE) partition comes first in table
 
    cout << "\nWARNING! Hybrid MBRs are flaky and dangerous! If you decide not to use one,\n"
         << "just hit the Enter key at the below prompt and your MBR partition table will\n"
         << "be untouched.\n\n\a";
 
+   hybridMBR.SetDisk(&myDisk);
    // Now get the numbers of up to three partitions to add to the
    // hybrid MBR....
    cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
         << "added to the hybrid MBR, in sequence: ";
-   if (!fgets(line, 255, stdin)) {
-      cerr << "Critical error! Failed fgets() in GPTDataTextUI::MakeHybrid()!\n";
-      exit(1);
-   } // if
+   ReadCString(line, 255);
    numPartsToCvt = sscanf(line, "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
 
    if (numPartsToCvt > 0) {
@@ -379,147 +380,63 @@ void GPTDataTextUI::MakeHybrid(void) {
    } // if
 
    for (i = 0; i < numPartsToCvt; i++) {
-      newNote = new struct PartInfo;
-      j = newNote->origPartNum = partNums[i] - 1;
+      j = partNums[i] - 1;
       if (partitions[j].IsUsed()) {
          mbrNum = i + (eeFirst == 'Y');
          cout << "\nCreating entry for GPT partition #" << j + 1
               << " (MBR partition #" << mbrNum + 1 << ")\n";
-         newNote->hexCode = GetMBRTypeCode(partitions[j].GetHexType() / 256);
-         newNote->firstLBA = partitions[j].GetFirstLBA();
-         newNote->lastLBA = partitions[j].GetLastLBA();
-         newNote->type = PRIMARY;
+         hybridPart.SetType(GetMBRTypeCode(partitions[j].GetHexType() / 256));
+         hybridPart.SetLocation(partitions[j].GetFirstLBA(), partitions[j].GetLengthLBA());
+         hybridPart.SetInclusion(PRIMARY);
          cout << "Set the bootable flag? ";
          if (GetYN() == 'Y')
-            newNote->active = 1;
+            hybridPart.SetStatus(1);
          else
-            newNote->active = 0;
-         notes.AddToEnd(newNote);
+            hybridPart.SetStatus(0);
+         hybridPart.SetInclusion(PRIMARY);
       } else {
-         delete newNote;
          cerr << "\nGPT partition #" << j + 1 << " does not exist; skipping.\n";
       } // if/else
+      hybridMBR.AddPart(mbrNum, hybridPart);
    } // for
 
    if (numPartsToCvt > 0) { // User opted to create a hybrid MBR....
       // Create EFI protective partition that covers the start of the disk.
       // If this location (covering the main GPT data structures) is omitted,
       // Linux won't find any partitions on the disk.
-      newNote = new struct PartInfo;
-      newNote->origPartNum = MBR_EFI_GPT;
-      newNote->firstLBA = 1;
-      newNote->active = 0;
-      newNote->hexCode = 0xEE;
-      newNote->type = PRIMARY;
+      hybridPart.SetLocation(1, hybridMBR.FindLastInFree(1));
+      hybridPart.SetStatus(0);
+      hybridPart.SetType(0xEE);
+      hybridPart.SetInclusion(PRIMARY);
       // newNote firstLBA and lastLBA are computed later...
       if (eeFirst == 'Y') {
-	     notes.AddToStart(newNote);
+         hybridMBR.AddPart(0, hybridPart);
       } else {
-	     notes.AddToEnd(newNote);
+         hybridMBR.AddPart(3, hybridPart);
       } // else
-      protectiveMBR.SetHybrid();
+      hybridMBR.SetHybrid();
 
       // ... and for good measure, if there are any partition spaces left,
       // optionally create another protective EFI partition to cover as much
       // space as possible....
-      if (notes.GetNumPrimary() < 4) { // unused entry....
+      if (hybridMBR.CountParts() < 4) { // unused entry....
          cout << "\nUnused partition space(s) found. Use one to protect more partitions? ";
          if (GetYN() == 'Y') {
             while ((hexCode <= 0) || (hexCode > 255)) {
                cout << "Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ";
                // Comment on above: Mac OS treats disks with more than one
                // 0xEE MBR partition as MBR disks, not as GPT disks.
-               if (!fgets(line, 255, stdin)) {
-                  cerr << "Critical error! Failed fgets() in GPTDataTextUI::MakeHybrid()\n";
-                  exit(1);
-               } // if
+               ReadCString(line, 255);
                sscanf(line, "%x", &hexCode);
                if (line[0] == '\n')
                   hexCode = 0x00;
             } // while
-            newNote = new struct PartInfo;
-            newNote->origPartNum = MBR_EFI_GPT;
-            newNote->active = 0;
-            newNote->hexCode = hexCode;
-            newNote->type = PRIMARY;
-            // newNote firstLBA and lastLBA are computed later...
-            notes.AddToEnd(newNote);
+            hybridMBR.MakeBiggestPart(3, 0xEE);
          } // if (GetYN() == 'Y')
       } // if unused entry
-      PartsToMBR(&notes);
-      if (bootable > 0)
-         protectiveMBR.SetPartBootable(bootable);
+      protectiveMBR = hybridMBR;
    } // if (numPartsToCvt > 0)
 } // GPTDataTextUI::MakeHybrid()
-
-// Assign GPT partitions to primary or logical status for conversion. The
-// function first presents a suggested layout with as many logicals as
-// possible, but gives the user the option to override this suggestion.
-// Returns the number of partitions assigned (0 if problems or if the
-// user aborts)
-int GPTDataTextUI::AssignPrimaryOrLogical(GptPartNotes& notes) {
-   int i, partNum, allOK = 1, changesWanted = 1, countedParts, numPrimary = 0, numLogical = 0;
-   int newNumParts; // size of GPT table
-
-   // Sort and resize the GPT table. Resized to clear the sector before the
-   // first available sector, if possible, so as to enable turning the
-   // first partition into a logical, should that be desirable/necessary.
-   SortGPT();
-   countedParts = newNumParts = CountParts();
-   i = blockSize / GPT_SIZE;
-   if ((newNumParts % i) != 0) {
-      newNumParts = ((newNumParts / i) + 1) * i;
-   } // if
-   SetGPTSize(newNumParts);
-
-   // Takes notes on existing partitions: Create an initial assignment as
-   // primary or logical, set default MBR types, and then make it legal
-   // (drop partitions as required to fit in the MBR and as logicals).
-   allOK = (notes.PassPartitions(partitions, this, numParts, blockSize) == (int) numParts);
-   for (i = 0; i < countedParts; i++)
-      notes.SetMbrHexType(i, partitions[i].GetHexType() / 255);
-   notes.MakeItLegal();
-
-   while (allOK && changesWanted) {
-      notes.ShowSummary();
-      cout << "\n";
-      partNum = GetNumber(-1, countedParts, -2,
-                          "Type partition to change, 0 to accept, -1 to abort: ");
-      switch (partNum) {
-         case -1:
-            allOK = 0;
-            break;
-         case 0:
-            changesWanted = 0;
-            break;
-         default:
-            allOK = notes.MakeChange(partNum - 1);
-            break;
-      } // switch
-   } // while
-
-   i = 0;
-   if (allOK)
-      for (i = 0; i < countedParts; i++) {
-         switch (notes.GetType(i)) {
-            case PRIMARY:
-               numPrimary++;
-               break;
-            case LOGICAL:
-               numLogical++;
-               break;
-         } // switch
-         if (notes.GetActiveStatus(i))
-            protectiveMBR.SetPartBootable(i);
-      } // for
-
-   if (numPrimary > 4) {
-      cerr << "Warning! More than four primary partitions in "
-           << "GPTDataTextUI::AssignPrimaryOrLogical()!\n";
-      allOK = 0;
-   } // if
-   return (allOK * (numPrimary + numLogical));
-} // GPTDataTextUI::AssignPrimaryOrLogical()
 
 // Convert the GPT to MBR form, storing partitions in the protectiveMBR
 // variable. This function is necessarily limited; it may not be able to
@@ -530,44 +447,18 @@ int GPTDataTextUI::AssignPrimaryOrLogical(GptPartNotes& notes) {
 // is over 0, the calling function should call DestroyGPT() to destroy
 // the GPT data, call SaveMBR() to save the MBR, and then exit.
 int GPTDataTextUI::XFormToMBR(void) {
-   int numToConvert, numReallyConverted = 0;
-   int origNumParts;
-   GptPartNotes notes;
-   GPTPart *tempGptParts;
    uint32_t i;
 
-   // Back up partition array, since we'll be sorting it and we want to
-   // be able to restore it in case the user aborts....
-   origNumParts = numParts;
-   tempGptParts = new GPTPart[numParts];
-   for (i = 0; i < numParts; i++)
-      tempGptParts[i] = partitions[i];
-
-   notes.MakeItLegal();
-   numToConvert = AssignPrimaryOrLogical(notes);
-
-   if (numToConvert > 0) {
-      numReallyConverted = PartsToMBR(&notes);
-      if (numReallyConverted != numToConvert) {
-         cerr << "Error converting partitions to MBR; tried to convert "
-              << numToConvert << " partitions,\nbut converted " << numReallyConverted
-              << ". Aborting operation!\n";
-         numReallyConverted = 0;
-         protectiveMBR.MakeProtectiveMBR();
-      } // if/else
-   } // if
-
-   // A problem or the user aborted; restore backup of unsorted and
-   // original-sized partition table and delete the sorted and
-   // resized one; otherwise free the backup table's memory....
-   if (numReallyConverted == 0) {
-      delete[] partitions;
-      partitions = tempGptParts;
-      SetGPTSize(origNumParts);
-   } else {
-      delete[] tempGptParts;
-   } // if
-   return numReallyConverted;
+   protectiveMBR.EmptyMBR();
+   for (i = 0; i < numParts; i++) {
+      if (partitions[i].IsUsed()) {
+         protectiveMBR.MakePart(i, partitions[i].GetFirstLBA(),
+                                partitions[i].GetLengthLBA(),
+                                partitions[i].GetHexType() / 0x0100, 0);
+      } // if
+   } // for
+   protectiveMBR.MakeItLegal();
+   return protectiveMBR.DoMenu();
 } // GPTDataTextUI::XFormToMBR()
 
 /*********************************************************************
@@ -589,10 +480,7 @@ int GetMBRTypeCode(int defType) {
       cout << "Enter an MBR hex code (default " << hex;
       cout.width(2);
       cout << defType << "): " << dec;
-      if (!fgets(line, 255, stdin)) {
-         cerr << "Critical error! Failed fgets() in GetMBRTypeCode()\n";
-         exit(1);
-      } // if
+      ReadCString(line, 255);
       if (line[0] == '\n')
          typeCode = defType;
       else

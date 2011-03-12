@@ -8,7 +8,6 @@
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdio.h>
-//#include <getopt.h>
 #include <string.h>
 #include <string>
 #include <iostream>
@@ -42,10 +41,7 @@ int main(int argc, char* argv[]) {
          WinWarning();
          cout << "Type device filename, or press <Enter> to exit: ";
          device = new char[255];
-         if (!fgets(device, 255, stdin)) {
-            cerr << "Critical error! Failed fgets() in main()!\n";
-            exit(1);
-         } // if
+         ReadCString(device, 255);
          i = strlen(device);
          if (i && device[i - 1] == '\n')
             device[i - 1] = '\0';
@@ -88,19 +84,13 @@ void MainMenu(string filename, GPTDataTextUI* theGPT) {
 
    do {
       cout << "\nCommand (? for help): ";
-      if (!fgets(line, 255, stdin)) {
-         cerr << "Critical error! Failed fgets() in MainMenu()!\n";
-         exit(1);
-      } // if
+      ReadCString(line, 255);
       switch (*line) {
          case '\n':
             break;
          case 'b': case 'B':
             cout << "Enter backup filename to save: ";
-            if (!fgets(line, 255, stdin)) {
-               exit(1);
-               cerr << "Critical error! Failed fgets() in MainMenu()!\n";
-            } // if
+            ReadCString(line, 255);
             sscanf(line, "%s", buFile);
             theGPT->SaveGPTBackup(buFile);
             break;
@@ -188,15 +178,12 @@ void ShowCommands(void) {
 // issues an exit command, such as 'w' or 'q'.
 void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
    char line[255], buFile[255];
-   uint32_t temp1, numParts;
-   int goOn = 1;
+   uint32_t numParts;
+   int goOn = 1, temp1;
 
    do {
       cout << "\nRecovery/transformation command (? for help): ";
-      if (!fgets(line, 255, stdin)) {
-         cerr << "Critical error! Failed fgets() in RecoveryMenu()!\n";
-         exit(1);
-      } // if
+      ReadCString(line, 255);
       switch (*line) {
          case '\n':
             break;
@@ -232,17 +219,17 @@ void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
          case 'g': case 'G':
             numParts = theGPT->GetNumParts();
             temp1 = theGPT->XFormToMBR();
-            if (temp1 > 0) {
+            if (temp1 > 0)
                cout << "\nConverted " << temp1 << " partitions. Finalize and exit? ";
-               if (GetYN() == 'Y') {
-                  if ((theGPT->DestroyGPT() > 0) && (theGPT->SaveMBR()))
-                     goOn = 0;
-               } else {
-                  theGPT->MakeProtectiveMBR();
-                  theGPT->SetGPTSize(numParts);
-                  cout << "Note: New protective MBR created\n\n";
-               } // if/else
-            } // if
+            if ((temp1 > 0) && (GetYN() == 'Y')) {
+               if ((theGPT->DestroyGPT() > 0) && (theGPT->SaveMBR())) {
+                  goOn = 0;
+               } // if
+            } else {
+               theGPT->MakeProtectiveMBR();
+               theGPT->SetGPTSize(numParts);
+               cout << "Note: New protective MBR created\n\n";
+            } // if/else
             break;
          case 'h': case 'H':
             theGPT->MakeHybrid();
@@ -252,10 +239,7 @@ void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
             break;
          case 'l': case 'L':
             cout << "Enter backup filename to load: ";
-            if (!fgets(line, 255, stdin)) {
-               cerr << "Critical error! Failed fgets() in RecoveryMenu()!\n";
-               exit(1);
-            } // if
+            ReadCString(line, 255);
             sscanf(line, "%s", buFile);
             theGPT->LoadGPTBackup(buFile);
             break;
@@ -329,10 +313,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
 
    do {
       cout << "\nExpert command (? for help): ";
-      if (!fgets(line, 255, stdin)) {
-         cerr << "Critical error! Failed fgets() in ExpertsMenu()!\n";
-         exit(1);
-      } // if
+      ReadCString(line, 255);
       switch (*line) {
          case '\n':
             break;
@@ -346,10 +327,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             if (theGPT->GetPartRange(&temp1, &temp2) > 0) {
                pn = theGPT->GetPartNum();
                cout << "Enter the partition's new unique GUID ('R' to randomize): ";
-               if (!fgets(guidStr, 255, stdin)) {
-                  cerr << "Critical error! Failed fgets() in ExpertsMenu()!\n";
-                  exit(1);
-               } // if
+               ReadCString(guidStr, 255);
                if ((strlen(guidStr) >= 33) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
                   theGPT->SetPartitionGUID(pn, (GUIDData) guidStr);
                   cout << "New GUID is " << theGPT->operator[](pn).GetUniqueGUID() << "\n";
@@ -371,10 +349,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             break;
          case 'g': case 'G':
             cout << "Enter the disk's unique GUID ('R' to randomize): ";
-            if (!fgets(guidStr, 255, stdin)) {
-               cerr << "Critical error! Failed fgets() in ExpertsMenu()!\n";
-               exit(1);
-            } // if
+            ReadCString(guidStr, 255);
             if ((strlen(guidStr) >= 33) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
                theGPT->SetDiskGUID((GUIDData) guidStr);
                cout << "The new disk GUID is " << theGPT->GetDiskGUID() << "\n";
@@ -423,16 +398,13 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
          case 'u': case 'U':
             cout << "Type device filename, or press <Enter> to exit: ";
             device = new char[255];
-            if (!fgets(device, 255, stdin)) {
-               cerr << "Critical error! Failed fgets() in ExpertsMenu()!\n";
-               exit(1);
-            } // if
+            ReadCString(device, 255);
             i = strlen(device);
             if (i && device[i - 1] == '\n')
                device[i - 1] = '\0';
             if (*device && strlen(device) > 0) {
                secondDevice = *theGPT;
-               secondDevice.SetFile(device);
+               secondDevice.SetDisk(device);
                secondDevice.SaveGPTData(0);
             } // if
             delete[] device;

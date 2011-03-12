@@ -1,14 +1,49 @@
-GPT fdisk (aka gdisk)
+GPT fdisk (aka gdisk and sgdisk) and FixParts
 by Roderick W. Smith, rodsmith@rodsbooks.com
 
 Introduction
 ------------
 
-This software is intended as a (somewhat) fdisk-workalike program for
-GPT-partitioned disks. Although libparted and programs that use it (GNU
-Parted, gparted, etc.) provide the ability to handle GPT disks, they have
-certain limitations that gdisk overcomes. Specific advantages of gdisk and
-sgdisk include:
+This binary archive includes the source code for three related disk
+partitioning programs:
+
+- gdisk -- This program is modeled after Linux fdisk, but it operates on
+  GUID Partition Table (GPT) disks rather than the Master Boot Record (MBR)
+  disks that fdisk modifies. As such, gdisk is an interactive text-mode
+  tool for manipulating partitions, but it does nothing to the contents of
+  those partitions (usually filesystems, but sometimes swap space or other
+  data).
+
+- sgdisk -- This program is conceptually similar to the Linux sfdisk and
+  FreeBSD gpt programs, but its operational details differ. It enables
+  manipulation of GPT disks using command-line options, so it's suitable
+  for use in scripts or by experts to perform specific tasks that might
+  take several commands in gdisk to accomplish.
+
+- fixparts -- This program, unlike the preceding two, operates on MBR
+  disks. It's intended to fix certain problems that can be created by
+  various utilities. Specifically, it can fix mis-sized extended partitions
+  and primary partitions located in the middle of extended partitions. It
+  also enables changing primary vs. logical partition status (within limits
+  of what's legal in the MBR scheme) and making a few other minor changes.
+  It does NOT support creating new partitions; for that, you should use
+  fdisk, parted, or some other tool.
+
+More details about the abilities of these tools follows.
+
+All three programs rely on the same set of underlying code base; they
+differ only in their control interfaces (defined in gdisk.cc, sgdisk.cc,
+and fixparts.cc, respectively) and in which support code they use.
+
+GPT fdisk (gdisk and sgdisk) Details
+------------------------------------
+
+The gdisk program is intended as a (somewhat) fdisk-workalike program for
+GPT-partitioned disks, and sgdisk provides most of gdisk's functionality in
+a more script-friendly program. Although libparted and programs that use it
+(GNU Parted, gparted, etc.) provide the ability to handle GPT disks, they
+have certain limitations that gdisk overcomes. Specific advantages of gdisk
+and sgdisk include:
 
 * The ability to convert MBR-partitioned disks in-place to GPT format,
   without losing data
@@ -16,10 +51,10 @@ sgdisk include:
 * The ability to convert BSD disklabels in-place to create GPT
   partitions, without losing data
 
-* The ability to specify sector-exact partition sizes
+* The ability to convert from GPT format to MBR format without data loss
 
 * More flexible specification of filesystem type code GUIDs, which
-  GNU Parted tends to corrupt (particularly for FAT partitions)
+  GNU Parted tends to corrupt
 
 * Clear identification of the number of unallocated sectors on a
   disk
@@ -45,12 +80,81 @@ manually partitioning disks or changing partitioning details; the latter is
 intended for use in scripts to help automate tasks such as disk cloning or
 preparing multiple disks for Linux installation.
 
+FixParts Details
+----------------
+
+This program's creation was motivated by cries for help I've seen in online
+forums from users who have found their partition tables to be corrupted by
+various buggy partitioning tools. Although most OSes can handle the
+afflicted disks fine, libparted-based tools (GParted, parted, most Linux
+installers, etc.) tend to flake out when presented with these disks.
+Typically, the symptom is a disk that appears to hold no partitions;
+however, sometimes the libparted tool presents partitions other than those
+that the OS sees.
+
+I've observed four causes of these symptoms, three of which FixParts can
+correct:
+
+- Old GPT data -- If a disk is used as a GPT disk and then re-used as an
+  MBR disk, the GPT data may be incompletely erased. This happens if the
+  disk is repartitioned with fdisk or the Microsoft Windows installer, for
+  instance. (Tools based on libparted correctly remove the old GPT data
+  when converting from GPT to MBR format.) FixParts checks for this problem
+  when it starts and offers to correct it. If you opt to erase the GPT
+  data, this erasure occurs immediately, unlike other changes the program
+  makes.
+
+- Mis-sized extended partitions -- Some tools create an extended partition
+  that's too large, typically ending after the last sector of the disk.
+  FixParts automatically corrects this problem (if you use the 'w' option
+  to save the partition table).
+
+- Primary partitions inside an extended partition -- Some utilities create
+  or move primary partitions to within the range covered by the extended
+  partition. FixParts can usually correct this problem by turning the
+  primary partition into a logical partition or by changing one or more
+  other logical partitions into primaries. Such corrections aren't always
+  possible, though, at least not without deleting or resizing other
+  partitions.
+
+- Leftover RAID data -- If a disk is used in a RAID array and then re-used
+  as a non-RAID disk, some utilities can become confused and fail to see
+  the disk. FixParts can NOT correct this problem. You must destroy the old
+  RAID data, or possibly remove the dmraid package from the system, to fix
+  this problem.
+
+When run, FixParts presents an fdisk-like interface, enabling you to adjust
+partition types (primary, logical, or omitted), change type codes, change
+the bootable flag, and so on. Although you can delete a partition (by
+omitting it), you can't create new partitions with the program. If you're
+used to partitioning disks, particularly with Linux fdisk, two unusual
+features of FixParts require elaboration:
+
+- No extended partitions -- Internally, FixParts reads the partition table
+  and discards data on any extended partition(s) it finds. When you save
+  the partition table, the program generates a new extended partition. This
+  design means that the program automatically corrects many problems
+  related to the extended partition. It also means that you'll see no
+  evidence of extended partitions in the FixParts user interface, although
+  it keeps track of the requirements and prevents you from creating illegal
+  layouts, such as a primary between two logicals.
+
+- Partition numbering -- In most Linux tools, partitions 1-4 are primaries
+  and partitions 5 and up are logicals. Although a legal partition table
+  loaded into FixParts will initially conform to this convention, some
+  types of damaged table might not, and various changes you make can also
+  cause deviations. When FixParts writes the partition table, its numbering
+  will be altered to conform to the standard MBR conventions, but you
+  should use the explicit labeling of partitions as primary or logical
+  rather than the partition numbers to determine a partition's status.
+
 Installing
 ----------
 
 To compile GPT fdisk, you must have appropriate development tools
 installed, most notably the GNU Compiler Collection (GCC) and its g++
-compiler for C++. In addition, note these requirements:
+compiler for C++. (Under Windows, Microsoft Visual C++ 2008 can also be
+used.) In addition, note these requirements:
 
 * On Linux, FreeBSD, and OS X, libuuid must be installed. This is the
   standard for Linux and OS X, although you may need to install a package
@@ -73,11 +177,11 @@ X, "make -f Makefile.freebsd" on FreeBSD, or "make -f Makefile.mingw" to
 compile using MinGW for Windows.) You may also need to add header (include)
 directories or library directories by setting the CXXFLAGS environment
 variable or by editing the Makefile. The result should be program files
-called gdisk and sgdisk. Typing "make gdisk" or "make sgdisk" will compile
-only the requested programs. You can use these programs in place or copy
-the files to a suitable directory, such as /usr/local/sbin. You can copy
-the man pages (gdisk.8 and sgdisk.8) to /usr/local/man/man8 to make them
-available.
+called gdisk, sgdisk, and fixparts. Typing "make gdisk", "make sgdisk", or
+"make fixparts" will compile only the requested programs. You can use these
+programs in place or copy the files to a suitable directory, such as
+/usr/local/sbin. You can copy the man pages (gdisk.8, sgdisk.8, and
+fixparts.8) to /usr/local/man/man8 to make them available.
 
 Caveats
 -------
@@ -85,19 +189,17 @@ Caveats
 THIS SOFTWARE IS BETA SOFTWARE! IF IT WIPES OUT YOUR HARD DISK OR EATS YOUR
 CAT, DON'T BLAME ME! To date, I've tested the software on several USB flash
 drives, a handful of PATA and SATA hard disks, and several virtual disks in
-a QEMU environment. I believe all data-corruption bugs to be squashed, but
-I know full well that the odds of my missing something are high. This is
-particularly true for large drives; my only direct testing with such disks
-is with virtual QEMU disks. I've received user reports of success with
-RAID arrays over 2TiB in size, though.
+the QEMU and VirtualBox environments. Many others have now used the
+software on their computers, as well. I believe all data-corruption bugs to
+be squashed, but I know full well that the odds of my missing something are
+high. This is particularly true for large drives; my only direct testing
+with such disks is with virtual QEMU disks. I've received user reports of
+success with RAID arrays over 2TiB in size, though.
 
 My main development platform is a system running the 64-bit version of
-Gentoo Linux (previously Ubuntu 8.04). I've also tested on 64-bit OpenSuSE,
-32-bit Fedora 10, 32-bit Fedora 11, 32-bit Ubuntu 6.10, 64-bit Ubunut 9.10,
-32-bit PowerPC Debian Linux, 32-bit Intel-based Mac OS X 10.5 and 10.6,
-64-bit FreeBSD 7.1, and Windows 7. Problems relating to 64-bit integers on
-the 32-bit Linux have been common during development and may crop up in the
-future.
+Gentoo Linux (previously Ubuntu 8.04). I've also tested on several other
+32- and 64-bit Linux distributions Intel-based Mac OS X 10.5 and 10.6,
+64-bit FreeBSD 7.1, and Windows 7.
 
 Redistribution
 --------------
@@ -122,3 +224,9 @@ Additional code contributors include:
 - Yves Blusseau (1otnwmz02@sneakemail.com)
 
 - David Hubbard (david.c.hubbard@gmail.com)
+
+- Justin Maggard (justin.maggard@netgear.com)
+
+- Dwight Schauer (dschauer@ti.com)
+
+- Florian Zumbiehl (florz@florz.de)

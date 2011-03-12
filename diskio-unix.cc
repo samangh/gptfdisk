@@ -22,6 +22,11 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+
+#ifdef __linux__
+#include "linux/hdreg.h"
+#endif
+
 #include <iostream>
 
 #include "diskio.h"
@@ -159,6 +164,42 @@ int DiskIO::GetBlockSize(void) {
 
    return (blockSize);
 } // DiskIO::GetBlockSize()
+
+// Returns the number of heads, according to the kernel, or 255 if the
+// correct value can't be determined.
+uint32_t DiskIO::GetNumHeads(void) {
+   uint32_t numHeads = 255;
+
+#ifdef HDIO_GETGEO
+   struct hd_geometry geometry;
+
+   // If disk isn't open, try to open it....
+   if (!isOpen)
+      OpenForRead();
+
+   if (!ioctl(fd, HDIO_GETGEO, &geometry))
+      numHeads = (uint32_t) geometry.heads;
+#endif
+   return numHeads;
+} // DiskIO::GetNumHeads();
+
+// Returns the number of sectors per track, according to the kernel, or 63
+// if the correct value can't be determined.
+uint32_t DiskIO::GetNumSecsPerTrack(void) {
+   uint32_t numSecs = 63;
+
+   #ifdef HDIO_GETGEO
+   struct hd_geometry geometry;
+
+   // If disk isn't open, try to open it....
+   if (!isOpen)
+      OpenForRead();
+
+   if (!ioctl(fd, HDIO_GETGEO, &geometry))
+      numSecs = (uint32_t) geometry.sectors;
+   #endif
+   return numSecs;
+} // DiskIO::GetNumSecsPerTrack()
 
 // Resync disk caches so the OS uses the new partition table. This code varies
 // a lot from one OS to another.

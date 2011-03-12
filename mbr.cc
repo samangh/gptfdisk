@@ -28,11 +28,17 @@ using namespace std;
  *                                      *
  ****************************************/
 
-// Assignment operator -- copy entire set of MBR data.
+/* // Assignment operator -- copy entire set of MBR data.
 MBRData & MBRData::operator=(const MBRData & orig) {
    BasicMBRData::operator=(orig);
    return *this;
 } // MBRData::operator=() */
+
+// Assignment operator -- copy entire set of MBR data.
+MBRData & MBRData::operator=(const BasicMBRData & orig) {
+   BasicMBRData::operator=(orig);
+   return *this;
+} // MBRData::operator=()
 
 /*****************************************************
  *                                                   *
@@ -50,15 +56,15 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
    MBRSignature = MBR_SIGNATURE;
    diskSignature = UINT32_C(0);
 
-   partitions[0].status = UINT8_C(0); // Flag the protective part. as unbootable
+   partitions[0].SetStatus(0); // Flag the protective part. as unbootable
 
-   partitions[0].partitionType = UINT8_C(0xEE);
-   partitions[0].firstLBA = UINT32_C(1);
+   partitions[0].SetType(UINT8_C(0xEE));
    if (diskSize < UINT32_MAX) { // If the disk is under 2TiB
-      partitions[0].lengthLBA = (uint32_t) diskSize - UINT32_C(1);
+      partitions[0].SetLocation(UINT32_C(1), (uint32_t) diskSize - UINT32_C(1));
    } else { // disk is too big to represent, so fake it...
-      partitions[0].lengthLBA = UINT32_MAX;
+      partitions[0].SetLocation(UINT32_C(1), UINT32_MAX);
    } // if/else
+   partitions[0].SetInclusion(PRIMARY);
 
    // Write CHS data. This maxes out the use of the disk, as much as
    // possible -- even to the point of exceeding the capacity of sub-8GB
@@ -66,9 +72,9 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
    // although normal MBR disks max out at 0xfeffff. FWIW, both GNU Parted
    // and Apple's Disk Utility use 0xfeffff, and the latter puts that
    // value in for the FIRST sector, too!
-   LBAtoCHS(1, partitions[0].firstSector);
+/*   LBAtoCHS(1, partitions[0].firstSector);
    if (LBAtoCHS(partitions[0].lengthLBA, partitions[0].lastSector) == 0)
-      partitions[0].lastSector[0] = 0xFF;
+      partitions[0].lastSector[0] = 0xFF; */
 
    state = gpt;
 } // MBRData::MakeProtectiveMBR()
@@ -76,27 +82,27 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
 // Optimizes the size of the 0xEE (EFI GPT) partition
 void MBRData::OptimizeEESize(void) {
    int i, typeFlag = 0;
-   uint32_t after;
+   uint64_t after;
 
    for (i = 0; i < 4; i++) {
       // Check for non-empty and non-0xEE partitions
-      if ((partitions[i].partitionType != 0xEE) && (partitions[i].partitionType != 0x00))
+      if ((partitions[i].GetType() != 0xEE) && (partitions[i].GetType() != 0x00))
          typeFlag++;
-      if (partitions[i].partitionType == 0xEE) {
+      if (partitions[i].GetType() == 0xEE) {
          // Blank space before this partition; fill it....
-         if (IsFree(partitions[i].firstLBA - 1)) {
-            partitions[i].firstLBA = FindFirstInFree(partitions[i].firstLBA - 1);
+         if (SectorUsedAs(partitions[i].GetStartLBA() - 1, 4) == NONE) {
+            partitions[i].SetStartLBA(FindFirstInFree(partitions[i].GetStartLBA() - 1));
          } // if
          // Blank space after this partition; fill it....
-         after = partitions[i].firstLBA + partitions[i].lengthLBA;
-         if (IsFree(after)) {
-            partitions[i].lengthLBA = FindLastInFree(after) - partitions[i].firstLBA + 1;
+         after = partitions[i].GetStartLBA() + partitions[i].GetLengthLBA();
+         if (SectorUsedAs(after, 4) == NONE) {
+            partitions[i].SetLengthLBA(FindLastInFree(after) - partitions[i].GetStartLBA() + 1);
          } // if free space after
          if (after > diskSize) {
             if (diskSize < UINT32_MAX) { // If the disk is under 2TiB
-               partitions[0].lengthLBA = (uint32_t) diskSize - partitions[i].firstLBA;
+               partitions[i].SetLengthLBA((uint32_t) diskSize - partitions[i].GetStartLBA());
             } else { // disk is too big to represent, so fake it...
-               partitions[0].lengthLBA = UINT32_MAX - partitions[i].firstLBA;
+               partitions[i].SetLengthLBA(UINT32_MAX - partitions[i].GetStartLBA());
             } // if/else
          } // if protective partition is too big
          RecomputeCHS(i);
@@ -118,8 +124,8 @@ int MBRData::DeleteByLocation(uint64_t start64, uint64_t length64) {
       start32 = (uint32_t) start64;
       length32 = (uint32_t) length64;
       for (i = 0; i < MAX_MBR_PARTS; i++) {
-         if ((partitions[i].firstLBA == start32) && (partitions[i].lengthLBA == length32) &&
-            (partitions[i].partitionType != 0xEE)) {
+         if ((partitions[i].GetType() != 0xEE) && (partitions[i].GetStartLBA() == start32)
+             && (partitions[i].GetLengthLBA() == length32)) {
             DeletePartition(i);
          if (state == hybrid)
             OptimizeEESize();
@@ -138,7 +144,7 @@ int MBRData::DeleteByLocation(uint64_t start64, uint64_t length64) {
 
 // Return the MBR data as a GPT partition....
 GPTPart MBRData::AsGPT(int i) {
-   MBRRecord* origPart;
+   MBRPart* origPart;
    GPTPart newPart;
    uint8_t origType;
    uint64_t firstSector, lastSector;
@@ -146,7 +152,7 @@ GPTPart MBRData::AsGPT(int i) {
    newPart.BlankPartition();
    origPart = GetPartition(i);
    if (origPart != NULL) {
-      origType = origPart->partitionType;
+      origType = origPart->GetType();
 
       // don't convert extended, hybrid protective, or null (non-existent)
       // partitions (Note similar protection is in GPTData::XFormPartitions(),
@@ -154,10 +160,9 @@ GPTPart MBRData::AsGPT(int i) {
       // context in the future....)
       if ((origType != 0x05) && (origType != 0x0f) && (origType != 0x85) &&
           (origType != 0x00) && (origType != 0xEE)) {
-         firstSector = (uint64_t) origPart->firstLBA;
+         firstSector = (uint64_t) origPart->GetStartLBA();
          newPart.SetFirstLBA(firstSector);
-         lastSector = firstSector + (uint64_t) origPart->lengthLBA;
-         if (lastSector > 0) lastSector--;
+         lastSector = (uint64_t) origPart->GetLastLBA();
          newPart.SetLastLBA(lastSector);
          newPart.SetType(((uint16_t) origType) * 0x0100);
          newPart.RandomizeUniqueGUID();

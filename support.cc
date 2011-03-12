@@ -31,6 +31,14 @@
 
 using namespace std;
 
+char* ReadCString(char *inStr, int numchars) {
+   if (!fgets(inStr, 255, stdin)) {
+      cerr << "Critical error! Failed fgets() in ReadCString()\n";
+      exit(1);
+   } // if
+   return inStr;
+} // ReadCString()
+
 // Get a numeric value from the user, between low and high (inclusive).
 // Keeps looping until the user enters a value within that range.
 // If user provides no input, def (default value) is returned.
@@ -66,10 +74,7 @@ char GetYN(void) {
 
    do {
       cout << "(Y/N): ";
-      if (!fgets(line, 255, stdin)) {
-         cerr << "Critical error! Failed fgets() in GetYN()\n";
-         exit(1);
-      } // if
+      ReadCString(line, 255);
       sscanf(line, "%c", &response);
       if (response == 'y')
          response = 'Y';
@@ -316,7 +321,7 @@ uint64_t GetInt(const string & argument, int itemNum) {
 } // GetInt()
 
 // Extract string data from argument string, which should be colon-delimited
-string GetString(const string & argument, int itemNum) {
+string GetString(string argument, int itemNum) {
    size_t startPos = -1, endPos = -1;
 
    while (itemNum-- > 0) {

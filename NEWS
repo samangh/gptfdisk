@@ -1,5 +1,22 @@
-0.6.15 (?/?/2011):
+0.7.0 (3/11/2011):
 ------------------
+
+- Fixed bug that caused some types of logical partitions to be misread.
+
+- Created FixParts program, to fix problems on MBR-partitioned disks.
+  Although this program is part of the GPT fdisk family, it is NOT used on
+  GPT disks.
+
+- Completely redid the GPT-to-MBR code, used both for converting to MBR
+  form and for creating hybrid MBRs.
+
+- Fixed a bug that caused gdisk to "forget" some partitions if there were
+  numbering gaps when a conversion to MBR was aborted.
+
+- Improved CHS value creation on small (<~8GB) disks for protective MBR
+  and when creating hybrid MBRs or converting to MBR format. Linux-only,
+  for the moment; other platforms still produce bad CHS values on sub-~8GB
+  disks (but few OSes care these days).
 
 - Enhanced disk replication features ('u' on the experts' menu in gdisk; -R
   or --replicate in sgdisk). It's now possible to replicate the partition
@@ -15,11 +32,10 @@
 - Changed largest drive that's not given a minimum 4 KiB alignment even
   when smaller alignment is detected on the disk to 300 GB.
 
-- Fixed bug that preventing a partition table backup ('u' on the
+- Fixed bug that prevented aborting a partition table backup ('u' on the
   experts' menu) by hitting the Enter key for the device filename.
 
-- Implemented a number of code cleanups provided by an anonymous
-  contributor.
+- Implemented a number of code cleanups provided by Florian Zumbiehl.
 
 0.6.14 (1/8/2011):
 ------------------

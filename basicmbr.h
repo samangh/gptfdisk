@@ -5,16 +5,13 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include "partnotes.h"
 #include "diskio.h"
+#include "mbrpart.h"
 
 #ifndef __BASICMBRSTRUCTS
 #define __BASICMBRSTRUCTS
 
 #define MBR_SIGNATURE UINT16_C(0xAA55)
-#define MAX_HEADS 255        /* numbered 0 - 254 */
-#define MAX_SECSPERTRACK 63  /* numbered 1 - 63 */
-#define MAX_CYLINDERS 1024   /* numbered 0 - 1023 */
 
 // Maximum number of MBR partitions
 #define MAX_MBR_PARTS 128
@@ -28,23 +25,6 @@ class PartNotes;
  * MBRData class and related structures *
  *                                      *
  ****************************************/
-
-// Data for a single MBR partition record
-// Note that firstSector and lastSector are in CHS addressing, which
-// splits the bits up in a weird way.
-// On read or write of MBR entries, firstLBA is an absolute disk sector.
-// On read of logical entries, it's relative to the EBR record for that
-// partition. When writing EBR records, it's relative to the extended
-// partition's start.
-#pragma pack(1)
-struct MBRRecord {
-   uint8_t status;
-   uint8_t firstSector[3];
-   uint8_t partitionType;
-   uint8_t lastSector[3];
-   uint32_t firstLBA; // see above
-   uint32_t lengthLBA;
-}; // struct MBRRecord
 
 // A 512-byte data structure into which the MBR can be loaded in one
 // go. Also used when loading logical partitions.
@@ -68,19 +48,19 @@ protected:
    uint16_t nulls;
    // MAX_MBR_PARTS defaults to 128. This array holds both the primary and
    // the logical partitions, to simplify data retrieval for GPT conversions.
-   struct MBRRecord partitions[MAX_MBR_PARTS];
+   MBRPart partitions[MAX_MBR_PARTS];
    uint16_t MBRSignature;
 
    // Above are basic MBR data; now add more stuff....
    uint32_t blockSize; // block size (usually 512)
    uint64_t diskSize; // size in blocks
-   uint64_t numHeads; // number of heads, in CHS scheme
-   uint64_t numSecspTrack; // number of sectors per track, in CHS scheme
+   uint32_t numHeads; // number of heads, in CHS scheme
+   uint32_t numSecspTrack; // number of sectors per track, in CHS scheme
    DiskIO* myDisk;
    int canDeleteMyDisk;
    string device;
    MBRValidity state;
-   struct MBRRecord* GetPartition(int i); // Return primary or logical partition
+   MBRPart* GetPartition(int i); // Return primary or logical partition
 public:
    BasicMBRData(void);
    BasicMBRData(string deviceFilename);
@@ -92,51 +72,90 @@ public:
    int ReadMBRData(DiskIO * theDisk, int checkBlockSize = 1);
    // ReadLogicalPart() returns last partition # read to logicals[] array,
    // or -1 if there was a problem....
-   int ReadLogicalPart(uint32_t extendedStart, uint32_t diskOffset,
+   int ReadLogicalPart(uint64_t extendedStart, uint64_t diskOffset,
                        int partNum);
    int WriteMBRData(void);
    int WriteMBRData(DiskIO *theDisk);
    int WriteMBRData(const string & deviceFilename);
    int WriteMBRData(struct TempMBR & mbr, DiskIO *theDisk, uint64_t sector);
-   void SetDisk(DiskIO *theDisk) {myDisk = theDisk; canDeleteMyDisk = 0;}
+   void DiskSync(void) {myDisk->DiskSync();}
+   void SetDisk(DiskIO *theDisk);
 
    // Display data for user...
-   void DisplayMBRData(int maxParts = 4);
+   void DisplayMBRData(void);
    void ShowState(void);
+
+   // GPT checks and fixes...
+   int CheckForGPT(void);
+   int BlankGPTData(void);
 
    // Functions that set or get disk metadata (size, CHS geometry, etc.)
    void SetDiskSize(uint64_t ds) {diskSize = ds;}
    void SetBlockSize(uint32_t bs) {blockSize = bs;}
    MBRValidity GetValidity(void) {return state;}
    void SetHybrid(void) {state = hybrid;} // Set hybrid flag
-   void SetCHSGeom(uint32_t h, uint32_t s);
+   void ReadCHSGeom(void);
+   int GetPartRange(uint32_t* low, uint32_t* high);
    int LBAtoCHS(uint64_t lba, uint8_t * chs); // Convert LBA to CHS
-   int Verify(void);
+   int FindOverlaps(void);
+   int NumPrimaries(void);
+   int NumLogicals(void);
+   int CountParts(void);
+   void UpdateCanBeLogical(void);
+   uint64_t FirstLogicalLBA(void);
+   uint64_t LastLogicalLBA(void);
+   int AreLogicalsContiguous(void);
+   int DoTheyFit(void);
+   int SpaceBeforeAllLogicals(void);
+   int IsLegal(void);
+   int FindNextInUse(int start);
 
    // Functions to create, delete, or change partitions
    // Pass EmptyMBR 1 to clear the boot loader code, 0 to leave it intact
    void EmptyMBR(int clearBootloader = 1);
    void EmptyBootloader(void);
-   void MakePart(int num, uint32_t startLBA, uint32_t lengthLBA, int type = 0x07,
+   void AddPart(int num, const MBRPart& newPart);
+   void MakePart(int num, uint64_t startLBA, uint64_t lengthLBA, int type = 0x07,
                  int bootable = 0);
    int SetPartType(int num, int type);
    int SetPartBootable(int num, int bootable = 1);
    int MakeBiggestPart(int i, int type); // Make partition filling most space
    void DeletePartition(int i);
+   int SetInclusionwChecks(int num, int inclStatus);
    void RecomputeCHS(int partNum);
-   int CreateLogicals(PartNotes * notes);
+   int SwapPartitions(uint32_t partNum1, uint32_t partNum2);
+   void SortMBR(int start = 0);
+   void QuickSortMBR(int start, int finish);
+   int DeleteOversizedParts();
+   int DeleteExtendedParts();
+   void OmitOverlaps(void);
+//   void OmitAll(void);
+   void MaximizeLogicals();
+   void MaximizePrimaries();
+   void TrimPrimaries();
+   void MakeLogicalsContiguous(void);
+   void MakeItLegal(void);
+   int RemoveLogicalsFromFirstFour(void);
+   int MovePrimariesToFirstFour(void);
+   int CreateExtended(void);
 
    // Functions to find information on free space....
-   uint32_t FindFirstAvailable(uint32_t start = 1);
-   uint32_t FindLastInFree(uint32_t start);
-   uint32_t FindFirstInFree(uint32_t start);
-   int IsFree(uint32_t sector);
+   uint64_t FindFirstAvailable(uint64_t start = 1);
+   uint64_t FindLastInFree(uint64_t start);
+   uint64_t FindFirstInFree(uint64_t start);
+//   int IsFree(uint64_t sector, int topPartNum = MAX_MBR_PARTS);
+   int SectorUsedAs(uint64_t sector, int topPartNum = MAX_MBR_PARTS);
 
    // Functions to extract data on specific partitions....
    uint8_t GetStatus(int i);
    uint8_t GetType(int i);
-   uint32_t GetFirstSector(int i);
-   uint32_t GetLength(int i);
+   uint64_t GetFirstSector(int i);
+   uint64_t GetLength(int i);
+
+   // User interaction functions....
+   int DoMenu(const string& prompt = "\nMBR command (? for help): ");
+   void ShowCommands(void);
+
 }; // struct BasicMBRData
 
 #endif

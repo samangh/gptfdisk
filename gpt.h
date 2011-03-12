@@ -11,18 +11,9 @@
 #include "mbr.h"
 #include "bsd.h"
 #include "gptpart.h"
-#include "gptpartnotes.h"
 
 #ifndef __GPTSTRUCTS
 #define __GPTSTRUCTS
-
-#define GPTFDISK_VERSION "0.6.15-pre1"
-
-// Constants used by GPTData::PartsToMBR(). MBR_EMPTY must be the lowest-
-// numbered value to refer to partition numbers. (Most will be 0 or positive,
-// of course.)
-#define MBR_EFI_GPT -1
-#define MBR_EMPTY -2
 
 // Default values for sector alignment
 #define DEFAULT_ALIGNMENT 2048
@@ -113,13 +104,14 @@ public:
    void RecomputeCRCs(void);
    void RebuildMainHeader(void);
    void RebuildSecondHeader(void);
-   int VerifyMBR(void) {return protectiveMBR.Verify();}
+   int VerifyMBR(void) {return protectiveMBR.FindOverlaps();}
    int FindHybridMismatches(void);
    int FindOverlaps(void);
    int FindInsanePartitions(void);
 
    // Load or save data from/to disk
-   int SetFile(const string & deviceFilename);
+   int SetDisk(const string & deviceFilename);
+   DiskIO* GetDisk(void) {return &myDisk;}
    int LoadMBR(const string & f) {return protectiveMBR.ReadMBRData(f);}
    int WriteProtectiveMBR(void) {return protectiveMBR.WriteMBRData(&myDisk);}
    void PartitionScan(void);
@@ -169,6 +161,7 @@ public:
    int Align(uint64_t* sector);
 
    // Return data about the GPT structures....
+   void SetProtectiveMBR(BasicMBRData & newMBR) {protectiveMBR = newMBR;}
    int GetPartRange(uint32_t* low, uint32_t* high);
    int FindFirstFreePart(void);
    uint32_t GetNumParts(void) {return mainHeader.numParts;}

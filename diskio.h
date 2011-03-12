@@ -31,7 +31,7 @@
 #endif
 
 #include "support.h"
-#include "parttypes.h"
+//#include "parttypes.h"
 
 using namespace std;
 
@@ -67,6 +67,8 @@ class DiskIO {
       int Write(void* buffer, int numBytes);
       void DiskSync(void); // resync disk caches to use new partitions
       int GetBlockSize(void);
+      uint32_t GetNumHeads(void);
+      uint32_t GetNumSecsPerTrack(void);
       int IsOpen(void) {return isOpen;}
       int IsOpenForWrite(void) {return openForWrite;}
       string GetName(void) const {return realFilename;}

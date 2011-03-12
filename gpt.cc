@@ -26,7 +26,7 @@
 #include "parttypes.h"
 #include "attributes.h"
 #include "diskio.h"
-#include "partnotes.h"
+//#include "partnotes.h"
 
 using namespace std;
 
@@ -61,7 +61,6 @@ GPTData::GPTData(void) {
    sectorAlignment = MIN_AF_ALIGNMENT; // Align partitions on 4096-byte boundaries by default
    beQuiet = 0;
    whichWasUsed = use_new;
-   srand((unsigned int) time(NULL));
    mainHeader.numParts = 0;
    numParts = 0;
    SetGPTSize(NUM_GPT_ENTRIES);
@@ -84,7 +83,6 @@ GPTData::GPTData(string filename) {
    sectorAlignment = MIN_AF_ALIGNMENT; // Align partitions on 4096-byte boundaries by default
    beQuiet = 0;
    whichWasUsed = use_new;
-   srand((unsigned int) time(NULL));
    mainHeader.numParts = 0;
    numParts = 0;
    if (!LoadPartitions(filename))
@@ -609,7 +607,7 @@ int GPTData::FindInsanePartitions(void) {
 // Change the filename associated with the GPT. Used for duplicating
 // the partition table to a new disk and saving backups.
 // Returns 1 on success, 0 on failure.
-int GPTData::SetFile(const string & deviceFilename) {
+int GPTData::SetDisk(const string & deviceFilename) {
    int err, allOK = 1;
 
    device = deviceFilename;
@@ -622,7 +620,7 @@ int GPTData::SetFile(const string & deviceFilename) {
    protectiveMBR.SetDiskSize(diskSize);
    protectiveMBR.SetBlockSize(blockSize);
    return allOK;
-} // GPTData::SetFile()
+} // GPTData::SetDisk()
 
 // Scan for partition data. This function loads the MBR data (regular MBR or
 // protective MBR) and loads BSD disklabel data (which is probably invalid).
@@ -991,7 +989,7 @@ int GPTData::SaveGPTData(int quiet) {
 
    if ((allOK) && (!quiet)) {
       cout << "\nFinal checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING\n"
-           << "PARTITIONS!!\n\nDo you want to proceed, possibly destroying your data? ";
+           << "PARTITIONS!!\n\nDo you want to proceed? ";
       answer = GetYN();
       if (answer == 'Y') {
          cout << "OK; writing new GUID partition table (GPT).\n";
@@ -1553,58 +1551,6 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
    } // if/else
    return allOK;
 } // GPTData::OnePartToMBR()
-
-// Convert partitions to MBR form (primary and logical) and return
-// the number done. Partitions are specified in a PartNotes variable,
-// which includes pointers to GPT partition numbers. A partition number
-// of MBR_EFI_GPT means to place an EFI GPT protective partition in that
-// location in the table, and MBR_EMPTY means not to create a partition
-// in that table position. If the partition type entry for a partition
-// is 0, a default entry is used, based on the GPT partition type code.
-// Returns the number of partitions converted, NOT counting EFI GPT
-// protective partitions or extended partitions.
-int GPTData::PartsToMBR(PartNotes * notes) {
-   int mbrNum = 0, numConverted = 0;
-   struct PartInfo convInfo;
-
-   protectiveMBR.EmptyMBR(0);
-   protectiveMBR.SetDiskSize(diskSize);
-   if (!notes->IsLegal())
-      notes->MakeItLegal();
-   notes->Rewind();
-   while (notes->GetNextInfo(&convInfo) >= 0) {
-      if ((convInfo.origPartNum >= 0) && (convInfo.type == PRIMARY)) {
-         numConverted += OnePartToMBR((uint32_t) convInfo.origPartNum, mbrNum);
-         if (convInfo.hexCode != 0)
-            protectiveMBR.SetPartType(mbrNum, convInfo.hexCode);
-         if (convInfo.active)
-            protectiveMBR.SetPartBootable(mbrNum);
-         mbrNum++;
-      } // if
-      if (convInfo.origPartNum == MBR_EFI_GPT)
-         mbrNum++;
-   } // for
-   // Now go through and set sizes for MBR_EFI_GPT partitions....
-   notes->Rewind();
-   mbrNum = 0;
-   while (notes->GetNextInfo(&convInfo) >= 0) {
-      if ((convInfo.origPartNum >= 0) && (convInfo.type == PRIMARY))
-         mbrNum++;
-      if (convInfo.origPartNum == MBR_EFI_GPT) {
-         if (protectiveMBR.FindFirstAvailable() == UINT32_C(1)) {
-            protectiveMBR.MakePart(mbrNum, 1, protectiveMBR.FindLastInFree(1), convInfo.hexCode);
-            protectiveMBR.SetHybrid();
-         } else {
-            protectiveMBR.MakeBiggestPart(mbrNum, convInfo.hexCode);
-         } // if/else
-         mbrNum++;
-      } // if
-   } // while
-   // Now do logical partition(s)...
-   protectiveMBR.SetDisk(&myDisk);
-   numConverted += protectiveMBR.CreateLogicals(notes);
-   return numConverted;
-} // GPTData::PartsToMBR()
 
 
 /**********************************************************************

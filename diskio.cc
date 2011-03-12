@@ -34,7 +34,7 @@
 
 #include "support.h"
 #include "diskio.h"
-#include "gpt.h"
+//#include "gpt.h"
 
 using namespace std;
 

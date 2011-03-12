@@ -4,19 +4,24 @@ STRIP=/usr/bin/i686-pc-mingw32-strip
 CFLAGS=-O2 -D_FILE_OFFSET_BITS=64 -g
 CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -g
 #CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -I /usr/local/include -I/opt/local/include -g
-LIB_NAMES=guid gptpart bsd parttypes partnotes gptpartnotes attributes crc32 basicmbr mbr gpt support diskio diskio-windows
+LIB_NAMES=guid gptpart bsd parttypes attributes crc32 mbrpart basicmbr mbr gpt support diskio diskio-windows
+MBR_LIBS=support diskio diskio-windows basicmbr mbrpart
 LIB_SRCS=$(NAMES:=.cc)
 LIB_OBJS=$(LIB_NAMES:=.o)
+MBR_LIB_OBJS=$(MBR_LIBS:=.o)
 LIB_HEADERS=$(LIB_NAMES:=.h)
 DEPEND= makedepend $(CFLAGS)
 
-all:	gdisk
+all:	gdisk fixparts
 
 gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
 	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o -luuid -static-libgcc -o gdisk.exe
 
 sgdisk: $(LIB_OBJS) sgdisk.o
-	$(CXX) $(LIB_OBJS) sgdisk.o -lpopt -o sgdisk.exe
+	$(CXX) $(LIB_OBJS) sgdisk.o -lpopt -static-libgcc -o sgdisk.exe
+
+fixparts: $(MBR_LIB_OBJS) fixparts.o
+	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -static-libgcc -o fixparts.exe
 
 lint:	#no pre-reqs
 	lint $(SRCS)
@@ -25,7 +30,7 @@ clean:	#no pre-reqs
 	rm -f core *.o *~ gdisk.exe sgdisk.exe
 
 strip:	#no pre-reqs
-	$(STRIP) gdisk.exe
+	$(STRIP) gdisk.exe fixparts.exe
 
 # what are the source dependencies
 depend: $(SRCS)
