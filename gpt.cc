@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <iostream>
+#include <algorithm>
 #include "crc32.h"
 #include "gpt.h"
 #include "bsd.h"
@@ -1683,58 +1684,11 @@ uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64
 } // GPTData::CreatePartition(partNum, startSector, endSector)
 
 // Sort the GPT entries, eliminating gaps and making for a logical
-// ordering. Relies on QuickSortGPT() for the bulk of the work
+// ordering.
 void GPTData::SortGPT(void) {
-   uint32_t i, numFound, firstPart, lastPart;
-
-   // First, find the last partition with data, so as not to
-   // spend needless time sorting empty entries....
-   numFound = GetPartRange(&firstPart, &lastPart);
-
-   // Now swap empties with the last partitions, to simplify the logic
-   // in the Quicksort function....
-   i = 0;
-   while (i < lastPart) {
-      if (partitions[i].GetFirstLBA() == 0) {
-	     SwapPartitions(i, lastPart);
-         do {
-            lastPart--;
-         } while ((lastPart > 0) && (partitions[lastPart].GetFirstLBA() == 0));
-      } // if
-      i++;
-   } // while
-
-   // If there are more empties than partitions in the range from 0 to lastPart,
-   // the above leaves lastPart set too high, so we've got to adjust it to
-   // prevent empties from migrating to the top of the list....
-   GetPartRange(&firstPart, &lastPart);
-
-   // Now call the recursive quick sort routine to do the real work....
-   QuickSortGPT(0, lastPart);
+   if (numParts > 0)
+      sort(partitions, partitions + numParts - 1);
 } // GPTData::SortGPT()
-
-// Recursive quick sort algorithm for GPT partitions. Note that if there
-// are any empties in the specified range, they'll be sorted to the
-// start, resulting in a sorted set of partitions that begins with
-// partition 2, 3, or higher.
-void GPTData::QuickSortGPT(int start, int finish) {
-   uint64_t starterValue; // starting location of median partition
-   int left, right;
-
-   left = start;
-   right = finish;
-   starterValue = partitions[(start + finish) / 2].GetFirstLBA();
-   do {
-      while (partitions[left].GetFirstLBA() < starterValue)
-         left++;
-      while (partitions[right].GetFirstLBA() > starterValue)
-         right--;
-      if (left <= right)
-	     SwapPartitions(left++, right--);
-   } while (left <= right);
-   if (start < right) QuickSortGPT(start, right);
-   if (finish > left) QuickSortGPT(left, finish);
-} // GPTData::QuickSortGPT()
 
 // Swap the contents of two partitions.
 // Returns 1 if successful, 0 if either partition is out of range
@@ -1765,8 +1719,7 @@ int GPTData::ClearGPTData(void) {
    int goOn = 1, i;
 
    // Set up the partition table....
-   if (partitions != NULL)
-      delete[] partitions;
+   delete[] partitions;
    partitions = NULL;
    SetGPTSize(NUM_GPT_ENTRIES);
 
@@ -1963,16 +1916,14 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
 
    *low = numParts + 1; // code for "not found"
    *high = 0;
-   if (numParts > 0) { // only try if partition table exists...
-      for (i = 0; i < numParts; i++) {
-         if (partitions[i].GetFirstLBA() != UINT64_C(0)) { // it exists
-            *high = i; // since we're counting up, set the high value
-	        // Set the low value only if it's not yet found...
-            if (*low == (numParts + 1)) *low = i;
-               numFound++;
-         } // if
-      } // for
-   } // if
+   for (i = 0; i < numParts; i++) {
+      if (partitions[i].GetFirstLBA() != UINT64_C(0)) { // it exists
+         *high = i; // since we're counting up, set the high value
+         // Set the low value only if it's not yet found...
+         if (*low == (numParts + 1)) *low = i;
+            numFound++;
+      } // if
+   } // for
 
    // Above will leave *low pointing to its "not found" value if no partitions
    // are defined, so reset to 0 if this is the case....
@@ -1987,7 +1938,7 @@ int GPTData::FindFirstFreePart(void) {
    int i = 0;
 
    if (partitions != NULL) {
-      while ((partitions[i].IsUsed()) && (i < (int) numParts))
+      while ((i < (int) numParts) && (partitions[i].IsUsed()))
          i++;
       if (i >= (int) numParts)
          i = -1;
@@ -2281,6 +2232,10 @@ const GPTPart & GPTData::operator[](uint32_t partNum) const {
    if (partNum >= numParts) {
       cerr << "Partition number out of range: " << partNum << "\n";
       partNum = 0;
+      if ((numParts == 0) || (partitions == NULL)) {
+         cerr << "No partitions defined; fatal error!\n";
+         exit(1);
+      } // if
    } // if
    return partitions[partNum];
 } // operator[]

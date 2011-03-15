@@ -95,6 +95,7 @@ public:
    GPTData(string deviceFilename);
    virtual ~GPTData(void);
    GPTData & operator=(const GPTData & orig);
+//   bool operator<(const GPTData &other) const;
 
    // Verify (or update) data integrity
    int Verify(void);

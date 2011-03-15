@@ -1604,7 +1604,7 @@ int BasicMBRData::DoMenu(const string& prompt) {
 
    do {
       cout << prompt;
-      ReadCString(line, 255);
+      ReadCString(line, sizeof(line));
       switch (*line) {
          case '\n':
             break;
@@ -1655,7 +1655,7 @@ int BasicMBRData::DoMenu(const string& prompt) {
                hexCode = 0;
                while ((hexCode <= 0) || (hexCode > 255)) {
                   cout << "Enter an MBR hex code: ";
-                  ReadCString(line, 255);
+                  ReadCString(line, sizeof(line));
                   sscanf(line, "%x", &hexCode);
                   if (line[0] == '\n')
                      hexCode = 0x00;

@@ -131,6 +131,19 @@ GPTPart & GPTPart::operator=(const GPTPart & orig) {
    return *this;
 } // assignment operator
 
+// Compare the values, and return a bool result.
+// Because this is intended for sorting and a firstLBA value of 0 denotes
+// a partition that's not in use and so that should be sorted upwards,
+// we return the opposite of the usual arithmetic result when either
+// firstLBA value is 0.
+bool GPTPart::operator<(const GPTPart &other) const {
+   
+   if (firstLBA && other.firstLBA)
+      return (firstLBA < other.firstLBA);
+   else
+      return (other.firstLBA < firstLBA);
+} // GPTPart::operator<()
+
 // Display summary information; does nothing if the partition is empty.
 void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
    string sizeInSI;
@@ -227,7 +240,7 @@ void GPTPart::ChangeType(void) {
    cout << "Current type is '" << GetTypeName() << "'\n";
    do {
       cout << "Hex code or GUID (L to show codes, Enter = 0700): ";
-      ReadCString(line, 255);
+      ReadCString(line, sizeof(line));
       if ((line[0] == 'L') || (line[0] == 'l')) {
          partitionType.ShowAllTypes();
       } else {

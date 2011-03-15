@@ -37,8 +37,7 @@ BSDData::BSDData(void) {
 } // default constructor
 
 BSDData::~BSDData(void) {
-   if (partitions != NULL)
-      delete[] partitions;
+   delete[] partitions;
 } // destructor
 
 // Read BSD disklabel data from the specified device filename. This function

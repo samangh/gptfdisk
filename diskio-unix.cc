@@ -409,7 +409,7 @@ uint64_t DiskIO::DiskSize(int *err) {
       // fstat() gives us....
       if ((sectors == 0) || (*err == -1)) {
          if (fstat64(fd, &st) == 0) {
-            bytes = (off_t) st.st_size;
+            bytes = st.st_size;
             if ((bytes % UINT64_C(512)) != 0)
                cerr << "Warning: File size is not a multiple of 512 bytes!"
                     << " Misbehavior is likely!\n\a";

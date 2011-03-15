@@ -84,13 +84,13 @@ void MainMenu(string filename, GPTDataTextUI* theGPT) {
 
    do {
       cout << "\nCommand (? for help): ";
-      ReadCString(line, 255);
+      ReadCString(line, sizeof(line));
       switch (*line) {
          case '\n':
             break;
          case 'b': case 'B':
             cout << "Enter backup filename to save: ";
-            ReadCString(line, 255);
+            ReadCString(line, sizeof(line));
             sscanf(line, "%s", buFile);
             theGPT->SaveGPTBackup(buFile);
             break;
@@ -183,7 +183,7 @@ void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
 
    do {
       cout << "\nRecovery/transformation command (? for help): ";
-      ReadCString(line, 255);
+      ReadCString(line, sizeof(line));
       switch (*line) {
          case '\n':
             break;
@@ -239,7 +239,7 @@ void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
             break;
          case 'l': case 'L':
             cout << "Enter backup filename to load: ";
-            ReadCString(line, 255);
+            ReadCString(line, sizeof(line));
             sscanf(line, "%s", buFile);
             theGPT->LoadGPTBackup(buFile);
             break;
@@ -313,7 +313,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
 
    do {
       cout << "\nExpert command (? for help): ";
-      ReadCString(line, 255);
+      ReadCString(line, sizeof(line));
       switch (*line) {
          case '\n':
             break;
@@ -327,7 +327,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             if (theGPT->GetPartRange(&temp1, &temp2) > 0) {
                pn = theGPT->GetPartNum();
                cout << "Enter the partition's new unique GUID ('R' to randomize): ";
-               ReadCString(guidStr, 255);
+               ReadCString(guidStr, sizeof(guidStr));
                if ((strlen(guidStr) >= 33) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
                   theGPT->SetPartitionGUID(pn, (GUIDData) guidStr);
                   cout << "New GUID is " << theGPT->operator[](pn).GetUniqueGUID() << "\n";
@@ -349,7 +349,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             break;
          case 'g': case 'G':
             cout << "Enter the disk's unique GUID ('R' to randomize): ";
-            ReadCString(guidStr, 255);
+            ReadCString(guidStr, sizeof(guidStr));
             if ((strlen(guidStr) >= 33) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
                theGPT->SetDiskGUID((GUIDData) guidStr);
                cout << "The new disk GUID is " << theGPT->GetDiskGUID() << "\n";
@@ -402,7 +402,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             i = strlen(device);
             if (i && device[i - 1] == '\n')
                device[i - 1] = '\0';
-            if (*device && strlen(device) > 0) {
+            if (*device) {
                secondDevice = *theGPT;
                secondDevice.SetDisk(device);
                secondDevice.SaveGPTData(0);

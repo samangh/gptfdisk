@@ -371,7 +371,7 @@ void GPTDataTextUI::MakeHybrid(void) {
    // hybrid MBR....
    cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
         << "added to the hybrid MBR, in sequence: ";
-   ReadCString(line, 255);
+   ReadCString(line, sizeof(line));
    numPartsToCvt = sscanf(line, "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
 
    if (numPartsToCvt > 0) {
@@ -426,7 +426,7 @@ void GPTDataTextUI::MakeHybrid(void) {
                cout << "Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ";
                // Comment on above: Mac OS treats disks with more than one
                // 0xEE MBR partition as MBR disks, not as GPT disks.
-               ReadCString(line, 255);
+               ReadCString(line, sizeof(line));
                sscanf(line, "%x", &hexCode);
                if (line[0] == '\n')
                   hexCode = 0x00;
@@ -480,7 +480,7 @@ int GetMBRTypeCode(int defType) {
       cout << "Enter an MBR hex code (default " << hex;
       cout.width(2);
       cout << defType << "): " << dec;
-      ReadCString(line, 255);
+      ReadCString(line, sizeof(line));
       if (line[0] == '\n')
          typeCode = defType;
       else

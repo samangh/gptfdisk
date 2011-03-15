@@ -78,6 +78,7 @@ class GPTPart {
 
       // Additional functions
       GPTPart & operator=(const GPTPart & orig);
+      bool operator<(const GPTPart &other) const;
       void ShowSummary(int partNum, uint32_t blockSize); // display summary information (1-line)
       void ShowDetails(uint32_t blockSize); // display detailed information (multi-line)
       void BlankPartition(void); // empty partition of data

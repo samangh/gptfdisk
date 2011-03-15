@@ -31,12 +31,11 @@
 
 using namespace std;
 
-char* ReadCString(char *inStr, int numchars) {
-   if (!fgets(inStr, 255, stdin)) {
+void ReadCString(char *inStr, int numchars) {
+   if (!fgets(inStr, numchars, stdin)) {
       cerr << "Critical error! Failed fgets() in ReadCString()\n";
       exit(1);
    } // if
-   return inStr;
 } // ReadCString()
 
 // Get a numeric value from the user, between low and high (inclusive).
@@ -74,7 +73,7 @@ char GetYN(void) {
 
    do {
       cout << "(Y/N): ";
-      ReadCString(line, 255);
+      ReadCString(line, sizeof(line));
       sscanf(line, "%c", &response);
       if (response == 'y')
          response = 'Y';
@@ -321,16 +320,28 @@ uint64_t GetInt(const string & argument, int itemNum) {
 } // GetInt()
 
 // Extract string data from argument string, which should be colon-delimited
+// If string begins with a colon, that colon is skipped in the counting. If an
+// invalid itemNum is specified, returns an empty string.
 string GetString(string argument, int itemNum) {
-   size_t startPos = -1, endPos = -1;
+   size_t startPos = 0, endPos = 0;
+   string retVal = "";
+   int foundLast = 0;
+   int numFound = 0;
 
-   while (itemNum-- > 0) {
-      startPos = endPos + 1;
+   if (argument[0] == ':')
+      argument.erase(0, 1);
+   while ((numFound < itemNum) && (!foundLast)) {
       endPos = argument.find(':', startPos);
-   }
-   if (endPos == string::npos)
-      endPos = argument.length();
-   endPos--;
+      numFound++;
+      if (endPos == string::npos) {
+         foundLast = 1;
+         endPos = argument.length();
+      } else if (numFound < itemNum) {
+         startPos = endPos + 1;
+      } // if/elseif
+   } // while
+   if ((numFound == itemNum) && (numFound > 0))
+      retVal = argument.substr(startPos, endPos - startPos);
 
-   return argument.substr(startPos, endPos - startPos + 1);
+   return retVal;
 } // GetString()

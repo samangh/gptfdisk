@@ -13,6 +13,7 @@
 #include <popt.h>
 #include <errno.h>
 #include <stdint.h>
+#include <string.h>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -438,6 +439,7 @@ int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
 
    if ((&theGPT != NULL) && (argument != NULL)) {
       numParts = CountColons(argument) + 1;
+      cout << "numParts = " << numParts << "\n";
       if (numParts <= (4 - isHybrid)) {
          newMBR.SetDisk(theGPT.GetDisk());
          for (i = 0; i < numParts; i++) {
@@ -464,15 +466,14 @@ int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
    return allOK;
 } // BuildMBR()
 
-// Returns the number of colons in argument string
+// Returns the number of colons in argument string, ignoring the
+// first character (thus, a leading colon is ignored, as GetString()
+// does).
 int CountColons(char* argument) {
-   int num = 0, i = 0;
+   int num = 0;
 
-   if (argument != NULL) {
-      while (argument[i] != '\0') {
-         if (argument[i++] == ':')
-            num++;
-      } // while
-   } // if
+   while ((argument[0] != '\0') && (argument = strchr(&argument[1], ':')))
+      num++;
+
    return num;
 } // CountColons()

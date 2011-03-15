@@ -56,7 +56,7 @@
 
 using namespace std;
 
-char* ReadCString(char *inStr, int numchars);
+void ReadCString(char *inStr, int numchars);
 int GetNumber(int low, int high, int def, const string & prompt);
 char GetYN(void);
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const std::string& prompt);
