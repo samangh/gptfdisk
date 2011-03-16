@@ -148,7 +148,6 @@ public:
    int DeletePartition(uint32_t partNum);
    uint32_t CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector);
    void SortGPT(void);
-   void QuickSortGPT(int start, int finish);
    int SwapPartitions(uint32_t partNum1, uint32_t partNum2);
    int ClearGPTData(void);
    void MoveSecondHeaderToEnd();

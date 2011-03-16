@@ -121,7 +121,7 @@ GPTData & GPTData::operator=(const GPTData & orig) {
    myDisk.OpenForRead(orig.myDisk.GetName());
 
    delete[] partitions;
-   partitions = new GPTPart [numParts * sizeof (GPTPart)];
+   partitions = new GPTPart [numParts];
    if (partitions != NULL) {
       for (i = 0; i < numParts; i++) {
          partitions[i] = orig.partitions[i];
@@ -290,9 +290,9 @@ int GPTData::Verify(void) {
    if (problems == 0) {
       totalFree = FindFreeBlocks(&numSegments, &largestSegment);
       cout << "\nNo problems found. " << totalFree << " free sectors ("
-           << BytesToSI(totalFree, blockSize) << ") available in "
+           << BytesToIeee(totalFree, blockSize) << ") available in "
            << numSegments << "\nsegments, the largest of which is "
-           << largestSegment << " (" << BytesToSI(largestSegment, blockSize)
+           << largestSegment << " (" << BytesToIeee(largestSegment, blockSize)
            << ") in size.\n";
    } else {
       cout << "\nIdentified " << problems << " problems!\n";
@@ -474,8 +474,6 @@ void GPTData::RecomputeCRCs(void) {
 // Rebuild the main GPT header, using the secondary header as a model.
 // Typically called when the main header has been found to be corrupt.
 void GPTData::RebuildMainHeader(void) {
-   int i;
-
    mainHeader.signature = GPT_SIGNATURE;
    mainHeader.revision = secondHeader.revision;
    mainHeader.headerSize = secondHeader.headerSize;
@@ -490,16 +488,13 @@ void GPTData::RebuildMainHeader(void) {
    mainHeader.numParts = secondHeader.numParts;
    mainHeader.sizeOfPartitionEntries = secondHeader.sizeOfPartitionEntries;
    mainHeader.partitionEntriesCRC = secondHeader.partitionEntriesCRC;
-   for (i = 0 ; i < GPT_RESERVED; i++)
-      mainHeader.reserved2[i] = secondHeader.reserved2[i];
+   memcpy(mainHeader.reserved2, secondHeader.reserved2, sizeof(mainHeader.reserved2));
    mainCrcOk = secondCrcOk;
    SetGPTSize(mainHeader.numParts);
 } // GPTData::RebuildMainHeader()
 
 // Rebuild the secondary GPT header, using the main header as a model.
 void GPTData::RebuildSecondHeader(void) {
-   int i;
-
    secondHeader.signature = GPT_SIGNATURE;
    secondHeader.revision = mainHeader.revision;
    secondHeader.headerSize = mainHeader.headerSize;
@@ -514,8 +509,7 @@ void GPTData::RebuildSecondHeader(void) {
    secondHeader.numParts = mainHeader.numParts;
    secondHeader.sizeOfPartitionEntries = mainHeader.sizeOfPartitionEntries;
    secondHeader.partitionEntriesCRC = mainHeader.partitionEntriesCRC;
-   for (i = 0 ; i < GPT_RESERVED; i++)
-      secondHeader.reserved2[i] = mainHeader.reserved2[i];
+   memcpy(secondHeader.reserved2, mainHeader.reserved2, sizeof(secondHeader.reserved2));
    secondCrcOk = mainCrcOk;
    SetGPTSize(secondHeader.numParts);
 } // GPTData::RebuildSecondHeader()
@@ -1210,13 +1204,11 @@ int GPTData::SaveMBR(void) {
 // MBR.
 // Returns 1 if the operation succeeds, 0 if not.
 int GPTData::DestroyGPT(void) {
-   int i, sum, tableSize, allOK = 1;
+   int sum, tableSize, allOK = 1;
    uint8_t blankSector[512];
    uint8_t* emptyTable;
 
-   for (i = 0; i < 512; i++) {
-      blankSector[i] = 0;
-   } // for
+   memset(blankSector, 0, sizeof(blankSector));
 
    if (myDisk.OpenForWrite()) {
       if (!myDisk.Seek(mainHeader.currentLBA))
@@ -1229,8 +1221,7 @@ int GPTData::DestroyGPT(void) {
          allOK = 0;
       tableSize = numParts * mainHeader.sizeOfPartitionEntries;
       emptyTable = new uint8_t[tableSize];
-      for (i = 0; i < tableSize; i++)
-         emptyTable[i] = 0;
+      memset(emptyTable, 0, tableSize);
       if (allOK) {
          sum = myDisk.Write(emptyTable, tableSize);
          if (sum != tableSize) {
@@ -1270,18 +1261,13 @@ int GPTData::DestroyGPT(void) {
 // Wipe MBR data from the disk (zero it out completely)
 // Returns 1 on success, 0 on failure.
 int GPTData::DestroyMBR(void) {
-   int allOK = 1, i;
+   int allOK;
    uint8_t blankSector[512];
 
-   for (i = 0; i < 512; i++)
-      blankSector[i] = 0;
+   memset(blankSector, 0, sizeof(blankSector));
 
-   if (myDisk.OpenForWrite()) {
-      if (myDisk.Seek(0)) {
-         if (myDisk.Write(blankSector, 512) != 512)
-            allOK = 0;
-      } else allOK = 0;
-   } else allOK = 0;
+   allOK = myDisk.OpenForWrite() && myDisk.Seek(0) && (myDisk.Write(blankSector, 512) == 512);
+
    if (!allOK)
       cerr << "Warning! MBR not overwritten! Error is " << errno << "!\n";
    return allOK;
@@ -1319,7 +1305,7 @@ void GPTData::DisplayGPTData(void) {
    uint64_t temp, totalFree;
 
    cout << "Disk " << device << ": " << diskSize << " sectors, "
-        << BytesToSI(diskSize, blockSize) << "\n";
+        << BytesToIeee(diskSize, blockSize) << "\n";
    cout << "Logical sector size: " << blockSize << " bytes\n";
    cout << "Disk identifier (GUID): " << mainHeader.diskGUID << "\n";
    cout << "Partition table holds up to " << numParts << " entries\n";
@@ -1328,7 +1314,7 @@ void GPTData::DisplayGPTData(void) {
    totalFree = FindFreeBlocks(&i, &temp);
    cout << "Partitions will be aligned on " << sectorAlignment << "-sector boundaries\n";
    cout << "Total free space is " << totalFree << " sectors ("
-        << BytesToSI(totalFree, blockSize) << ")\n";
+        << BytesToIeee(totalFree, blockSize) << ")\n";
    cout << "\nNumber  Start (sector)    End (sector)  Size       Code  Name\n";
    for (i = 0; i < numParts; i++) {
       partitions[i].ShowSummary(i, blockSize);
@@ -1566,7 +1552,6 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
 // well, 0 if an error is encountered.
 int GPTData::SetGPTSize(uint32_t numEntries) {
    GPTPart* newParts;
-   GPTPart* trash;
    uint32_t i, high, copyNum;
    int allOK = 1;
 
@@ -1585,7 +1570,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
    // array that's been expanded because this function is called when loading
    // data.
    if (((numEntries != numParts) || (partitions == NULL)) && (numEntries > 0)) {
-      newParts = new GPTPart [numEntries * sizeof (GPTPart)];
+      newParts = new GPTPart [numEntries];
       if (newParts != NULL) {
          if (partitions != NULL) { // existing partitions; copy them over
             GetPartRange(&i, &high);
@@ -1603,9 +1588,8 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
                for (i = 0; i < copyNum; i++) {
                   newParts[i] = partitions[i];
                } // for
-               trash = partitions;
+               delete[] partitions;
                partitions = newParts;
-               delete[] trash;
             } // if
          } else { // No existing partition table; just create it
             partitions = newParts;
@@ -1687,7 +1671,7 @@ uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64
 // ordering.
 void GPTData::SortGPT(void) {
    if (numParts > 0)
-      sort(partitions, partitions + numParts - 1);
+      sort(partitions, partitions + numParts);
 } // GPTData::SortGPT()
 
 // Swap the contents of two partitions.
@@ -2119,15 +2103,8 @@ int GPTData::IsFree(uint64_t sector, uint32_t *partNum) {
 
 // Returns 1 if partNum is unused.
 int GPTData::IsFreePartNum(uint32_t partNum) {
-   int retval = 1;
-
-   if ((partNum < numParts) && (partitions != NULL)) {
-      if (partitions[partNum].IsUsed()) {
-         retval = 0;
-      } // if partition is in use
-   } else retval = 0;
-
-   return retval;
+   return ((partNum < numParts) && (partitions != NULL) &&
+           (!partitions[partNum].IsUsed()));
 } // GPTData::IsFreePartNum()
 
 
@@ -2233,7 +2210,7 @@ const GPTPart & GPTData::operator[](uint32_t partNum) const {
       cerr << "Partition number out of range: " << partNum << "\n";
       partNum = 0;
       if ((numParts == 0) || (partitions == NULL)) {
-         cerr << "No partitions defined; fatal error!\n";
+         cerr << "No partitions defined in GPTData::operator[]; fatal error!\n";
          exit(1);
       } // if
    } // if

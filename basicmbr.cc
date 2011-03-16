@@ -455,7 +455,7 @@ void BasicMBRData::DisplayMBRData(void) {
    int i;
 
    cout << "\nDisk size is " << diskSize << " sectors ("
-        << BytesToSI(diskSize, blockSize) << ")\n";
+        << BytesToIeee(diskSize, blockSize) << ")\n";
    cout << "MBR disk identifier: 0x";
    cout.width(8);
    cout.fill('0');

@@ -266,8 +266,8 @@ int main(int argc, char *argv[]) {
                      partNum = theGPT.FindFirstFreePart();
                   low = theGPT.FindFirstInLargest();
                   high = theGPT.FindLastInFree(low);
-                  startSector = SIToInt(GetString(newPartInfo, 2), sSize, low, high, low);
-                  endSector = SIToInt(GetString(newPartInfo, 3), sSize, startSector, high, high);
+                  startSector = IeeeToInt(GetString(newPartInfo, 2), sSize, low, high, low);
+                  endSector = IeeeToInt(GetString(newPartInfo, 3), sSize, startSector, high, high);
                   if (theGPT.CreatePartition(partNum, startSector, endSector)) {
                      saveData = 1;
                   } else {

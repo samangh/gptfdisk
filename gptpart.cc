@@ -146,11 +146,11 @@ bool GPTPart::operator<(const GPTPart &other) const {
 
 // Display summary information; does nothing if the partition is empty.
 void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
-   string sizeInSI;
+   string sizeInIeee;
    size_t i;
 
    if (firstLBA != 0) {
-      sizeInSI = BytesToSI(lastLBA - firstLBA + 1, blockSize);
+      sizeInIeee = BytesToIeee(lastLBA - firstLBA + 1, blockSize);
       cout.fill(' ');
       cout.width(4);
       cout << partNum + 1 << "  ";
@@ -158,9 +158,10 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout << firstLBA << "  ";
       cout.width(14);
       cout << lastLBA  << "   ";
-      cout << BytesToSI(lastLBA - firstLBA + 1, blockSize) << "  ";
-      for (i = 0; i < 10 - sizeInSI.length(); i++)
-         cout << " ";
+      cout << BytesToIeee(lastLBA - firstLBA + 1, blockSize) << "  ";
+      if (sizeInIeee.length() < 10)
+         for (i = 0; i < 10 - sizeInIeee.length(); i++)
+            cout << " ";
       cout.fill('0');
       cout.width(4);
       cout.setf(ios::uppercase);
@@ -182,12 +183,12 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
       cout << "Partition unique GUID: " << uniqueGUID << "\n";
 
       cout << "First sector: " << firstLBA << " (at "
-            << BytesToSI(firstLBA, blockSize) << ")\n";
+            << BytesToIeee(firstLBA, blockSize) << ")\n";
       cout << "Last sector: " << lastLBA << " (at "
-            << BytesToSI(lastLBA, blockSize) << ")\n";
+            << BytesToIeee(lastLBA, blockSize) << ")\n";
       size = (lastLBA - firstLBA + 1);
       cout << "Partition size: " << size << " sectors ("
-            << BytesToSI(size, blockSize) << ")\n";
+            << BytesToIeee(size, blockSize) << ")\n";
       cout << "Attribute flags: ";
       cout.fill('0');
       cout.width(16);

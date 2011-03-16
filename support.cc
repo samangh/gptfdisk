@@ -74,11 +74,7 @@ char GetYN(void) {
    do {
       cout << "(Y/N): ";
       ReadCString(line, sizeof(line));
-      sscanf(line, "%c", &response);
-      if (response == 'y')
-         response = 'Y';
-      if (response == 'n')
-         response = 'N';
+      response = toupper(line[0]);
    } while ((response != 'Y') && (response != 'N'));
    return response;
 } // GetYN(void)
@@ -99,22 +95,23 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize,
    do {
       cout << prompt;
       cin.getline(line, 255);
-      response = SIToInt(line, sSize, low, high, def);
+      response = IeeeToInt(line, sSize, low, high, def);
    } while ((response < low) || (response > high));
    return response;
 } // GetSectorNum()
 
-// Convert an SI value (K, M, G, T, or P) to its equivalent in
+// Convert an IEEE-1541-2002 value (K, M, G, T, P, or E) to its equivalent in
 // number of sectors. If no units are appended, interprets as the number
 // of sectors; otherwise, interprets as number of specified units and
 // converts to sectors. For instance, with 512-byte sectors, "1K" converts
 // to 2. If value includes a "+", adds low and subtracts 1; if SIValue
-// inclues a "-", subtracts from high. If SIValue is empty, returns def.
+// inclues a "-", subtracts from high. If IeeeValue is empty, returns def.
 // Returns integral sector value.
-uint64_t SIToInt(string SIValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def) {
-   int plusFlag = 0, badInput = 0;
-   uint64_t response = def, mult = 1, divide = 1;
-   char suffix;
+uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def) {
+   uint64_t response = def, bytesPerUnit = 1, mult = 1, divide = 1;
+   size_t foundAt = 0;
+   char suffix, plusFlag = ' ';
+   string suffixes = "KMGTPE";
 
    if (sSize == 0) {
       sSize = SECTOR_SIZE;
@@ -122,127 +119,87 @@ uint64_t SIToInt(string SIValue, uint64_t sSize, uint64_t low, uint64_t high, ui
    } // if
 
    // Remove leading spaces, if present
-   while (SIValue[0] == ' ')
-      SIValue.erase(0, 1);
+   while (inValue[0] == ' ')
+      inValue.erase(0, 1);
 
-   // If present, flag and remove leading plus sign
-   if (SIValue[0] == '+') {
-      plusFlag = 1;
-      SIValue.erase(0, 1);
-   } // if
-
-   // If present, flag and remove leading minus sign
-   if (SIValue[0] == '-') {
-      plusFlag = -1;
-      SIValue.erase(0, 1);
+   // If present, flag and remove leading plus or minus sign
+   if ((inValue[0] == '+') || (inValue[0] == '-')) {
+      plusFlag = inValue[0];
+      inValue.erase(0, 1);
    } // if
 
    // Extract numeric response and, if present, suffix
-   istringstream inString(SIValue);
-   if (((inString.peek() < '0') || (inString.peek() > '9')) && (inString.peek() != -1))
-      badInput = 1;
-   inString >> response >> suffix;
-
-   // If no response, or if response == 0, use default (def)
-   if ((SIValue.length() == 0) || (response == 0)) {
-      response = def;
-      suffix = ' ';
-      plusFlag = 0;
-   } // if
-
-    // Set multiplier based on suffix
-   switch (suffix) {
-      case 'K':
-      case 'k':
-         mult = UINT64_C(1024) / sSize;
-         divide = sSize / UINT64_C(1024);
-         break;
-      case 'M':
-      case 'm':
-         mult = UINT64_C(1048576) / sSize;
-         divide = sSize / UINT64_C(1048576);
-         break;
-      case 'G':
-      case 'g':
-         mult = UINT64_C(1073741824) / sSize;
-         break;
-      case 'T':
-      case 't':
-         mult = UINT64_C(1099511627776) / sSize;
-         break;
-      case 'P':
-      case 'p':
-         mult = UINT64_C(1125899906842624) / sSize;
-         break;
-      default:
-         mult = 1;
-   } // switch
-
-   // Adjust response based on multiplier and plus flag, if present
-   if (mult > 1)
-      response *= mult;
-   else if (divide > 1)
-      response /= divide;
-   if (plusFlag == 1) {
-      // Recompute response based on low part of range (if default = high
-      // value, which should be the case when prompting for the end of a
-      // range) or the defaut value (if default != high, which should be
-      // the case for the first sector of a partition).
-      if (def == high)
-         response = response + low - UINT64_C(1);
-      else
-         response = response + def;
-   } // if
-   if (plusFlag == -1) {
-      response = high - response;
-   } // if
-
-   if (badInput)
+   istringstream inString(inValue);
+   if (((inString.peek() >= '0') && (inString.peek() <= '9')) || (inString.peek() == -1)) {
+      inString >> response >> suffix;
+      suffix = toupper(suffix);
+      
+      // If no response, or if response == 0, use default (def)
+      if ((inValue.length() == 0) || (response == 0)) {
+         response = def;
+         suffix = ' ';
+         plusFlag = 0;
+      } // if
+      
+      // Find multiplication and division factors for the suffix
+      foundAt = suffixes.find(suffix);
+      if (foundAt != string::npos) {
+         bytesPerUnit = UINT64_C(1) << (10 * (foundAt + 1));
+         mult = bytesPerUnit / sSize;
+         divide = sSize / bytesPerUnit;
+      } // if
+      
+      // Adjust response based on multiplier and plus flag, if present
+      if (mult > 1)
+         response *= mult;
+      else if (divide > 1)
+         response /= divide;
+      if (plusFlag == '+') {
+         // Recompute response based on low part of range (if default = high
+         // value, which should be the case when prompting for the end of a
+         // range) or the defaut value (if default != high, which should be
+         // the case for the first sector of a partition).
+         if (def == high)
+            response = response + low - UINT64_C(1);
+         else
+            response = response + def;
+      } else if (plusFlag == '-') {
+         response = high - response;
+      } // if   
+   } else { // user input is invalid
       response = high + UINT64_C(1);
+   } // if/else
 
    return response;
-} // SIToInt()
+} // IeeeToInt()
 
-// Takes a size and converts this to a size in SI units (KiB, MiB, GiB,
-// TiB, or PiB), returned in C++ string form. The size is either in units
-// of the sector size or, if that parameter is omitted, in bytes.
+// Takes a size and converts this to a size in IEEE-1541-2002 units (KiB, MiB,
+// GiB, TiB, PiB, or EiB), returned in C++ string form. The size is either in
+// units of the sector size or, if that parameter is omitted, in bytes.
 // (sectorSize defaults to 1).
-string BytesToSI(uint64_t size, uint32_t sectorSize) {
-   string units;
+string BytesToIeee(uint64_t size, uint32_t sectorSize) {
+   float sizeInIeee;
+   uint index = 0;
+   string units, prefixes = " KMGTPE";
    ostringstream theValue;
-   float sizeInSI;
 
-   sizeInSI = (float) size * (float) sectorSize;
-   units = " bytes";
-   if (sizeInSI > 1024.0) {
-      sizeInSI /= 1024.0;
-      units = " KiB";
-   } // if
-   if (sizeInSI > 1024.0) {
-      sizeInSI /= 1024.0;
-      units = " MiB";
-   } // if
-   if (sizeInSI > 1024.0) {
-      sizeInSI /= 1024.0;
-      units = " GiB";
-   } // if
-   if (sizeInSI > 1024.0) {
-      sizeInSI /= 1024.0;
-      units = " TiB";
-   } // if
-   if (sizeInSI > 1024.0) {
-      sizeInSI /= 1024.0;
-      units = " PiB";
-   } // if
+   sizeInIeee = size * (float) sectorSize;
+   while ((sizeInIeee > 1024.0) && (index < (prefixes.length() - 1))) {
+      index++;
+      sizeInIeee /= 1024.0;
+   } // while
    theValue.setf(ios::fixed);
-   if (units == " bytes") { // in bytes, so no decimal point
+   if (prefixes[index] == ' ') {
+      units = " bytes";
       theValue.precision(0);
    } else {
+      units = "  iB";
+      units[1] = prefixes[index];
       theValue.precision(1);
    } // if/else
-   theValue << sizeInSI << units;
+   theValue << sizeInIeee << units;
    return theValue.str();
-} // BlocksToSI()
+} // BlocksToIeee()
 
 // Converts two consecutive characters in the input string into a
 // number, interpreting the string as a hexadecimal number, starting
