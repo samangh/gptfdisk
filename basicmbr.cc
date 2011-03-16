@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <iostream>
+#include <algorithm>
 #include "mbr.h"
 #include "support.h"
 
@@ -1110,65 +1111,10 @@ int BasicMBRData::SwapPartitions(uint32_t partNum1, uint32_t partNum2) {
    return allOK;
 } // BasicMBRData::SwapPartitions()
 
-// Sort the MBR entries, eliminating gaps and making for a logical
-// ordering. Relies on QuickSortMBR() for the bulk of the work
 void BasicMBRData::SortMBR(int start) {
-   int i, numFound, firstPart, lastPart;
-   uint32_t fp, lp;
-
-   // First, find the last partition with data, so as not to
-   // spend needless time sorting empty entries....
-   numFound = GetPartRange(&fp, &lp);
-   firstPart = (int) fp;
-   lastPart = (int) lp;
-   if (firstPart < start)
-      firstPart = start;
-
-   // Now swap empties with the last partitions, to simplify the logic
-   // in the Quicksort function....
-   i = start;
-   while (i < lastPart) {
-      if (partitions[i].GetStartLBA() == 0) {
-         SwapPartitions(i, lastPart);
-         do {
-            lastPart--;
-         } while ((lastPart > 0) && (partitions[lastPart].GetStartLBA() == 0));
-      } // if
-      i++;
-   } // while
-
-   // If there are more empties than partitions in the range from 0 to lastPart,
-   // the above leaves lastPart set too high, so we've got to adjust it to
-   // prevent empties from migrating to the top of the list....
-   GetPartRange(&fp, &lp);
-   lastPart = (int) lp;
-
-   // Now call the recursive quick sort routine to do the real work....
-   QuickSortMBR(start, lastPart);
-} // GPTData::SortGPT()
-
-// Recursive quick sort algorithm for MBR partitions. Note that if there
-// are any empties in the specified range, they'll be sorted to the
-// start, resulting in a sorted set of partitions that begins with
-// partition 2, 3, or higher.
-void BasicMBRData::QuickSortMBR(int start, int finish) {
-   uint64_t starterValue; // starting location of median partition
-   int left, right;
-
-   left = start;
-   right = finish;
-   starterValue = partitions[(start + finish) / 2].GetStartLBA();
-   do {
-      while (partitions[left].GetStartLBA() < starterValue)
-         left++;
-      while (partitions[right].GetStartLBA() > starterValue)
-         right--;
-      if (left <= right)
-         SwapPartitions(left++, right--);
-   } while (left <= right);
-   if (start < right) QuickSortMBR(start, right);
-   if (finish > left) QuickSortMBR(left, finish);
-} // BasicMBRData::QuickSortMBR()
+   if ((start < MAX_MBR_PARTS) && (start >= 0))
+      sort(partitions + start, partitions + MAX_MBR_PARTS);
+} // BasicMBRData::SortMBR()
 
 // Delete any partitions that are too big to fit on the disk
 // or that are too big for MBR (32-bit limits).

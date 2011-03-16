@@ -137,7 +137,6 @@ GPTPart & GPTPart::operator=(const GPTPart & orig) {
 // we return the opposite of the usual arithmetic result when either
 // firstLBA value is 0.
 bool GPTPart::operator<(const GPTPart &other) const {
-   
    if (firstLBA && other.firstLBA)
       return (firstLBA < other.firstLBA);
    else

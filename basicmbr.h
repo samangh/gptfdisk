@@ -125,11 +125,10 @@ public:
    void RecomputeCHS(int partNum);
    int SwapPartitions(uint32_t partNum1, uint32_t partNum2);
    void SortMBR(int start = 0);
-   void QuickSortMBR(int start, int finish);
+//   void QuickSortMBR(int start, int finish);
    int DeleteOversizedParts();
    int DeleteExtendedParts();
    void OmitOverlaps(void);
-//   void OmitAll(void);
    void MaximizeLogicals();
    void MaximizePrimaries();
    void TrimPrimaries();
@@ -143,7 +142,6 @@ public:
    uint64_t FindFirstAvailable(uint64_t start = 1);
    uint64_t FindLastInFree(uint64_t start);
    uint64_t FindFirstInFree(uint64_t start);
-//   int IsFree(uint64_t sector, int topPartNum = MAX_MBR_PARTS);
    int SectorUsedAs(uint64_t sector, int topPartNum = MAX_MBR_PARTS);
 
    // Functions to extract data on specific partitions....

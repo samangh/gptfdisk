@@ -21,7 +21,6 @@
 #include "gpt.h"
 #include "support.h"
 #include "parttypes.h"
-//#include "gptpartnotes.h"
 #include "attributes.h"
 
 using namespace std;
@@ -316,7 +315,6 @@ int main(int argc, char *argv[]) {
                   secondDevice = theGPT;
                   secondDevice.SetDisk(outDevice);
                   secondDevice.JustLooking(0);
-//                  secondDevice.FixupMBR();
                   secondDevice.SaveGPTData(1);
                   break;
                case 's':
@@ -432,8 +430,6 @@ int main(int argc, char *argv[]) {
 // Create a hybrid or regular MBR from GPT data structures
 int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
    int numParts, allOK = 1, i, origPartNum;
-//   GptPartNotes notes;
-//   struct PartInfo *newNote;
    MBRPart newPart;
    BasicMBRData newMBR;
 

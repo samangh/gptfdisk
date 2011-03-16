@@ -33,8 +33,9 @@ using namespace std;
 
 void ReadCString(char *inStr, int numchars) {
    if (!fgets(inStr, numchars, stdin)) {
-      cerr << "Critical error! Failed fgets() in ReadCString()\n";
-      exit(1);
+      cerr << "Error! Failed fgets() in ReadCString()\n";
+      if ((numchars > 0) && (inStr != NULL))
+         inStr[0] = '\0';
    } // if
 } // ReadCString()
 

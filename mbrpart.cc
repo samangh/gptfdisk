@@ -102,6 +102,18 @@ MBRPart& MBRPart::operator=(const struct MBRRecord& orig) {
    return *this;
 } // MBRPart::operator=(const struct MBRRecord& orig)
 
+// Compare the values, and return a bool result.
+// Because this is intended for sorting and a lengthLBA value of 0 denotes
+// a partition that's not in use and so that should be sorted upwards,
+// we return the opposite of the usual arithmetic result when either
+// lengthLBA value is 0.
+bool MBRPart::operator<(const MBRPart &other) const {
+   if (lengthLBA && other.lengthLBA)
+      return (firstLBA < other.firstLBA);
+   else
+      return (other.firstLBA < firstLBA);
+} // operator<()
+
 /**************************************************
  *                                                *
  * Set information on partitions or disks without *

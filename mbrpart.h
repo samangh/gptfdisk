@@ -74,6 +74,7 @@ public:
     virtual ~MBRPart();
     virtual MBRPart& operator=(const MBRPart& orig);
     virtual MBRPart& operator=(const struct MBRRecord& orig);
+    bool operator<(const MBRPart &other) const;
 
     // Set information on partitions or disks...
     void SetGeometry(uint32_t heads, uint32_t sectors, uint64_t diskSize, uint32_t blockSize);
