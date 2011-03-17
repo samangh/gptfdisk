@@ -33,6 +33,10 @@ GUIDData::GUIDData(const GUIDData & orig) {
    memcpy(uuidData, orig.uuidData, sizeof(uuidData));
 } // copy constructor
 
+GUIDData::GUIDData(const string & orig) {
+   operator=(orig);
+} // copy (from string) constructor
+
 GUIDData::GUIDData(const char * orig) {
    operator=(orig);
 } // copy (from char*) constructor

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <unicode/unistr.h>
+#include <unicode/ustream.h>
 #include <string>
 #include "support.h"
 #include "guid.h"
@@ -51,11 +53,14 @@ public:
 
    // Retrieve transformed GUID data based on type code matches
    string TypeName(void) const;
+   UnicodeString UTypeName(void) const;
    uint16_t GetHexType() const;
 
    // Information relating to all type data
    void ShowAllTypes(void) const;
    int Valid(uint16_t code) const;
 };
+
+UnicodeString ReadUString(void);
 
 #endif

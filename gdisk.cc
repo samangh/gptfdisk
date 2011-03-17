@@ -28,8 +28,8 @@ void WinWarning(void);
 
 int main(int argc, char* argv[]) {
    GPTDataTextUI theGPT;
-   size_t i;
-   char *device = NULL;
+   string device = "";
+   UnicodeString uString;
 
    cout << "GPT fdisk (gdisk) version " << GPTFDISK_VERSION << "\n\n";
 
@@ -40,14 +40,12 @@ int main(int argc, char* argv[]) {
       case 1:
          WinWarning();
          cout << "Type device filename, or press <Enter> to exit: ";
-         device = new char[255];
-         ReadCString(device, 255);
-         i = strlen(device);
-         if (i && device[i - 1] == '\n')
-            device[i - 1] = '\0';
-         if (*device && theGPT.LoadPartitions(device))
+         device = ReadString();
+         if (device.length() == 0)
+            exit(0);
+         else if (theGPT.LoadPartitions(device)) {
             MainMenu(device, &theGPT);
-         delete[] device;
+         } // if/elseif
          break;
       case 2: // basic usage
          WinWarning();
@@ -56,15 +54,15 @@ int main(int argc, char* argv[]) {
          break;
       case 3: // usage with "-l" option
          if (strcmp(argv[1], "-l") == 0) {
-            device = argv[2];
+            device = (string) argv[2];
          } else if (strcmp(argv[2], "-l") == 0) {
-            device = argv[1];
+            device = (string) argv[1];
          } else { // 3 arguments, but none is "-l"
             cerr << "Usage: " << argv[0] << " [-l] device_file\n";
          } // if/elseif/else
-         if (device != NULL) {
+         if (device != "") {
             theGPT.JustLooking();
-            if (theGPT.LoadPartitions((string) device))
+            if (theGPT.LoadPartitions(device))
                theGPT.DisplayGPTData();
          } // if
          break;
@@ -77,22 +75,18 @@ int main(int argc, char* argv[]) {
 // Accept a command and execute it. Returns only when the user
 // wants to exit (such as after a 'w' or 'q' command).
 void MainMenu(string filename, GPTDataTextUI* theGPT) {
-   char line[255], buFile[255];
    int goOn = 1;
    PartType typeHelper;
    uint32_t temp1, temp2;
 
    do {
       cout << "\nCommand (? for help): ";
-      ReadCString(line, sizeof(line));
-      switch (*line) {
-         case '\n':
+      switch (ReadString()[0]) {
+         case '\0':
             break;
          case 'b': case 'B':
             cout << "Enter backup filename to save: ";
-            ReadCString(line, sizeof(line));
-            sscanf(line, "%s", buFile);
-            theGPT->SaveGPTBackup(buFile);
+            theGPT->SaveGPTBackup(ReadString());
             break;
          case 'c': case 'C':
             if (theGPT->GetPartRange(&temp1, &temp2) > 0)
@@ -177,15 +171,13 @@ void ShowCommands(void) {
 // Accept a recovery & transformation menu command. Returns only when the user
 // issues an exit command, such as 'w' or 'q'.
 void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
-   char line[255], buFile[255];
    uint32_t numParts;
    int goOn = 1, temp1;
 
    do {
       cout << "\nRecovery/transformation command (? for help): ";
-      ReadCString(line, sizeof(line));
-      switch (*line) {
-         case '\n':
+      switch (ReadString()[0]) {
+         case '\0':
             break;
          case 'b': case 'B':
             theGPT->RebuildMainHeader();
@@ -239,9 +231,7 @@ void RecoveryMenu(string filename, GPTDataTextUI* theGPT) {
             break;
          case 'l': case 'L':
             cout << "Enter backup filename to load: ";
-            ReadCString(line, sizeof(line));
-            sscanf(line, "%s", buFile);
-            theGPT->LoadGPTBackup(buFile);
+            theGPT->LoadGPTBackup(ReadString());
             break;
          case 'm': case 'M':
             MainMenu(filename, theGPT);
@@ -303,19 +293,16 @@ void ShowRecoveryCommands(void) {
 // selects an exit command, such as 'w' or 'q'.
 void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
    GPTData secondDevice;
-   char line[255], *device;
    uint32_t pn, temp1, temp2;
    int goOn = 1;
-   size_t i;
-   char guidStr[255];
+   string guidStr, device;
    GUIDData aGUID;
    ostringstream prompt;
 
    do {
       cout << "\nExpert command (? for help): ";
-      ReadCString(line, sizeof(line));
-      switch (*line) {
-         case '\n':
+      switch (ReadString()[0]) {
+         case '\0':
             break;
          case 'a': case 'A':
             if (theGPT->GetPartRange(&temp1, &temp2) > 0)
@@ -327,8 +314,8 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             if (theGPT->GetPartRange(&temp1, &temp2) > 0) {
                pn = theGPT->GetPartNum();
                cout << "Enter the partition's new unique GUID ('R' to randomize): ";
-               ReadCString(guidStr, sizeof(guidStr));
-               if ((strlen(guidStr) >= 33) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
+               guidStr = ReadString();
+               if ((guidStr.length() >= 32) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
                   theGPT->SetPartitionGUID(pn, (GUIDData) guidStr);
                   cout << "New GUID is " << theGPT->operator[](pn).GetUniqueGUID() << "\n";
                } else {
@@ -349,12 +336,13 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             break;
          case 'g': case 'G':
             cout << "Enter the disk's unique GUID ('R' to randomize): ";
-            ReadCString(guidStr, sizeof(guidStr));
-            if ((strlen(guidStr) >= 33) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
+            guidStr = ReadString();
+            if ((guidStr.length() >= 32) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
                theGPT->SetDiskGUID((GUIDData) guidStr);
                cout << "The new disk GUID is " << theGPT->GetDiskGUID() << "\n";
-            } else
+            } else {
                cout << "GUID is too short!\n";
+            } // if/else
             break;
          case 'h': case 'H':
             theGPT->RecomputeCHS();
@@ -397,17 +385,12 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
             break;
          case 'u': case 'U':
             cout << "Type device filename, or press <Enter> to exit: ";
-            device = new char[255];
-            ReadCString(device, 255);
-            i = strlen(device);
-            if (i && device[i - 1] == '\n')
-               device[i - 1] = '\0';
-            if (*device) {
+            device = ReadString();
+            if (device.length() > 0) {
                secondDevice = *theGPT;
                secondDevice.SetDisk(device);
                secondDevice.SaveGPTData(0);
             } // if
-            delete[] device;
             break;
          case 'v': case 'V':
             theGPT->Verify();

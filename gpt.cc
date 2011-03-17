@@ -1028,7 +1028,7 @@ int GPTData::SaveGPTData(int quiet) {
 
          myDisk.Close();
       } else {
-         cerr << "Unable to open device " << myDisk.GetName() << " for writing! Errno is "
+         cerr << "Unable to open device '" << myDisk.GetName() << "' for writing! Errno is "
               << errno << "! Aborting write!\n";
          allOK = 0;
       } // if/else
@@ -1078,7 +1078,7 @@ int GPTData::SaveGPTBackup(const string & filename) {
       } // if/else
       backupFile.Close();
    } else {
-      cerr << "Unable to open file " << filename << " for writing! Aborting!\n";
+      cerr << "Unable to open file '" << filename << "' for writing! Aborting!\n";
       allOK = 0;
    } // if/else
    return allOK;
@@ -1190,7 +1190,7 @@ int GPTData::LoadGPTBackup(const string & filename) {
       } // if
    } else {
       allOK = 0;
-      cerr << "Unable to open file " << filename << " for reading! Aborting!\n";
+      cerr << "Unable to open file '" << filename << "' for reading! Aborting!\n";
    } // if/else
 
    return allOK;
@@ -1253,7 +1253,7 @@ int GPTData::DestroyGPT(void) {
            << "other utilities.\n";
       delete[] emptyTable;
    } else {
-      cerr << "Problem opening " << device << " for writing! Program will now terminate.\n";
+      cerr << "Problem opening '" << device << "' for writing! Program will now terminate.\n";
    } // if/else (fd != -1)
    return (allOK);
 } // GPTDataTextUI::DestroyGPT()
@@ -1766,7 +1766,7 @@ void GPTData::MoveSecondHeaderToEnd() {
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
 } // GPTData::FixSecondHeaderLocation()
 
-int GPTData::SetName(uint32_t partNum, const string & theName) {
+int GPTData::SetName(uint32_t partNum, const UnicodeString & theName) {
    int retval = 1;
 
    if (!IsFreePartNum(partNum)) {

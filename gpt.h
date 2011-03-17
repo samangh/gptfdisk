@@ -151,7 +151,7 @@ public:
    int SwapPartitions(uint32_t partNum1, uint32_t partNum2);
    int ClearGPTData(void);
    void MoveSecondHeaderToEnd();
-   int SetName(uint32_t partNum, const string & theName = "");
+   int SetName(uint32_t partNum, const UnicodeString & theName = "");
    void SetDiskGUID(GUIDData newGUID);
    int SetPartitionGUID(uint32_t pn, GUIDData theGUID);
    void RandomizeGUIDs(void);

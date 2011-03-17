@@ -37,6 +37,7 @@ class GUIDData {
    public:
       GUIDData(void);
       GUIDData(const GUIDData & orig);
+      GUIDData(const string & orig);
       GUIDData(const char * orig);
       ~GUIDData(void);
 

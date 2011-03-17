@@ -30,6 +30,11 @@ using namespace std;
 int BuildMBR(GPTData& theGPT, char* argument, int isHybrid);
 int CountColons(char* argument);
 
+// Extract colon-separated fields from a string....
+uint64_t GetInt(const string & argument, int itemNum);
+string GetString(string argument, int itemNum);
+
+
 int main(int argc, char *argv[]) {
    GPTData theGPT, secondDevice;
    uint32_t sSize;
@@ -173,7 +178,7 @@ int main(int argc, char *argv[]) {
                case 'c':
                   theGPT.JustLooking(0);
                   partNum = (int) GetInt(partName, 1) - 1;
-                  if (theGPT.SetName(partNum, GetString(partName, 2))) {
+                  if (theGPT.SetName(partNum, (UnicodeString) GetString(partName, 2).c_str())) {
                      saveData = 1;
                   } else {
                      cerr << "Unable to set partition " << partNum + 1
@@ -473,3 +478,39 @@ int CountColons(char* argument) {
 
    return num;
 } // CountColons()
+
+// Extract integer data from argument string, which should be colon-delimited
+uint64_t GetInt(const string & argument, int itemNum) {
+   uint64_t retval;
+   
+   istringstream inString(GetString(argument, itemNum));
+   inString >> retval;
+   return retval;
+} // GetInt()
+
+// Extract string data from argument string, which should be colon-delimited
+// If string begins with a colon, that colon is skipped in the counting. If an
+// invalid itemNum is specified, returns an empty string.
+string GetString(string argument, int itemNum) {
+   size_t startPos = 0, endPos = 0;
+   string retVal = "";
+   int foundLast = 0;
+   int numFound = 0;
+   
+   if (argument[0] == ':')
+      argument.erase(0, 1);
+   while ((numFound < itemNum) && (!foundLast)) {
+      endPos = argument.find(':', startPos);
+      numFound++;
+      if (endPos == string::npos) {
+         foundLast = 1;
+         endPos = argument.length();
+      } else if (numFound < itemNum) {
+         startPos = endPos + 1;
+      } // if/elseif
+   } // while
+   if ((numFound == itemNum) && (numFound > 0))
+      retVal = argument.substr(startPos, endPos - startPos);
+   
+   return retVal;
+} // GetString()

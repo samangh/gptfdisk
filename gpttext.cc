@@ -355,7 +355,7 @@ void GPTDataTextUI::ShowDetails(void) {
 // OSes that don't understand GPT.
 void GPTDataTextUI::MakeHybrid(void) {
    uint32_t partNums[3];
-   char line[255];
+   string line;
    int numPartsToCvt, i, j, mbrNum = 0;
    unsigned int hexCode = 0;
    MBRPart hybridPart;
@@ -371,8 +371,8 @@ void GPTDataTextUI::MakeHybrid(void) {
    // hybrid MBR....
    cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
         << "added to the hybrid MBR, in sequence: ";
-   ReadCString(line, sizeof(line));
-   numPartsToCvt = sscanf(line, "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
+   line = ReadString();
+   numPartsToCvt = sscanf(line.c_str(), "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
 
    if (numPartsToCvt > 0) {
       cout << "Place EFI GPT (0xEE) partition first in MBR (good for GRUB)? ";
@@ -422,16 +422,11 @@ void GPTDataTextUI::MakeHybrid(void) {
       if (hybridMBR.CountParts() < 4) { // unused entry....
          cout << "\nUnused partition space(s) found. Use one to protect more partitions? ";
          if (GetYN() == 'Y') {
-            while ((hexCode <= 0) || (hexCode > 255)) {
-               cout << "Enter an MBR hex code (EE is EFI GPT, but may confuse MacOS): ";
-               // Comment on above: Mac OS treats disks with more than one
-               // 0xEE MBR partition as MBR disks, not as GPT disks.
-               ReadCString(line, sizeof(line));
-               sscanf(line, "%x", &hexCode);
-               if (line[0] == '\n')
-                  hexCode = 0x00;
-            } // while
-            hybridMBR.MakeBiggestPart(3, 0xEE);
+            cout << "Note: Default is 0xEE, but this may confuse Mac OS X.\n";
+            // Comment on above: Mac OS treats disks with more than one
+            // 0xEE MBR partition as MBR disks, not as GPT disks.
+            hexCode = GetMBRTypeCode(0xEE);
+            hybridMBR.MakeBiggestPart(3, hexCode);
          } // if (GetYN() == 'Y')
       } // if unused entry
       protectiveMBR = hybridMBR;
@@ -471,7 +466,7 @@ int GPTDataTextUI::XFormToMBR(void) {
 
 // Get an MBR type code from the user and return it
 int GetMBRTypeCode(int defType) {
-   char line[255];
+   string line;
    int typeCode;
 
    cout.setf(ios::uppercase);
@@ -480,11 +475,11 @@ int GetMBRTypeCode(int defType) {
       cout << "Enter an MBR hex code (default " << hex;
       cout.width(2);
       cout << defType << "): " << dec;
-      ReadCString(line, sizeof(line));
-      if (line[0] == '\n')
+      line = ReadString();
+      if (line[0] == '\0')
          typeCode = defType;
       else
-         sscanf(line, "%x", &typeCode);
+         typeCode = StrToHex(line, 0);
    } while ((typeCode <= 0) || (typeCode > 255));
    cout.fill(' ');
    return typeCode;

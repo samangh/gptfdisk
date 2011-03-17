@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unicode/ustdio.h>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -31,13 +32,15 @@
 
 using namespace std;
 
-void ReadCString(char *inStr, int numchars) {
-   if (!fgets(inStr, numchars, stdin)) {
-      cerr << "Error! Failed fgets() in ReadCString()\n";
-      if ((numchars > 0) && (inStr != NULL))
-         inStr[0] = '\0';
-   } // if
-} // ReadCString()
+// Reads a string from stdin, returning it as a C++-style string.
+// Note that the returned string will NOT include the carriage return
+// entered by the user.
+string ReadString(void) {
+   string inString;
+
+   getline(cin, inString);
+   return inString;
+} // ReadString()
 
 // Get a numeric value from the user, between low and high (inclusive).
 // Keeps looping until the user enters a value within that range.
@@ -69,12 +72,12 @@ int GetNumber(int low, int high, int def, const string & prompt) {
 
 // Gets a Y/N response (and converts lowercase to uppercase)
 char GetYN(void) {
-   char line[255];
    char response;
+   string line;
 
    do {
       cout << "(Y/N): ";
-      ReadCString(line, sizeof(line));
+      line = ReadString();
       response = toupper(line[0]);
    } while ((response != 'Y') && (response != 'N'));
    return response;
@@ -180,7 +183,7 @@ uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, 
 // (sectorSize defaults to 1).
 string BytesToIeee(uint64_t size, uint32_t sectorSize) {
    float sizeInIeee;
-   uint index = 0;
+   unsigned int index = 0;
    string units, prefixes = " KMGTPE";
    ostringstream theValue;
 
@@ -209,7 +212,7 @@ unsigned char StrToHex(const string & input, unsigned int position) {
    unsigned char retval = 0x00;
    unsigned int temp;
 
-   if (input.length() >= (position + 2)) {
+   if (input.length() > position) {
       sscanf(input.substr(position, 2).c_str(), "%x", &temp);
       retval = (unsigned char) temp;
    } // if
@@ -267,39 +270,3 @@ void ReverseBytes(void* theValue, int numBytes) {
       delete[] tempValue;
    } // if
 } // ReverseBytes()
-
-// Extract integer data from argument string, which should be colon-delimited
-uint64_t GetInt(const string & argument, int itemNum) {
-   uint64_t retval;
-
-   istringstream inString(GetString(argument, itemNum));
-   inString >> retval;
-   return retval;
-} // GetInt()
-
-// Extract string data from argument string, which should be colon-delimited
-// If string begins with a colon, that colon is skipped in the counting. If an
-// invalid itemNum is specified, returns an empty string.
-string GetString(string argument, int itemNum) {
-   size_t startPos = 0, endPos = 0;
-   string retVal = "";
-   int foundLast = 0;
-   int numFound = 0;
-
-   if (argument[0] == ':')
-      argument.erase(0, 1);
-   while ((numFound < itemNum) && (!foundLast)) {
-      endPos = argument.find(':', startPos);
-      numFound++;
-      if (endPos == string::npos) {
-         foundLast = 1;
-         endPos = argument.length();
-      } else if (numFound < itemNum) {
-         startPos = endPos + 1;
-      } // if/elseif
-   } // while
-   if ((numFound == itemNum) && (numFound > 0))
-      retVal = argument.substr(startPos, endPos - startPos);
-
-   return retVal;
-} // GetString()

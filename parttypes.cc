@@ -270,6 +270,26 @@ string PartType::TypeName(void) const {
    return typeName;
 } // PartType::TypeName()
 
+// Return the Unicode description of the partition type (e.g., "Linux/Windows data")
+UnicodeString PartType::UTypeName(void) const {
+   AType* theItem = allTypes;
+   int found = 0;
+   UnicodeString typeName;
+
+   while ((theItem != NULL) && (!found)) {
+      if (theItem->GUIDType == *this) { // found it!
+         typeName = theItem->name.c_str();
+         found = 1;
+      } else {
+         theItem = theItem->next;
+      } // if/else
+   } // while
+   if (!found) {
+      typeName = "Unknown";
+   } // if (!found)
+   return typeName;
+} // PartType::TypeName()
+
 // Return the custom GPT fdisk 2-byte (16-bit) hex code for this GUID partition type
 // Note that this function ignores entries for which the display variable
 // is set to 0. This enables control of which values get returned when
@@ -337,3 +357,29 @@ int PartType::Valid(uint16_t code) const {
    } // while
    return found;
 } // PartType::Valid()
+
+/********************************
+ *                              *
+ * Non-class support functions. *
+ *                              *
+ ********************************/
+
+// Note: ReadUString() is here rather than in support.cc so that the ICU
+// libraries need not be linked to fixparts.
+
+// Reads a Unicode string from stdin, returning it as a ICU-style string.
+// Note that the returned string will NOT include the carriage return
+// entered by the user.
+UnicodeString ReadUString(void) {
+   UnicodeString inString = "", oneWord;
+   
+   do {
+      cin >> oneWord;
+      if (inString.length() > 0)
+         inString += " ";
+      inString += oneWord;
+   } while (cin.peek() != '\n');
+   cin.get(); // discard CR
+   return inString;
+} // ReadUString()
+

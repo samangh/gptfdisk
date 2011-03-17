@@ -54,13 +54,15 @@ class GPTPart {
       PartType & GetType(void) {return partitionType;}
       uint16_t GetHexType(void) const;
       string GetTypeName(void);
+      UnicodeString GetUTypeName(void);
       const GUIDData GetUniqueGUID(void) const {return uniqueGUID;}
       uint64_t GetFirstLBA(void) const {return firstLBA;}
       uint64_t GetLastLBA(void) const {return lastLBA;}
       uint64_t GetLengthLBA(void) const;
       Attributes GetAttributes(void) {return attributes;}
       void ShowAttributes(uint32_t partNum) {attributes.ShowAttributes(partNum);}
-      string GetDescription(void);
+//      string GetDescription(void);
+      UnicodeString GetDescription(void);
       int IsUsed(void);
 
       // Simple data assignment:
@@ -72,7 +74,9 @@ class GPTPart {
       void SetLastLBA(uint64_t l) {lastLBA = l;}
       void SetAttributes(uint64_t a) {attributes = a;}
       void SetAttributes(void) {attributes.ChangeAttributes();}
-      void SetName(const string & n);
+      void SetName(string theName);
+      void SetName(UnicodeString theName);
+//      void SetName(UChar *theName);
       void SetDefaultDescription(void);
 
       // Additional functions

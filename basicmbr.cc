@@ -1544,15 +1544,13 @@ MBRPart* BasicMBRData::GetPartition(int i) {
 // user selected the 'q' option. (Thus, the caller should save data
 // if the return value is >0, or possibly >=0 depending on intentions.)
 int BasicMBRData::DoMenu(const string& prompt) {
-   char line[255];
    int goOn = 1, quitting = 0, retval, num, haveShownInfo = 0;
    unsigned int hexCode = 0x00;
 
    do {
       cout << prompt;
-      ReadCString(line, sizeof(line));
-      switch (*line) {
-         case '\n':
+      switch (ReadString()[0]) {
+         case '\0':
             break;
          case 'a': case 'A':
             num = GetNumber(1, MAX_MBR_PARTS, 1, "Toggle active flag for partition: ") - 1;
@@ -1598,13 +1596,9 @@ int BasicMBRData::DoMenu(const string& prompt) {
          case 't': case 'T':
             num = GetNumber(1, MAX_MBR_PARTS, 1, "Partition to change type code: ") - 1;
             if (partitions[num].GetLengthLBA() > 0) {
-               hexCode = 0;
                while ((hexCode <= 0) || (hexCode > 255)) {
                   cout << "Enter an MBR hex code: ";
-                  ReadCString(line, sizeof(line));
-                  sscanf(line, "%x", &hexCode);
-                  if (line[0] == '\n')
-                     hexCode = 0x00;
+                  hexCode = StrToHex(ReadString(), 0);
                } // while
                partitions[num].SetType(hexCode);
             } // if

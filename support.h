@@ -8,7 +8,7 @@
 #ifndef __GPTSUPPORT
 #define __GPTSUPPORT
 
-#define GPTFDISK_VERSION "0.7.1-pre1"
+#define GPTFDISK_VERSION "0.7.1-pre2"
 
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 // Darwin (Mac OS) only: disk IOCTLs are different, and there is no lseek64
@@ -38,8 +38,8 @@
 #define APM_SIGNATURE1 UINT64_C(0x00004D5000000000)
 #define APM_SIGNATURE2 UINT64_C(0x0000535400000000)
 
-// Maximum line length ignored on some input functions
-#define MAX_IGNORED 999
+// Maximum line length on some input functions
+#define MAX_LINE_LENGTH 255
 
 /**************************
  * Some GPT constants.... *
@@ -56,7 +56,7 @@
 
 using namespace std;
 
-void ReadCString(char *inStr, int numchars);
+string ReadString(void);
 int GetNumber(int low, int high, int def, const string & prompt);
 char GetYN(void);
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const std::string& prompt);
@@ -66,9 +66,5 @@ unsigned char StrToHex(const string & input, unsigned int position);
 int IsHex(const string & input); // Returns 1 if input can be hexadecimal number....
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
-
-// Extract colon-separated fields from a string....
-uint64_t GetInt(const string & argument, int itemNum);
-string GetString(string argument, int itemNum);
 
 #endif

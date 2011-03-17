@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <unicode/ustdio.h>
 #include <iostream>
 #include "gptpart.h"
 #include "attributes.h"
@@ -46,6 +47,16 @@ string GPTPart::GetTypeName(void) {
    return partitionType.TypeName();
 } // GPTPart::GetNameType()
 
+// Return a Unicode description of the partition type (e.g., "Linux/Windows
+// data" or "Linux swap").
+UnicodeString GPTPart::GetUTypeName(void) {
+   return partitionType.UTypeName();
+/*   UnicodeString temp;
+
+   temp = temp.fromUTF8(partitionType.TypeName());
+   return temp; */
+} // GPTPart::GetNameType()
+
 // Compute and return the partition's length (or 0 if the end is incorrectly
 // set before the beginning).
 uint64_t GPTPart::GetLengthLBA(void) const {
@@ -56,7 +67,7 @@ uint64_t GPTPart::GetLengthLBA(void) const {
    return length;
 } // GPTPart::GetLengthLBA()
 
-// Return partition's name field, converted to a C++ ASCII string
+/* // Return partition's name field, converted to a C++ ASCII string
 string GPTPart::GetDescription(void) {
    string theName;
    int i;
@@ -65,6 +76,20 @@ string GPTPart::GetDescription(void) {
    for (i = 0; i < NAME_SIZE; i += 2) {
       if (name[i] != '\0')
          theName += name[i];
+   } // for
+   return theName;
+} // GPTPart::GetDescription() */
+
+UnicodeString GPTPart::GetDescription(void) {
+   UnicodeString theName;
+   UChar *temp;
+   int i;
+
+   theName = "";
+   temp = (UChar*) name;
+   for (i = 0; i < NAME_SIZE / 2; i++) {
+      if (temp[i] != '\0')
+         theName += temp[i];
    } // for
    return theName;
 } // GPTPart::GetDescription()
@@ -78,41 +103,38 @@ int GPTPart::IsUsed(void) {
 // name *IF* the current name is the generic one for the current partition
 // type.
 void GPTPart::SetType(PartType t) {
-   if (GetDescription() == partitionType.TypeName()) {
+   if (GetDescription() == partitionType.UTypeName()) {
       SetName(t.TypeName());
    } // if
    partitionType = t;
 } // GPTPart::SetType()
 
 // Set the name for a partition to theName, or prompt for a name if
-// theName is empty. Note that theName is a standard C++-style ASCII
-// string, although the GUID partition definition requires a UTF-16LE
-// string. This function creates a simple-minded copy for this.
-void GPTPart::SetName(const string & theName) {
-   char newName[NAME_SIZE];
-   size_t i;
+// theName is empty, using a C++-style string as input.
+void GPTPart::SetName(string theName) {
+   UnicodeString uString;
 
-   // Blank out new name string, so that it will terminate in a null
-   // when data are copied to it....
-   memset(newName, 0, NAME_SIZE);
+   uString = theName.c_str();
+   SetName(uString);
+} // GPTPart::SetName()
+
+// Set the name for a partition to theName, or prompt for a name
+// if theName is empty, using a Unicode string as input.
+void GPTPart::SetName(UnicodeString theName) {
+   int i;
+   UChar temp[NAME_SIZE / 2];
 
    if (theName == "") { // No name specified, so get one from the user
       cout << "Enter name: ";
-      ReadCString(newName, NAME_SIZE / 2 + 1);
-
-      // Input is likely to include a newline, so remove it....
-      i = strlen(newName);
-      if (i && newName[i - 1] == '\n')
-         newName[i - 1] = '\0';
-   } else {
-      strcpy(newName, theName.substr(0, NAME_SIZE / 2).c_str());
+      theName = ReadUString();
    } // if
 
-   // Copy the C-style ASCII string from newName into a form that the GPT
+   // Copy the C++-style string from newName into a form that the GPT
    // table will accept....
-   memset(name, 0, NAME_SIZE);
-   for (i = 0; i < NAME_SIZE / 2; i++)
-      name[i * 2] = newName[i];
+   memset(temp, 0, NAME_SIZE);
+   for (i = 0; i < theName.length(); i++)
+      temp[i] = theName[i];
+   memcpy(name, temp, NAME_SIZE);
 } // GPTPart::SetName()
 
 // Set the name for the partition based on the current GUID partition type
@@ -146,6 +168,7 @@ bool GPTPart::operator<(const GPTPart &other) const {
 // Display summary information; does nothing if the partition is empty.
 void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
    string sizeInIeee;
+   UnicodeString description;
    size_t i;
 
    if (firstLBA != 0) {
@@ -166,7 +189,13 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout.setf(ios::uppercase);
       cout << hex << partitionType.GetHexType() << "  " << dec;
       cout.fill(' ');
-      cout << GetDescription().substr(0, 23) << "\n";
+//      description = GetDescription();
+      GetDescription().extractBetween(0, 24, description);
+      cout << description << "\n";
+//      for (i = 0; i < 23; i++)
+//         cout << (char) description.;
+//      cout << GetDescription().tempSubString(0, 23) << "\n";
+//      cout << GetDescription().substr(0, 23) << "\n";
       cout.fill(' ');
    } // if
 } // GPTPart::ShowSummary()
@@ -217,11 +246,16 @@ int GPTPart::DoTheyOverlap(const GPTPart & other) {
           (firstLBA <= other.lastLBA) != (lastLBA < other.firstLBA);
 } // GPTPart::DoTheyOverlap()
 
-// Reverse the bytes of integral data types; used on big-endian systems.
+// Reverse the bytes of integral data types and of the UTF-16LE name;
+// used on big-endian systems.
 void GPTPart::ReversePartBytes(void) {
+   int i;
+
    ReverseBytes(&firstLBA, 8);
    ReverseBytes(&lastLBA, 8);
    ReverseBytes(&attributes, 8);
+   for (i = 0; i < NAME_SIZE; i += 2)
+      ReverseBytes(name + i, 2);
 } // GPTPart::ReverseBytes()
 
 /****************************************
@@ -231,20 +265,20 @@ void GPTPart::ReversePartBytes(void) {
 // Change the type code on the partition. Also changes the name if the original
 // name is the generic one for the partition type.
 void GPTPart::ChangeType(void) {
-   char line[255];
+   string line;
    int changeName;
    PartType tempType = (GUIDData) "00000000-0000-0000-0000-000000000000";
 
-   changeName = (GetDescription() == GetTypeName());
+   changeName = (GetDescription() == GetUTypeName());
 
    cout << "Current type is '" << GetTypeName() << "'\n";
    do {
       cout << "Hex code or GUID (L to show codes, Enter = 0700): ";
-      ReadCString(line, sizeof(line));
+      line = ReadString();
       if ((line[0] == 'L') || (line[0] == 'l')) {
          partitionType.ShowAllTypes();
       } else {
-         if (strlen(line) == 1)
+         if (line.length() == 0)
             tempType = 0x0700;
          else
             tempType = line;

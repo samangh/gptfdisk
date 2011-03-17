@@ -161,6 +161,10 @@ used.) In addition, note these requirements:
   called uuid-dev or something similar to get the headers. On FreeBSD, the
   e2fsprogs-libuuid port must be installed.
 
+* The ICU library (http://site.icu-project.org) is required on all
+  platforms. This library is normally installed in Linux, but you may need
+  to install the development headers (libicu-dev or something similar).
+
 * The sgdisk program also requires the popt library and its development
   files (headers). Most Linux distributions install popt by default, but
   you may need to install a package called popt-dev, popt-devel, or
