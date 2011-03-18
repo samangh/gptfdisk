@@ -45,6 +45,7 @@ class GPTDataTextUI : public GPTData {
       void CreatePartition(void);
       void DeletePartition(void);
       void ChangePartType(void);
+      void ChangeUniqueGuid(void);
       void SetAttributes(uint32_t partNum);
       int SwapPartitions(void);
       int DestroyGPTwPrompt(void); // Returns 1 if user proceeds

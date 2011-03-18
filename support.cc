@@ -15,7 +15,6 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unicode/ustdio.h>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -110,7 +109,9 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize,
 // converts to sectors. For instance, with 512-byte sectors, "1K" converts
 // to 2. If value includes a "+", adds low and subtracts 1; if SIValue
 // inclues a "-", subtracts from high. If IeeeValue is empty, returns def.
-// Returns integral sector value.
+// Returns final sector value. In case inValue works out to something that
+// is not in the range of low to high (inclusive), returns high + 1; the
+// calling function is responsible for checking the validity of this value.
 uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def) {
    uint64_t response = def, bytesPerUnit = 1, mult = 1, divide = 1;
    size_t foundAt = 0;

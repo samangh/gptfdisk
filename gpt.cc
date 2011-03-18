@@ -1140,6 +1140,7 @@ int GPTData::LoadGPTBackup(const string & filename) {
 
       // Let the MBRData class load the saved MBR...
       protectiveMBR.ReadMBRData(&backupFile, 0); // 0 = don't check block size
+      protectiveMBR.SetDisk(&myDisk);
 
       LoadHeader(&mainHeader, backupFile, 1, &mainCrcOk);
 
@@ -1580,6 +1581,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
                     << "partition table size of " << numEntries
                     << "; cannot resize. Perhaps sorting will help.\n";
                allOK = 0;
+               delete[] newParts;
             } else { // go ahead with copy
                if (numEntries < numParts)
                   copyNum = numEntries;
@@ -2101,12 +2103,17 @@ int GPTData::IsFree(uint64_t sector, uint32_t *partNum) {
    return (isFree);
 } // GPTData::IsFree()
 
-// Returns 1 if partNum is unused.
+// Returns 1 if partNum is unused AND if it's a legal value.
 int GPTData::IsFreePartNum(uint32_t partNum) {
    return ((partNum < numParts) && (partitions != NULL) &&
            (!partitions[partNum].IsUsed()));
 } // GPTData::IsFreePartNum()
 
+// Returns 1 if partNum is in use.
+int GPTData::IsUsedPartNum(uint32_t partNum) {
+   return ((partNum < numParts) && (partitions != NULL) &&
+           (partitions[partNum].IsUsed()));
+} // GPTData::IsUsedPartNum()
 
 /***********************************************************
  *                                                         *
@@ -2207,12 +2214,13 @@ bool GPTData::ValidPartNum (const uint32_t partNum) {
 // functions.
 const GPTPart & GPTData::operator[](uint32_t partNum) const {
    if (partNum >= numParts) {
-      cerr << "Partition number out of range: " << partNum << "\n";
-      partNum = 0;
-      if ((numParts == 0) || (partitions == NULL)) {
-         cerr << "No partitions defined in GPTData::operator[]; fatal error!\n";
-         exit(1);
-      } // if
+      cerr << "Partition number out of range (" << partNum << " requested, but only "
+           << numParts << " available)\n";
+      exit(1);
+   } // if
+   if (partitions == NULL) {
+      cerr << "No partitions defined in GPTData::operator[]; fatal error!\n";
+      exit(1);
    } // if
    return partitions[partNum];
 } // operator[]

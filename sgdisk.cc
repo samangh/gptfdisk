@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
    uint64_t startSector, endSector;
    uint64_t temp; // temporary variable; free to use in any case
    char *attributeOperation = NULL;
-   char *device = NULL;
+   char *device;
    char *newPartInfo = NULL, *typeCode = NULL, *partName = NULL;
    char *backupFile = NULL, *twoParts = NULL, *hybrids = NULL, *mbrParts;
    char *partGUID = NULL, *diskGUID = NULL, *outDevice = NULL;
@@ -440,17 +440,21 @@ int BuildMBR(GPTData & theGPT, char* argument, int isHybrid) {
 
    if ((&theGPT != NULL) && (argument != NULL)) {
       numParts = CountColons(argument) + 1;
-      cout << "numParts = " << numParts << "\n";
       if (numParts <= (4 - isHybrid)) {
          newMBR.SetDisk(theGPT.GetDisk());
          for (i = 0; i < numParts; i++) {
             origPartNum = GetInt(argument, i + 1) - 1;
-            newPart.SetInclusion(PRIMARY);
-            newPart.SetLocation(theGPT[origPartNum].GetFirstLBA(),
-                                theGPT[origPartNum].GetLengthLBA());
-            newPart.SetStatus(0);
-            newPart.SetType((uint8_t)(theGPT[origPartNum].GetHexType() / 0x0100));
-            newMBR.AddPart(i + isHybrid, newPart);
+            if (theGPT.IsUsedPartNum(origPartNum)) {
+               newPart.SetInclusion(PRIMARY);
+               newPart.SetLocation(theGPT[origPartNum].GetFirstLBA(),
+                                 theGPT[origPartNum].GetLengthLBA());
+               newPart.SetStatus(0);
+               newPart.SetType((uint8_t)(theGPT[origPartNum].GetHexType() / 0x0100));
+               newMBR.AddPart(i + isHybrid, newPart);
+            } else {
+               cerr << "Partition " << origPartNum << " does not exist! Aborting operation!\n";
+               allOK = 0;
+            } // if/else
          } // for
          if (isHybrid) {
             newPart.SetInclusion(PRIMARY);

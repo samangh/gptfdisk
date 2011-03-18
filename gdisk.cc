@@ -293,7 +293,7 @@ void ShowRecoveryCommands(void) {
 // selects an exit command, such as 'w' or 'q'.
 void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
    GPTData secondDevice;
-   uint32_t pn, temp1, temp2;
+   uint32_t temp1, temp2;
    int goOn = 1;
    string guidStr, device;
    GUIDData aGUID;
@@ -311,17 +311,7 @@ void ExpertsMenu(string filename, GPTDataTextUI* theGPT) {
                cout << "No partitions\n";
             break;
          case 'c': case 'C':
-            if (theGPT->GetPartRange(&temp1, &temp2) > 0) {
-               pn = theGPT->GetPartNum();
-               cout << "Enter the partition's new unique GUID ('R' to randomize): ";
-               guidStr = ReadString();
-               if ((guidStr.length() >= 32) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
-                  theGPT->SetPartitionGUID(pn, (GUIDData) guidStr);
-                  cout << "New GUID is " << theGPT->operator[](pn).GetUniqueGUID() << "\n";
-               } else {
-                  cout << "GUID is too short!\n";
-               } // if/else
-            } else cout << "No partitions\n";
+            theGPT->ChangeUniqueGuid();
             break;
          case 'd': case 'D':
             cout << "Partitions will begin on " << theGPT->GetAlignment()

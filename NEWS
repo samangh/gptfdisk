@@ -1,6 +1,9 @@
 0.7.1 (?/?/2011):
 -----------------
 
+- Fixed bug that caused the protective MBR to not be written when
+  restoring a backup of the GPT data.
+
 - Fixed bug that caused second protective MBR partition, when created
   as part of a hybrid MBR, to always be of type 0xEE, even when the
   user specified something else.

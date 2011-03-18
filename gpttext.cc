@@ -271,6 +271,27 @@ void GPTDataTextUI::ChangePartType(void) {
    } // if/else
 } // GPTDataTextUI::ChangePartType()
 
+// Prompt user for a partition number, then change its unique
+// GUID.
+void GPTDataTextUI::ChangeUniqueGuid(void) {
+   int partNum;
+   uint32_t low, high;
+   string guidStr;
+
+   if (GetPartRange(&low, &high) > 0) {
+      partNum = GetPartNum();
+      cout << "Enter the partition's new unique GUID ('R' to randomize): ";
+      guidStr = ReadString();
+      if ((guidStr.length() >= 32) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
+         SetPartitionGUID(partNum, (GUIDData) guidStr);
+         cout << "New GUID is " << partitions[partNum].GetUniqueGUID() << "\n";
+      } else {
+         cout << "GUID is too short!\n";
+      } // if/else
+   } else
+      cout << "No partitions\n";
+} // GPTDataTextUI::ChangeUniqueGuid()
+
 // Partition attributes seem to be rarely used, but I want a way to
 // adjust them for completeness....
 void GPTDataTextUI::SetAttributes(uint32_t partNum) {

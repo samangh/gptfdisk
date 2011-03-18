@@ -65,7 +65,7 @@ class GPTData {
 protected:
    struct GPTHeader mainHeader;
    GPTPart *partitions;
-   uint32_t numParts;
+   uint32_t numParts; // # of partitions the table can hold
    struct GPTHeader secondHeader;
    MBRData protectiveMBR;
    string device; // device filename
@@ -95,7 +95,6 @@ public:
    GPTData(string deviceFilename);
    virtual ~GPTData(void);
    GPTData & operator=(const GPTData & orig);
-//   bool operator<(const GPTData &other) const;
 
    // Verify (or update) data integrity
    int Verify(void);
@@ -185,7 +184,8 @@ public:
    uint64_t FindFreeBlocks(uint32_t *numSegments, uint64_t *largestSegment);
    int IsFree(uint64_t sector, uint32_t *partNum = NULL);
    int IsFreePartNum(uint32_t partNum);
-
+   int IsUsedPartNum(uint32_t partNum);
+   
    // Change how functions work, or return information on same
    void SetAlignment(uint32_t n);
    uint32_t ComputeAlignment(void); // Set alignment based on current partitions

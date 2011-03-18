@@ -14,10 +14,10 @@ DEPEND= makedepend $(CXXFLAGS)
 all:	gdisk sgdisk fixparts
 
 gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
-	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -licui18n -licuio -luuid -o gdisk
+	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -licuio -luuid -o gdisk
 
 sgdisk: $(LIB_OBJS) sgdisk.o
-	$(CXX) $(LIB_OBJS) sgdisk.o $(LDFLAGS) -licui18n -licuio -luuid -lpopt -o sgdisk
+	$(CXX) $(LIB_OBJS) sgdisk.o $(LDFLAGS) -licuio -luuid -lpopt -o sgdisk
 
 fixparts: $(MBR_LIB_OBJS) fixparts.o
 	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -o fixparts
