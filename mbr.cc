@@ -66,16 +66,6 @@ void MBRData::MakeProtectiveMBR(int clearBoot) {
    } // if/else
    partitions[0].SetInclusion(PRIMARY);
 
-   // Write CHS data. This maxes out the use of the disk, as much as
-   // possible -- even to the point of exceeding the capacity of sub-8GB
-   // disks. The EFI spec says to use 0xffffff as the ending value,
-   // although normal MBR disks max out at 0xfeffff. FWIW, both GNU Parted
-   // and Apple's Disk Utility use 0xfeffff, and the latter puts that
-   // value in for the FIRST sector, too!
-/*   LBAtoCHS(1, partitions[0].firstSector);
-   if (LBAtoCHS(partitions[0].lengthLBA, partitions[0].lastSector) == 0)
-      partitions[0].lastSector[0] = 0xFF; */
-
    state = gpt;
 } // MBRData::MakeProtectiveMBR()
 

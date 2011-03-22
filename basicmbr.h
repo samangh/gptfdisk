@@ -123,9 +123,7 @@ public:
    void DeletePartition(int i);
    int SetInclusionwChecks(int num, int inclStatus);
    void RecomputeCHS(int partNum);
-   int SwapPartitions(uint32_t partNum1, uint32_t partNum2);
    void SortMBR(int start = 0);
-//   void QuickSortMBR(int start, int finish);
    int DeleteOversizedParts();
    int DeleteExtendedParts();
    void OmitOverlaps(void);
@@ -153,7 +151,6 @@ public:
    // User interaction functions....
    int DoMenu(const string& prompt = "\nMBR command (? for help): ");
    void ShowCommands(void);
-
-}; // struct BasicMBRData
+}; // class BasicMBRData
 
 #endif

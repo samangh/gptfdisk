@@ -88,10 +88,19 @@ for disks and partitions, not to the GUIDs used to identify partition type
 codes; those are standardized and are handled correctly by all versions of
 GPT fdisk.
 
+The Windows binaries I've compiled do not support Unicode UTF-16LE GPT
+partition names. This feature was added to version 0.7.1 of the software
+for Linux, FreeBSD, and OS X, and with changes to some #ifndef lines in the
+source files, it can be compiled for Windows; however, it seems to do
+little good in Windows because of Command Prompt window and/or ICU library
+limitations. Thus, I've omitted this support in the interests of
+simplifying the binary distribution, since including it would mean
+distributing the ICU libraries.
+
 Source Code and Compilation Issues
 ----------------------------------
 
-I have successfully compiled GPT fdisk using two different Windows
+I have successfully compiled GPT fdisk using three different Windows
 compilers:
 
 - MinGW (http://www.mingw.org), and in particular its Linux-hosted
@@ -109,8 +118,11 @@ compilers:
   all the *.cc files except diskio-unix.cc, sgdisk.cc, and whichever
   program file you intend to NOT build (gdisk.cc or fixparts.cc).
 
-The MinGW compiler produces much larger executables than does the MS
-compiler. The resulting binaries seem to work equally well, but my testing
+- Microsoft Visual C++ 2010 Express -- This compiler works much like the
+  2008 version, although I didn't need to add a third-party stdint.h file.
+
+The MinGW compiler produces much larger executables than do the MS
+compilers. The resulting binaries seem to work equally well, but my testing
 has been minimal.
 
 I've also attempted to compile the code with OpenWatcom 1.8, but this

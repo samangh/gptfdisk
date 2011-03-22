@@ -874,7 +874,6 @@ int BasicMBRData::SpaceBeforeAllLogicals(void) {
    do {
       if ((partitions[i].GetStartLBA() > 0) && (partitions[i].GetInclusion() == LOGICAL)) {
          allOK = allOK && (SectorUsedAs(partitions[i].GetStartLBA() - 1) == EBR);
-//         allOK = allOK && IsFree(partitions[i].GetStartLBA() - 1);
       } // if
       i++;
    } while (allOK && (i < MAX_MBR_PARTS));
@@ -1080,37 +1079,12 @@ int BasicMBRData::SetInclusionwChecks(int num, int inclStatus) {
 // providing a function to do this deliberately at the user's command.
 // This function does nothing if the partition's length is 0.
 void BasicMBRData::RecomputeCHS(int partNum) {
-//   uint64_t firstLBA, lengthLBA;
-
    partitions[partNum].RecomputeCHS();
-/*   firstLBA = (uint64_t) partitions[partNum].firstLBA;
-   lengthLBA = (uint64_t) partitions[partNum].lengthLBA;
-
-   if (lengthLBA > 0) {
-      LBAtoCHS(firstLBA, partitions[partNum].firstSector);
-      LBAtoCHS(firstLBA + lengthLBA - 1, partitions[partNum].lastSector);
-   } // if */
 } // BasicMBRData::RecomputeCHS()
 
-// Swap the contents of two partitions.
-// Returns 1 if successful, 0 if either partition is out of range
-// (that is, not a legal number; either or both can be empty).
-// Note that if partNum1 = partNum2 and this number is in range,
-// it will be considered successful.
-int BasicMBRData::SwapPartitions(uint32_t partNum1, uint32_t partNum2) {
-   MBRPart temp;
-   int allOK = 1;
-
-   if ((partNum1 < MAX_MBR_PARTS) && (partNum2 < MAX_MBR_PARTS)) {
-      if (partNum1 != partNum2) {
-         temp = partitions[partNum1];
-         partitions[partNum1] = partitions[partNum2];
-         partitions[partNum2] = temp;
-      } // if
-   } else allOK = 0; // partition numbers are valid
-   return allOK;
-} // BasicMBRData::SwapPartitions()
-
+// Sorts the partitions starting with partition #start. This function
+// does NOT pay attention to primary/logical assignment, which is
+// critical when writing the partitions.
 void BasicMBRData::SortMBR(int start) {
    if ((start < MAX_MBR_PARTS) && (start >= 0))
       sort(partitions + start, partitions + MAX_MBR_PARTS);
@@ -1167,15 +1141,6 @@ void BasicMBRData::OmitOverlaps() {
    } // for (i...)
 } // BasicMBRData::OmitOverlaps()
 
-/* // Omits all partitions; used as starting point in MakeItLegal()
-void BasicMBRData::OmitAll(void) {
-   int i;
-
-   for (i = 0; i < MAX_MBR_PARTS; i++) {
-      partitions[i].SetInclusion(NONE);
-   } // for
-} // BasicMBRData::OmitAll() */
-
 // Convert as many partitions into logicals as possible, except for
 // the first partition, if possible.
 void BasicMBRData::MaximizeLogicals() {
@@ -1206,8 +1171,8 @@ void BasicMBRData::MaximizePrimaries() {
    while ((num < 4) && (i < MAX_MBR_PARTS)) {
       if ((partitions[i].GetInclusion() == NONE) && (partitions[i].CanBePrimary())) {
          partitions[i].SetInclusion(PRIMARY);
-	 num++;
-	 UpdateCanBeLogical();
+         num++;
+         UpdateCanBeLogical();
       } // if
       i++;
    } // while
@@ -1254,7 +1219,6 @@ void BasicMBRData::MakeLogicalsContiguous(void) {
 void BasicMBRData::MakeItLegal(void) {
    if (!IsLegal()) {
       DeleteOversizedParts();
-//      OmitAll();
       MaximizeLogicals();
       MaximizePrimaries();
       if (!AreLogicalsContiguous())
@@ -1406,6 +1370,7 @@ uint64_t BasicMBRData::FindLastInFree(uint64_t start) {
       nearestStart = diskSize - 1;
    else
       nearestStart = UINT32_MAX - 1;
+
    for (i = 0; i < 4; i++) {
       if ((nearestStart > partitions[i].GetStartLBA()) &&
           (partitions[i].GetStartLBA() > start)) {
@@ -1448,19 +1413,6 @@ int BasicMBRData::SectorUsedAs(uint64_t sector, int topPartNum) {
    } while ((i < topPartNum) && (usedAs == NONE));
    return usedAs;
 } // BasicMBRData::SectorUsedAs()
-
-/* // Returns 1 if the specified sector is unallocated, 0 if it's
-// allocated.
-int BasicMBRData::IsFree(uint64_t sector, int topPartNum) {
-   int i, isFree = 1;
-
-   for (i = 0; i < topPartNum; i++) {
-      if ((partitions[i].GetStartLBA() <= sector) && (partitions[i].GetLastLBA() >= sector)
-          && (partitions[i].GetInclusion() != NONE))
-         isFree = 0;
-   } // for
-   return isFree;
-} // BasicMBRData::IsFree() */
 
 /******************************************************
  *                                                    *

@@ -3,8 +3,11 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <unicode/unistr.h>
+#ifndef _WIN32
 #include <unicode/ustream.h>
+#else
+#define UnicodeString string
+#endif
 #include <string>
 #include "support.h"
 #include "guid.h"
@@ -60,7 +63,5 @@ public:
    void ShowAllTypes(void) const;
    int Valid(uint16_t code) const;
 };
-
-UnicodeString ReadUString(void);
 
 #endif

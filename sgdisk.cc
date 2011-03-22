@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
    char *newPartInfo = NULL, *typeCode = NULL, *partName = NULL;
    char *backupFile = NULL, *twoParts = NULL, *hybrids = NULL, *mbrParts;
    char *partGUID = NULL, *diskGUID = NULL, *outDevice = NULL;
-   string cmd, typeGUID;
+   string cmd, typeGUID, name;
    PartType typeHelper;
 
    poptContext poptCon;
@@ -178,7 +178,8 @@ int main(int argc, char *argv[]) {
                case 'c':
                   theGPT.JustLooking(0);
                   partNum = (int) GetInt(partName, 1) - 1;
-                  if (theGPT.SetName(partNum, (UnicodeString) GetString(partName, 2).c_str())) {
+                  name = GetString(partName, 2);
+                  if (theGPT.SetName(partNum, (UnicodeString) name.c_str())) {
                      saveData = 1;
                   } else {
                      cerr << "Unable to set partition " << partNum + 1

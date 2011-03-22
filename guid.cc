@@ -5,7 +5,7 @@
 // Implements the GUIDData data structure and support methods
 //
 //
-// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2010
+// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2010-2011
 //
 // Copyright: See COPYING file that comes with this distribution
 //

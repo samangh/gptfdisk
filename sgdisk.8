@@ -1,6 +1,6 @@
 .\" Copyright 2011 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.7.0" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.7.1" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -182,8 +182,8 @@ will reflect GPT fdisk's first\-pass interpretation of the GPT.
 .TP 
 .B \-c, \-\-change\-name=partnum:name
 Change the GPT name of a partition. This name is encoded as a UTF\-16
-string, but \fBsgdisk\fR
-supports only ASCII characters as names. For the most part, Linux ignores
+string, but proper entry and display of anything beyond basic ASCII values
+requires suitable locale and font support. For the most part, Linux ignores
 the partition name, but it may be important in some OSes. GPT fdisk sets
 a default name based on the partition type code. If you want to set a name
 that includes a space, enclose it in quotation marks, as in
@@ -470,7 +470,7 @@ Non\-GPT disk detected and no \fI\-g\fR option
 .B 4
 An error prevented saving changes
 .SH "BUGS"
-As of March 2011 (version 0.7.00), \fBsgdisk\fR
+As of March 2011 (version 0.7.1), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
@@ -493,13 +493,6 @@ The fields used to display the start and end sector numbers for partitions
 in the \fI\-p\fR option are 14 characters wide. This translates to a limitation
 of about 45 PiB. On larger disks, the displayed columns will go out of
 alignment.
-
-.TP 
-.B *
-Only ASCII characters are supported in the partition name field. If an
-existing partition uses non\-ASCII UTF\-16 characters, they're likely to be
-corrupted in the 'i' and 'p' menu options' displays; however, they should be
-preserved when loading and saving partitions.
 
 .TP 
 .B *

@@ -8,7 +8,7 @@
 #ifndef __GPTSUPPORT
 #define __GPTSUPPORT
 
-#define GPTFDISK_VERSION "0.7.1-pre2"
+#define GPTFDISK_VERSION "0.7.1"
 
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 // Darwin (Mac OS) only: disk IOCTLs are different, and there is no lseek64

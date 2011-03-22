@@ -357,29 +357,3 @@ int PartType::Valid(uint16_t code) const {
    } // while
    return found;
 } // PartType::Valid()
-
-/********************************
- *                              *
- * Non-class support functions. *
- *                              *
- ********************************/
-
-// Note: ReadUString() is here rather than in support.cc so that the ICU
-// libraries need not be linked to fixparts.
-
-// Reads a Unicode string from stdin, returning it as a ICU-style string.
-// Note that the returned string will NOT include the carriage return
-// entered by the user.
-UnicodeString ReadUString(void) {
-   UnicodeString inString = "", oneWord;
-   
-   do {
-      cin >> oneWord;
-      if (inString.length() > 0)
-         inString += " ";
-      inString += oneWord;
-   } while (cin.peek() != '\n');
-   cin.get(); // discard CR
-   return inString;
-} // ReadUString()
-

@@ -1057,6 +1057,7 @@ int GPTData::SaveGPTBackup(const string & filename) {
       RecomputeCRCs();
 
       protectiveMBR.WriteMBRData(&backupFile);
+      protectiveMBR.SetDisk(&myDisk);
 
       if (allOK) {
          // MBR write closed disk, so re-open and seek to end....
@@ -1768,12 +1769,16 @@ void GPTData::MoveSecondHeaderToEnd() {
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
 } // GPTData::FixSecondHeaderLocation()
 
+// Sets the partition's name to the specified UnicodeString without
+// user interaction.
+// Returns 1 on success, 0 on failure (invalid partition number).
 int GPTData::SetName(uint32_t partNum, const UnicodeString & theName) {
    int retval = 1;
 
-   if (!IsFreePartNum(partNum)) {
+   if (IsUsedPartNum(partNum))
       partitions[partNum].SetName(theName);
-   } else retval = 0;
+   else
+      retval = 0;
 
    return retval;
 } // GPTData::SetName

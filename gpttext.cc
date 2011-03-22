@@ -1,5 +1,5 @@
 /*
-    Copyright (C) <2010>  <Roderick W. Smith>
+    Copyright (C) 2010-2011  <Roderick W. Smith>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@
 #include <cstdio>
 #include "attributes.h"
 #include "gpttext.h"
-//#include "gptpartnotes.h"
 #include "support.h"
 
 using namespace std;
@@ -295,14 +294,28 @@ void GPTDataTextUI::ChangeUniqueGuid(void) {
 // Partition attributes seem to be rarely used, but I want a way to
 // adjust them for completeness....
 void GPTDataTextUI::SetAttributes(uint32_t partNum) {
-//   Attributes theAttr;
-
    partitions[partNum].SetAttributes();
-/*   theAttr = partitions[partNum].GetAttributes();
-//   theAttr.SetAttributes(partitions[partNum].GetAttributes());
-   theAttr.ChangeAttributes();
-   partitions[partNum].SetAttributes(theAttr.GetAttributes()); */
 } // GPTDataTextUI::SetAttributes()
+
+// Prompts the user for a partition name and sets the partition's
+// name. Returns 1 on success, 0 on failure (invalid partition
+// number). (Note that the function skips prompting when an
+// invalid partition number is detected.)
+int GPTDataTextUI::SetName(uint32_t partNum) {
+   UnicodeString theName = "";
+   int retval = 1;
+
+   if (IsUsedPartNum(partNum)) {
+      cout << "Enter name: ";
+      theName = ReadUString();
+      partitions[partNum].SetName(theName);
+   } else {
+      cerr << "Invalid partition number (" << partNum << ")\n";
+      retval = 0;
+   } // if/else
+
+   return retval;
+} // GPTDataTextUI::SetName()
 
 // Ask user for two partition numbers and swap them in the table. Note that
 // this just reorders table entries; it doesn't adjust partition layout on
@@ -477,13 +490,15 @@ int GPTDataTextUI::XFormToMBR(void) {
    return protectiveMBR.DoMenu();
 } // GPTDataTextUI::XFormToMBR()
 
-/*********************************************************************
- *                                                                   *
- * The following doesn't really belong in the class, since it's MBR- *
- * specific, but it's also user I/O-related, so I want to keep it in *
- * this file....                                                     *
- *                                                                   *
- *********************************************************************/
+/********************************
+ *                              *
+ * Non-class support functions. *
+ *                              *
+ ********************************/
+
+// GetMBRTypeCode() doesn't really belong in the class, since it's MBR-
+// specific, but it's also user I/O-related, so I want to keep it in
+// this file....
 
 // Get an MBR type code from the user and return it
 int GetMBRTypeCode(int defType) {
@@ -505,3 +520,15 @@ int GetMBRTypeCode(int defType) {
    cout.fill(' ');
    return typeCode;
 } // GetMBRTypeCode
+
+// Note: ReadUString() is here rather than in support.cc so that the ICU
+// libraries need not be linked to fixparts.
+
+// Reads a Unicode string from stdin, returning it as an ICU-style string.
+// Note that the returned string will NOT include the carriage return
+// entered by the user. Relies on the ICU constructor from a string
+// encoded in the current codepage to work.
+UnicodeString ReadUString(void) {
+   return ReadString().c_str();
+} // ReadUString()
+   

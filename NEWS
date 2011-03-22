@@ -1,5 +1,18 @@
-0.7.1 (?/?/2011):
------------------
+0.7.1 (3/21/2011):
+------------------
+
+- Added support for proper UTF-16LE partition names rather than the
+  "shortcut" that properly encoded only ASCII names. This support works
+  only in Linux, FreeBSD, and OS X, though, at least for the moment.
+  Although it's possible to compile this support into Windows when using
+  Visual C++, it doesn't seem to work properly. Since using this feature
+  would require distributing the ICU libraries with the Windows binary,
+  thus bloating the binary package's size to no effect, I've disabled it in
+  my standard Windows build, at least for now.
+
+- Added check to fixparts to keep it from operating on devices that
+  lack an existing MBR signature. (In 0.7.0, it could write an empty
+  MBR data structure to a device on which it was mistakenly launched.)
 
 - Fixed bug that caused the protective MBR to not be written when
   restoring a backup of the GPT data.

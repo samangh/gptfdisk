@@ -1,6 +1,6 @@
 .\" Copyright 2011 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.7.0" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.7.1" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -152,12 +152,12 @@ to encourage its use.
 .TP 
 .B c
 Change the GPT name of a partition. This name is encoded as a UTF\-16
-string, but \fBgdisk\fR
-supports only ASCII characters as names. For the most part, Linux ignores
-the partition name, but it may be important in some OSes. GPT fdisk sets
-a default name based on the partition type code. Note that the GPT partition
-name is different from the filesystem name, which is encoded in the filesystem's
-data structures.
+string, but proper entry and display of anything beyond basic ASCII values
+requires suitable locale and font support. For the most part, Linux ignores
+the partition name, but it may be important in some OSes. GPT fdisk sets a
+default name based on the partition type code. Note that the GPT partition
+name is different from the filesystem name, which is encoded in the
+filesystem's data structures.
 
 .TP 
 .B d
@@ -561,7 +561,7 @@ entering data. When only one option is possible, \fBgdisk\fR
 usually bypasses the prompt entirely.
 
 .SH "BUGS"
-As of March 2011 (version 0.7.0), \fBgdisk\fR
+As of March 2011 (version 0.7.1), \fBgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
@@ -590,10 +590,12 @@ alignment.
 
 .TP 
 .B *
-Only ASCII characters are supported in the partition name field. If an
-existing partition uses non\-ASCII UTF\-16 characters, they're likely to be
-corrupted in the 'i' and 'p' menu options' displays; however, they should be
-preserved when loading and saving partitions.
+In the Windows version, only ASCII characters are supported in the
+partition name field. If an existing partition uses non\-ASCII UTF\-16
+characters, they're likely to be corrupted in the 'i' and 'p' menu options'
+displays; however, they should be preserved when loading and saving
+partitions. Binaries for Linux, FreeBSD, and OS X support full UTF-16
+partition names.
 
 .TP 
 .B *

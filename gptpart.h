@@ -61,7 +61,6 @@ class GPTPart {
       uint64_t GetLengthLBA(void) const;
       Attributes GetAttributes(void) {return attributes;}
       void ShowAttributes(uint32_t partNum) {attributes.ShowAttributes(partNum);}
-//      string GetDescription(void);
       UnicodeString GetDescription(void);
       int IsUsed(void);
 
@@ -74,9 +73,10 @@ class GPTPart {
       void SetLastLBA(uint64_t l) {lastLBA = l;}
       void SetAttributes(uint64_t a) {attributes = a;}
       void SetAttributes(void) {attributes.ChangeAttributes();}
-      void SetName(string theName);
-      void SetName(UnicodeString theName);
-//      void SetName(UChar *theName);
+      void SetName(const string & theName);
+#ifndef _WIN32
+      void SetName(const UnicodeString & theName);
+#endif
       void SetDefaultDescription(void);
 
       // Additional functions

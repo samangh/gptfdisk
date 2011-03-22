@@ -1,6 +1,6 @@
 /*
     <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
+    Copyright (C) 2010-2011 Roderick W. Smith
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@ class GPTDataTextUI : public GPTData {
       void ChangePartType(void);
       void ChangeUniqueGuid(void);
       void SetAttributes(uint32_t partNum);
+      int SetName(uint32_t partNum);
       int SwapPartitions(void);
       int DestroyGPTwPrompt(void); // Returns 1 if user proceeds
       void ShowDetails(void);
@@ -55,5 +56,6 @@ class GPTDataTextUI : public GPTData {
 }; // class GPTDataTextUI
 
 int GetMBRTypeCode(int defType);
+UnicodeString ReadUString(void);
 
 #endif // __GPTDATATEXT_H

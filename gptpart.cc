@@ -4,7 +4,7 @@
 // Description: Class to implement a SINGLE GPT partition
 //
 //
-// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2009
+// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2009-2011
 //
 // Copyright: See COPYING file that comes with this distribution
 //
@@ -15,9 +15,14 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
+#ifndef _WIN32
+#include <unicode/ustdio.h>
+#else
+#define UnicodeString string
+#endif
+
 #include <string.h>
 #include <stdio.h>
-#include <unicode/ustdio.h>
 #include <iostream>
 #include "gptpart.h"
 #include "attributes.h"
@@ -51,10 +56,6 @@ string GPTPart::GetTypeName(void) {
 // data" or "Linux swap").
 UnicodeString GPTPart::GetUTypeName(void) {
    return partitionType.UTypeName();
-/*   UnicodeString temp;
-
-   temp = temp.fromUTF8(partitionType.TypeName());
-   return temp; */
 } // GPTPart::GetNameType()
 
 // Compute and return the partition's length (or 0 if the end is incorrectly
@@ -67,7 +68,13 @@ uint64_t GPTPart::GetLengthLBA(void) const {
    return length;
 } // GPTPart::GetLengthLBA()
 
-/* // Return partition's name field, converted to a C++ ASCII string
+#ifndef _WIN32
+// Return partition's name field, converted to a Unicode string
+UnicodeString GPTPart::GetDescription(void) {
+   return (UChar*) name;
+} // GPTPart::GetDescription()
+#else
+// Return partition's name field, converted to a C++ ASCII string
 string GPTPart::GetDescription(void) {
    string theName;
    int i;
@@ -78,21 +85,8 @@ string GPTPart::GetDescription(void) {
          theName += name[i];
    } // for
    return theName;
-} // GPTPart::GetDescription() */
-
-UnicodeString GPTPart::GetDescription(void) {
-   UnicodeString theName;
-   UChar *temp;
-   int i;
-
-   theName = "";
-   temp = (UChar*) name;
-   for (i = 0; i < NAME_SIZE / 2; i++) {
-      if (temp[i] != '\0')
-         theName += temp[i];
-   } // for
-   return theName;
-} // GPTPart::GetDescription()
+} // GPTPart::GetDescription() (Windows version)
+#endif
 
 // Return 1 if the partition is in use
 int GPTPart::IsUsed(void) {
@@ -109,33 +103,40 @@ void GPTPart::SetType(PartType t) {
    partitionType = t;
 } // GPTPart::SetType()
 
-// Set the name for a partition to theName, or prompt for a name if
-// theName is empty, using a C++-style string as input.
-void GPTPart::SetName(string theName) {
-   UnicodeString uString;
-
-   uString = theName.c_str();
-   SetName(uString);
+#ifndef _WIN32
+// Set the name for a partition to theName, using a C++-style string as
+// input.
+void GPTPart::SetName(const string & theName) {
+   SetName((UnicodeString) theName.c_str());
 } // GPTPart::SetName()
 
-// Set the name for a partition to theName, or prompt for a name
-// if theName is empty, using a Unicode string as input.
-void GPTPart::SetName(UnicodeString theName) {
-   int i;
-   UChar temp[NAME_SIZE / 2];
-
-   if (theName == "") { // No name specified, so get one from the user
-      cout << "Enter name: ";
-      theName = ReadUString();
-   } // if
-
-   // Copy the C++-style string from newName into a form that the GPT
-   // table will accept....
-   memset(temp, 0, NAME_SIZE);
-   for (i = 0; i < theName.length(); i++)
-      temp[i] = theName[i];
-   memcpy(name, temp, NAME_SIZE);
+// Set the name for a partition to theName, using a Unicode string as
+// input.
+void GPTPart::SetName(const UnicodeString & theName) {
+   if (theName.isBogus()) {
+      cerr << "Bogus UTF-16 name found in GPTPart::SetName()! Name not changed!\n";
+   } else {
+      memset(name, 0, NAME_SIZE);
+      theName.extractBetween(0, NAME_SIZE / 2 - 1, (UChar*) name);
+   } // if/else
 } // GPTPart::SetName()
+#else
+// Set the name for a partition to theName. Note that theName is a
+// standard C++-style ASCII string, although the GUID partition definition
+// requires a UTF-16LE string. This function creates a simple-minded copy
+// for this.
+void GPTPart::SetName(const string & theName) {
+   int i, length;
+
+   if (theName.length() < (NAME_SIZE / 2))
+      length = theName.length();
+   else
+      length = NAME_SIZE / 2;
+   memset(name, 0, NAME_SIZE);
+   for (i = 0; i < length; i++)
+      name[i * 2] = theName[i];
+} // GPTPart::SetName(), Windows version
+#endif
 
 // Set the name for the partition based on the current GUID partition type
 // code's associated name
@@ -189,13 +190,12 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout.setf(ios::uppercase);
       cout << hex << partitionType.GetHexType() << "  " << dec;
       cout.fill(' ');
-//      description = GetDescription();
-      GetDescription().extractBetween(0, 24, description);
+#ifndef _WIN32
+      GetDescription().extractBetween(0, 23, description);
       cout << description << "\n";
-//      for (i = 0; i < 23; i++)
-//         cout << (char) description.;
-//      cout << GetDescription().tempSubString(0, 23) << "\n";
-//      cout << GetDescription().substr(0, 23) << "\n";
+#else
+      cout << GetDescription().substr(0, 23) << "\n";
+#endif
       cout.fill(' ');
    } // if
 } // GPTPart::ShowSummary()
@@ -223,7 +223,7 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
       cout << hex;
       cout << attributes << "\n";
       cout << dec;
-      cout << "Partition name: " << GetDescription() << "\n";
+      cout << "Partition name: '" << GetDescription() << "'\n";
       cout.fill(' ');
    }  // if
 } // GPTPart::ShowDetails()

@@ -4,8 +4,8 @@ by Roderick W. Smith, rodsmith@rodsbooks.com
 Introduction
 ------------
 
-This binary archive includes the source code for three related disk
-partitioning programs:
+This package includes the source code for three related disk partitioning
+programs:
 
 - gdisk -- This program is modeled after Linux fdisk, but it operates on
   GUID Partition Table (GPT) disks rather than the Master Boot Record (MBR)
@@ -62,8 +62,7 @@ and sgdisk include:
 * A user interface that's familiar to long-time users of Linux
   fdisk (gdisk only)
 
-* The MBR boot loader code is left alone (GNU Parted tends to
-  wipe it out with every change)
+* The MBR boot loader code is left alone
 
 * The ability to create a hybrid MBR, which permits GPT-unaware
   OSes to access up to three GPT partitions on the disk
@@ -95,7 +94,7 @@ that the OS sees.
 I've observed four causes of these symptoms, three of which FixParts can
 correct:
 
-- Old GPT data -- If a disk is used as a GPT disk and then re-used as an
+* Old GPT data -- If a disk is used as a GPT disk and then re-used as an
   MBR disk, the GPT data may be incompletely erased. This happens if the
   disk is repartitioned with fdisk or the Microsoft Windows installer, for
   instance. (Tools based on libparted correctly remove the old GPT data
@@ -104,12 +103,12 @@ correct:
   data, this erasure occurs immediately, unlike other changes the program
   makes.
 
-- Mis-sized extended partitions -- Some tools create an extended partition
+* Mis-sized extended partitions -- Some tools create an extended partition
   that's too large, typically ending after the last sector of the disk.
   FixParts automatically corrects this problem (if you use the 'w' option
   to save the partition table).
 
-- Primary partitions inside an extended partition -- Some utilities create
+* Primary partitions inside an extended partition -- Some utilities create
   or move primary partitions to within the range covered by the extended
   partition. FixParts can usually correct this problem by turning the
   primary partition into a logical partition or by changing one or more
@@ -117,7 +116,7 @@ correct:
   possible, though, at least not without deleting or resizing other
   partitions.
 
-- Leftover RAID data -- If a disk is used in a RAID array and then re-used
+* Leftover RAID data -- If a disk is used in a RAID array and then re-used
   as a non-RAID disk, some utilities can become confused and fail to see
   the disk. FixParts can NOT correct this problem. You must destroy the old
   RAID data, or possibly remove the dmraid package from the system, to fix
@@ -130,7 +129,7 @@ omitting it), you can't create new partitions with the program. If you're
 used to partitioning disks, particularly with Linux fdisk, two unusual
 features of FixParts require elaboration:
 
-- No extended partitions -- Internally, FixParts reads the partition table
+* No extended partitions -- Internally, FixParts reads the partition table
   and discards data on any extended partition(s) it finds. When you save
   the partition table, the program generates a new extended partition. This
   design means that the program automatically corrects many problems
@@ -139,7 +138,7 @@ features of FixParts require elaboration:
   it keeps track of the requirements and prevents you from creating illegal
   layouts, such as a primary between two logicals.
 
-- Partition numbering -- In most Linux tools, partitions 1-4 are primaries
+* Partition numbering -- In most Linux tools, partitions 1-4 are primaries
   and partitions 5 and up are logicals. Although a legal partition table
   loaded into FixParts will initially conform to this convention, some
   types of damaged table might not, and various changes you make can also
@@ -162,8 +161,9 @@ used.) In addition, note these requirements:
   e2fsprogs-libuuid port must be installed.
 
 * The ICU library (http://site.icu-project.org) is required on all
-  platforms. This library is normally installed in Linux, but you may need
-  to install the development headers (libicu-dev or something similar).
+  platforms except Windows. This library is normally installed in Linux,
+  but you may need to install the development headers (libicu-dev or
+  something similar).
 
 * The sgdisk program also requires the popt library and its development
   files (headers). Most Linux distributions install popt by default, but

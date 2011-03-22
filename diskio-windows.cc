@@ -133,11 +133,12 @@ int DiskIO::GetBlockSize(void) {
    } // if
 
    if (isOpen) {
-	  if (DeviceIoControl(fd, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geom, sizeof(geom), &retBytes, NULL)) {
+      if (DeviceIoControl(fd, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0,
+                          &geom, sizeof(geom), &retBytes, NULL)) {
          blockSize = geom.Geometry.BytesPerSector;
-	  } else { // was probably an ordinary file; set default value....
+      } else { // was probably an ordinary file; set default value....
          blockSize = SECTOR_SIZE;
-	  } // if/else
+      } // if/else
    } // if (isOpen)
 
    return (blockSize);
