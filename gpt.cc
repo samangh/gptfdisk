@@ -122,15 +122,14 @@ GPTData & GPTData::operator=(const GPTData & orig) {
 
    delete[] partitions;
    partitions = new GPTPart [numParts];
-   if (partitions != NULL) {
-      for (i = 0; i < numParts; i++) {
-         partitions[i] = orig.partitions[i];
-      }
-   } else {
-      numParts = 0;
+   if (partitions == NULL) {
       cerr << "Error! Could not allocate memory for partitions in GPTData::operator=()!\n"
-           << "Continuing, but strange problems may occur!\n";
-   } // if/else
+           << "Terminating!\n";
+      exit(1);
+   } // if
+   for (i = 0; i < numParts; i++) {
+      partitions[i] = orig.partitions[i];
+   }
    return *this;
 } // GPTData::operator=()
 
@@ -912,6 +911,10 @@ int GPTData::CheckTable(struct GPTHeader *header) {
    if (myDisk.Seek(header->partitionEntriesLBA)) {
       sizeOfParts = header->numParts * header->sizeOfPartitionEntries;
       storage = new uint8_t[sizeOfParts];
+      if (storage == NULL) {
+         cerr << "Could not allocate memory in GPTData::CheckTable()! Terminating!\n";
+         exit(1);
+      } // if
       if (myDisk.Read(storage, sizeOfParts) != (int) sizeOfParts) {
          cerr << "Warning! Error " << errno << " reading partition table for CRC check!\n";
       } else {
@@ -1223,6 +1226,10 @@ int GPTData::DestroyGPT(void) {
          allOK = 0;
       tableSize = numParts * mainHeader.sizeOfPartitionEntries;
       emptyTable = new uint8_t[tableSize];
+      if (emptyTable == NULL) {
+         cerr << "Could not allocate memory in GPTData::CheckTable()! Terminating!\n";
+         exit(1);
+      } // if
       memset(emptyTable, 0, tableSize);
       if (allOK) {
          sum = myDisk.Write(emptyTable, tableSize);
@@ -1604,7 +1611,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
          if (diskSize > 0)
             CheckGPTSize();
       } else { // Bad memory allocation
-         cerr << "Error allocating memory for partition table!\n";
+         cerr << "Error allocating memory for partition table! Size is unchanged!\n";
          allOK = 0;
       } // if/else
    } // if/else
@@ -2324,11 +2331,6 @@ int SizesOK(void) {
       cerr << "PartType is " << sizeof(GUIDData) << " bytes, should be 16 bytes; aborting!\n";
       allOK = 0;
    } // if
-   // Determine endianness; warn user if running on big-endian (PowerPC, etc.) hardware
-//   if (IsLittleEndian() == 0) {
-//      cerr << "\aRunning on big-endian hardware. Big-endian support is new and poorly"
-//            " tested!\n";
-//   } // if
    return (allOK);
 } // SizesOK()
 

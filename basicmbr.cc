@@ -84,6 +84,10 @@ BasicMBRData & BasicMBRData::operator=(const BasicMBRData & orig) {
    state = orig.state;
 
    myDisk = new DiskIO;
+   if (myDisk == NULL) {
+      cerr << "Unable to allocate memory in BasicMBRData::operator=()! Terminating!\n";
+      exit(1);
+   } // if
    if (orig.myDisk != NULL)
       myDisk->OpenForRead(orig.myDisk->GetName());
 
@@ -106,6 +110,10 @@ int BasicMBRData::ReadMBRData(const string & deviceFilename) {
 
    if (myDisk == NULL) {
       myDisk = new DiskIO;
+      if (myDisk == NULL) {
+         cerr << "Unable to allocate memory in BasicMBRData::ReadMBRData()! Terminating!\n";
+         exit(1);
+      } // if
       canDeleteMyDisk = 1;
    } // if
    if (myDisk->OpenForRead(deviceFilename)) {
@@ -1497,7 +1505,8 @@ MBRPart* BasicMBRData::GetPartition(int i) {
 // if the return value is >0, or possibly >=0 depending on intentions.)
 int BasicMBRData::DoMenu(const string& prompt) {
    int goOn = 1, quitting = 0, retval, num, haveShownInfo = 0;
-   unsigned int hexCode = 0x00;
+   unsigned int hexCode;
+   string tempStr;
 
    do {
       cout << prompt;
@@ -1547,10 +1556,13 @@ int BasicMBRData::DoMenu(const string& prompt) {
             break;
          case 't': case 'T':
             num = GetNumber(1, MAX_MBR_PARTS, 1, "Partition to change type code: ") - 1;
+            hexCode = 0x00;
             if (partitions[num].GetLengthLBA() > 0) {
                while ((hexCode <= 0) || (hexCode > 255)) {
                   cout << "Enter an MBR hex code: ";
-                  hexCode = StrToHex(ReadString(), 0);
+                  tempStr = ReadString();
+                  if (IsHex(tempStr))
+                     sscanf(tempStr.c_str(), "%x", &hexCode);
                } // while
                partitions[num].SetType(hexCode);
             } // if

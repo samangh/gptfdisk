@@ -109,14 +109,23 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize,
 // converts to sectors. For instance, with 512-byte sectors, "1K" converts
 // to 2. If value includes a "+", adds low and subtracts 1; if SIValue
 // inclues a "-", subtracts from high. If IeeeValue is empty, returns def.
-// Returns final sector value. In case inValue works out to something that
-// is not in the range of low to high (inclusive), returns high + 1; the
-// calling function is responsible for checking the validity of this value.
+// Returns final sector value. In case inValue is invalid, returns 0 (a
+// sector value that's always is use on GPT and therefore invalid); and if
+// inValue works out to something outside the range low-high, returns the
+// computed value; the calling function is responsible for checking the
+// validity of this value.
+// NOTE: There's a difference in how GCC and VC++ treat oversized values
+// (say, "999999999999999999999") read via the ">>" operator; GCC turns
+// them into the maximum value for the type, whereas VC++ turns them into
+// 0 values. The result is that IeeeToInt() returns UINT64_MAX when
+// compiled with GCC (and so the value is rejected), whereas when VC++
+// is used, the default value is returned.
 uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def) {
    uint64_t response = def, bytesPerUnit = 1, mult = 1, divide = 1;
    size_t foundAt = 0;
    char suffix, plusFlag = ' ';
    string suffixes = "KMGTPE";
+   int badInput = 0; // flag bad input; once this goes to 1, other values are irrelevant
 
    if (sSize == 0) {
       sSize = SECTOR_SIZE;
@@ -135,45 +144,63 @@ uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, 
 
    // Extract numeric response and, if present, suffix
    istringstream inString(inValue);
-   if (((inString.peek() >= '0') && (inString.peek() <= '9')) || (inString.peek() == -1)) {
-      inString >> response >> suffix;
-      suffix = toupper(suffix);
-      
-      // If no response, or if response == 0, use default (def)
-      if ((inValue.length() == 0) || (response == 0)) {
-         response = def;
-         suffix = ' ';
-         plusFlag = 0;
-      } // if
-      
-      // Find multiplication and division factors for the suffix
-      foundAt = suffixes.find(suffix);
-      if (foundAt != string::npos) {
-         bytesPerUnit = UINT64_C(1) << (10 * (foundAt + 1));
-         mult = bytesPerUnit / sSize;
-         divide = sSize / bytesPerUnit;
-      } // if
-      
-      // Adjust response based on multiplier and plus flag, if present
-      if (mult > 1)
+   if (((inString.peek() < '0') || (inString.peek() > '9')) && (inString.peek() != -1))
+      badInput = 1;
+   inString >> response >> suffix;
+   suffix = toupper(suffix);
+
+   // If no response, or if response == 0, use default (def)
+   if ((inValue.length() == 0) || (response == 0)) {
+      response = def;
+      suffix = ' ';
+      plusFlag = ' ';
+   } // if
+
+   // Find multiplication and division factors for the suffix
+   foundAt = suffixes.find(suffix);
+   if (foundAt != string::npos) {
+      bytesPerUnit = UINT64_C(1) << (10 * (foundAt + 1));
+      mult = bytesPerUnit / sSize;
+      divide = sSize / bytesPerUnit;
+   } // if
+
+   // Adjust response based on multiplier and plus flag, if present
+   if (mult > 1) {
+      if (response > (UINT64_MAX / mult))
+         badInput = 1;
+      else
          response *= mult;
-      else if (divide > 1)
+   } else if (divide > 1) {
          response /= divide;
-      if (plusFlag == '+') {
-         // Recompute response based on low part of range (if default = high
-         // value, which should be the case when prompting for the end of a
-         // range) or the defaut value (if default != high, which should be
-         // the case for the first sector of a partition).
-         if (def == high)
-            response = response + low - UINT64_C(1);
+   } // if/elseif
+
+   if (plusFlag == '+') {
+      // Recompute response based on low part of range (if default == high
+      // value, which should be the case when prompting for the end of a
+      // range) or the defaut value (if default != high, which should be
+      // the case for the first sector of a partition).
+      if (def == high) {
+         if (response > 0)
+            response--;
+         if (response > (UINT64_MAX - low))
+            badInput = 1;
+         else
+            response = response + low;
+      } else {
+         if (response > (UINT64_MAX - def))
+            badInput = 1;
          else
             response = response + def;
-      } else if (plusFlag == '-') {
+      } // if/else
+   } else if (plusFlag == '-') {
+      if (response > high)
+         badInput = 1;
+      else
          response = high - response;
-      } // if   
-   } else { // user input is invalid
-      response = high + UINT64_C(1);
-   } // if/else
+   } // if   
+
+   if (badInput)
+      response = UINT64_C(0);
 
    return response;
 } // IeeeToInt()
@@ -185,7 +212,7 @@ uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, 
 string BytesToIeee(uint64_t size, uint32_t sectorSize) {
    float sizeInIeee;
    unsigned int index = 0;
-   string units, prefixes = " KMGTPE";
+   string units, prefixes = " KMGTPEZ";
    ostringstream theValue;
 
    sizeInIeee = size * (float) sectorSize;
@@ -222,11 +249,14 @@ unsigned char StrToHex(const string & input, unsigned int position) {
 
 // Returns 1 if input can be interpreted as a hexadecimal number --
 // all characters must be spaces, digits, or letters A-F (upper- or
-// lower-case), with at least one valid hexadecimal digit; otherwise
+// lower-case), with at least one valid hexadecimal digit; with the
+// exception of the first two characters, which may be "0x"; otherwise
 // returns 0.
-int IsHex(const string & input) {
+int IsHex(string input) {
    int isHex = 1, foundHex = 0, i;
 
+   if (input.substr(0, 2) == "0x")
+      input.erase(0, 2);
    for (i = 0; i < (int) input.length(); i++) {
       if ((input[i] < '0') || (input[i] > '9')) {
          if ((input[i] < 'A') || (input[i] > 'F')) {
@@ -269,5 +299,8 @@ void ReverseBytes(void* theValue, int numBytes) {
       for (i = 0; i < numBytes; i++)
          ((char*) theValue)[i] = tempValue[numBytes - i - 1];
       delete[] tempValue;
-   } // if
+   } else {
+      cerr << "Could not allocate memory in ReverseBytes()! Terminating\n";
+      exit(1);
+   } // if/else
 } // ReverseBytes()

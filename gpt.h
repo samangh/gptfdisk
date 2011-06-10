@@ -26,8 +26,6 @@
 
 using namespace std;
 
-class PartNotes;
-
 /****************************************
  *                                      *
  * GPTData class and related structures *
@@ -139,7 +137,6 @@ public:
    virtual int XFormDisklabel(uint32_t partNum);
    int XFormDisklabel(BSDData* disklabel);
    int OnePartToMBR(uint32_t gptPart, int mbrPart); // add one partition to MBR. Returns 1 if successful
-   int PartsToMBR(PartNotes * notes);
 
    // Adjust GPT structures WITHOUT user interaction...
    int SetGPTSize(uint32_t numEntries);

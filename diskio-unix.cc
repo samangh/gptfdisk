@@ -290,6 +290,10 @@ int DiskIO::Read(void* buffer, int numBytes) {
             numBlocks++;
          tempSpace = new char [numBlocks * blockSize];
       } // if/else
+      if (tempSpace == NULL) {
+         cerr << "Unable to allocate memory in DiskIO::Read()! Terminating!\n";
+         exit(1);
+      } // if
 
       // Read the data into temporary space, then copy it to buffer
       retval = read(fd, tempSpace, numBlocks * blockSize);
@@ -328,7 +332,11 @@ int DiskIO::Write(void* buffer, int numBytes) {
          if ((numBytes % blockSize) != 0) numBlocks++;
          tempSpace = new char [numBlocks * blockSize];
       } // if/else
-
+      if (tempSpace == NULL) {
+         cerr << "Unable to allocate memory in DiskIO::Write()! Terminating!\n";
+         exit(1);
+      } // if
+      
       // Copy the data to my own buffer, then write it
       memcpy(tempSpace, buffer, numBytes);
       for (i = numBytes; i < numBlocks * blockSize; i++) {

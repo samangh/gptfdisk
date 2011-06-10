@@ -134,6 +134,10 @@ int BSDData::ReadBSDData(DiskIO *theDisk, uint64_t startSector, uint64_t endSect
    // If the state is good, go ahead and load the main partition data....
    if (state == bsd) {
       partitions = new struct BSDRecord[numParts * sizeof(struct BSDRecord)];
+      if (partitions == NULL) {
+         cerr << "Unable to allocate memory in BSDData::ReadBSDData()! Terminating!\n";
+         exit(1);
+      } // if
       for (i = 0; i < numParts; i++) {
          // Once again, we use the buffer, but index it using a BSDRecord
          // pointer (dangerous, but effective)....

@@ -8,7 +8,7 @@
 #ifndef __GPTSUPPORT
 #define __GPTSUPPORT
 
-#define GPTFDISK_VERSION "0.7.1"
+#define GPTFDISK_VERSION "0.7.1.1"
 
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 // Darwin (Mac OS) only: disk IOCTLs are different, and there is no lseek64
@@ -63,7 +63,7 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize,
 uint64_t IeeeToInt(string IeeeValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def = 0);
 string BytesToIeee(uint64_t size, uint32_t sectorSize = 1);
 unsigned char StrToHex(const string & input, unsigned int position);
-int IsHex(const string & input); // Returns 1 if input can be hexadecimal number....
+int IsHex(string input); // Returns 1 if input can be hexadecimal number....
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
 

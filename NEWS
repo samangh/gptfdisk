@@ -1,3 +1,18 @@
+0.7.2 (?/??/2011):
+------------------
+
+- Fixed a bug that caused an incorrect code to be set for active/bootable
+  partitions when generating a hybrid MBR.
+
+- Enable entry of hex codes that begin with "0x" for both GPT and MBR
+  partitions.
+
+- Fixed bug that caused the boot loader code to be lost when creating a
+  hybrid MBR.
+
+- Fixed bug in sector input code that could produce improper values
+  if the user inputs ridiculously large "+" values.
+
 0.7.1 (3/21/2011):
 ------------------
 

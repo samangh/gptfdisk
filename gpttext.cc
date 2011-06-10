@@ -400,7 +400,11 @@ void GPTDataTextUI::MakeHybrid(void) {
         << "just hit the Enter key at the below prompt and your MBR partition table will\n"
         << "be untouched.\n\n\a";
 
-   hybridMBR.SetDisk(&myDisk);
+   // Use a local MBR structure, copying from protectiveMBR to keep its
+   // boot loader code intact....
+   hybridMBR = protectiveMBR;
+   hybridMBR.EmptyMBR(0);
+
    // Now get the numbers of up to three partitions to add to the
    // hybrid MBR....
    cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
@@ -424,9 +428,9 @@ void GPTDataTextUI::MakeHybrid(void) {
          hybridPart.SetInclusion(PRIMARY);
          cout << "Set the bootable flag? ";
          if (GetYN() == 'Y')
-            hybridPart.SetStatus(1);
+            hybridPart.SetStatus(0x80);
          else
-            hybridPart.SetStatus(0);
+            hybridPart.SetStatus(0x00);
          hybridPart.SetInclusion(PRIMARY);
       } else {
          cerr << "\nGPT partition #" << j + 1 << " does not exist; skipping.\n";
@@ -478,7 +482,7 @@ void GPTDataTextUI::MakeHybrid(void) {
 int GPTDataTextUI::XFormToMBR(void) {
    uint32_t i;
 
-   protectiveMBR.EmptyMBR();
+   protectiveMBR.EmptyMBR(0);
    for (i = 0; i < numParts; i++) {
       if (partitions[i].IsUsed()) {
          protectiveMBR.MakePart(i, partitions[i].GetFirstLBA(),

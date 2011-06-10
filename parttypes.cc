@@ -195,6 +195,8 @@ int PartType::AddType(uint16_t mbrType, const char * guidData, const char * name
       } // if/else
       lastType = tempType;
    } else {
+      cerr << "Unable to allocate memory in PartType::AddType()! Partition type list will\n";
+      cerr << "be incomplete!\n";
       allOK = 0;
    } // if/else
    return allOK;

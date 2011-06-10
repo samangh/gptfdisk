@@ -15,8 +15,6 @@
 
 using namespace std;
 
-// class PartNotes;
-
 /****************************************
  *                                      *
  * MBRData class and related structures *
