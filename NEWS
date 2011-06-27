@@ -1,5 +1,30 @@
-0.7.2 (?/??/2011):
+0.7.2 (6/26/2011):
 ------------------
+
+- The Windows version now (finally!) generates proper GUIDs rather than a
+  purely random number. This fixes a bug that caused Windows 7 to crash
+  when converting a disk from MBR format (but, oddly, not when creating a
+  fresh partition table or doing various other things).
+
+- Added a warning when an MBR partition is discarded because it's too
+  big for the disk.
+
+- Changed warning to Windows users about the dangers of converting to GPT
+  so that it appears only on disks that aren't already in GPT form.
+
+- Fixed bug that caused bogus "3" values to pad the ends of partition names
+  on some disks (particularly those created by Microsoft's disk
+  partitioning tools).
+
+- Made compilation without Unicode support possible (see README file)
+
+- Made default filesystem type code OS-dependent (based on the compilation
+  platform).
+
+- Added new Linux-only filesystem partition type GUID code,
+  0FC63DAF-8483-4772-8E79-3D69D8477DE4 (8300 entry code). Also changed name
+  of the EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 (0700 entry code) to
+  "Microsoft basic data").
 
 - Fixed a bug that caused an incorrect code to be set for active/bootable
   partitions when generating a hybrid MBR.

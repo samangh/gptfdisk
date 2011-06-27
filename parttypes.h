@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#ifndef _WIN32
+#ifdef USE_UTF16
 #include <unicode/ustream.h>
 #else
 #define UnicodeString string

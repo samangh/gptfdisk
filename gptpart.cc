@@ -15,7 +15,7 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-#ifndef _WIN32
+#ifdef USE_UTF16
 #include <unicode/ustdio.h>
 #else
 #define UnicodeString string
@@ -68,7 +68,7 @@ uint64_t GPTPart::GetLengthLBA(void) const {
    return length;
 } // GPTPart::GetLengthLBA()
 
-#ifndef _WIN32
+#ifdef USE_UTF16
 // Return partition's name field, converted to a Unicode string
 UnicodeString GPTPart::GetDescription(void) {
    return (UChar*) name;
@@ -77,13 +77,13 @@ UnicodeString GPTPart::GetDescription(void) {
 // Return partition's name field, converted to a C++ ASCII string
 string GPTPart::GetDescription(void) {
    string theName;
-   int i;
+   int i = 0;
 
    theName = "";
-   for (i = 0; i < NAME_SIZE; i += 2) {
-      if (name[i] != '\0')
-         theName += name[i];
-   } // for
+   while ((i < NAME_SIZE) && (name[i] != '\0')) {
+      theName += name[i];
+      i+=2;
+   } // while
    return theName;
 } // GPTPart::GetDescription() (Windows version)
 #endif
@@ -103,7 +103,7 @@ void GPTPart::SetType(PartType t) {
    partitionType = t;
 } // GPTPart::SetType()
 
-#ifndef _WIN32
+#ifdef USE_UTF16
 // Set the name for a partition to theName, using a C++-style string as
 // input.
 void GPTPart::SetName(const string & theName) {
@@ -120,7 +120,9 @@ void GPTPart::SetName(const UnicodeString & theName) {
       theName.extractBetween(0, NAME_SIZE / 2 - 1, (UChar*) name);
    } // if/else
 } // GPTPart::SetName()
+
 #else
+
 // Set the name for a partition to theName. Note that theName is a
 // standard C++-style ASCII string, although the GUID partition definition
 // requires a UTF-16LE string. This function creates a simple-minded copy
@@ -190,7 +192,7 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout.setf(ios::uppercase);
       cout << hex << partitionType.GetHexType() << "  " << dec;
       cout.fill(' ');
-#ifndef _WIN32
+#ifdef USE_UTF16
       GetDescription().extractBetween(0, 23, description);
       cout << description << "\n";
 #else
@@ -273,13 +275,13 @@ void GPTPart::ChangeType(void) {
 
    cout << "Current type is '" << GetTypeName() << "'\n";
    do {
-      cout << "Hex code or GUID (L to show codes, Enter = 0700): ";
+      cout << "Hex code or GUID (L to show codes, Enter = " << hex << DEFAULT_TYPE << dec << "): ";
       line = ReadString();
       if ((line[0] == 'L') || (line[0] == 'l')) {
          partitionType.ShowAllTypes();
       } else {
          if (line.length() == 0)
-            tempType = 0x0700;
+            tempType= DEFAULT_TYPE;
          else
             tempType = line;
       } // if/else

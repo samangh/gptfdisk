@@ -73,21 +73,21 @@ void PartType::AddAllTypes(void) {
    AddType(0x0000, "00000000-0000-0000-0000-000000000000", "Unused entry", 0);
 
    // DOS/Windows partition types, which confusingly Linux also uses in GPT
-   AddType(0x0100, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-12
-   AddType(0x0400, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-16 < 32M
-   AddType(0x0600, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-16
-   AddType(0x0700, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 1); // NTFS (or HPFS)
-   AddType(0x0b00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-32
-   AddType(0x0c00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-32 LBA
+   AddType(0x0100, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-12
+   AddType(0x0400, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-16 < 32M
+   AddType(0x0600, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-16
+   AddType(0x0700, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 1); // NTFS (or HPFS)
+   AddType(0x0b00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-32
+   AddType(0x0c00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-32 LBA
    AddType(0x0c01, "E3C9E316-0B5C-4DB8-817D-F92DF00215AE", "Microsoft reserved");
-   AddType(0x0e00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // FAT-16 LBA
-   AddType(0x1100, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-12
-   AddType(0x1400, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-16 < 32M
-   AddType(0x1600, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-16
-   AddType(0x1700, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden NTFS (or HPFS)
-   AddType(0x1b00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-32
-   AddType(0x1c00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-32 LBA
-   AddType(0x1e00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Hidden FAT-16 LBA
+   AddType(0x0e00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-16 LBA
+   AddType(0x1100, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // Hidden FAT-12
+   AddType(0x1400, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // Hidden FAT-16 < 32M
+   AddType(0x1600, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // Hidden FAT-16
+   AddType(0x1700, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // Hidden NTFS (or HPFS)
+   AddType(0x1b00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // Hidden FAT-32
+   AddType(0x1c00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // Hidden FAT-32 LBA
+   AddType(0x1e00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // Hidden FAT-16 LBA
    AddType(0x2700, "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC", "Windows RE");
    AddType(0x4200, "AF9B60A0-1431-4F62-BC68-3311714A69AD", "Windows LDM data"); // Logical disk manager
    AddType(0x4201, "5808C8AA-7E8F-42E0-85D2-E1E90434CFB3", "Windows LDM metadata"); // Logical disk manager
@@ -107,7 +107,8 @@ void PartType::AddAllTypes(void) {
 
    // Linux-specific partition types....
    AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris)
-   AddType(0x8300, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Linux native
+   AddType(0x8300, "0FC63DAF-8483-4772-8E79-3D69D8477DE4", "Linux filesystem"); // Linux native
+//   AddType(0x8300, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Linux native
    AddType(0x8301, "8DA63339-0007-60C0-C436-083AC8230908", "Linux reserved");
    AddType(0x8e00, "E6D6D379-F507-44C2-A23C-238F2A3DF928", "Linux LVM");
 
@@ -241,18 +242,18 @@ PartType & PartType::operator=(uint16_t ID) {
    } // while
    if (!found) {
       // Assign a default value....
-      GUIDData::operator=("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"); // 0700, Linux/Windows data
+      operator=(DEFAULT_TYPE);
       cout.setf(ios::uppercase);
       cout.fill('0');
       cout << "Exact type match not found for type code ";
       cout.width(4);
-      cout << hex << ID << "; assigning type code for\n'Linux/Windows data'\n" << dec;
+      cout << hex << ID << "; assigning type code for\n'" << TypeName() << "'\n" << dec;
       cout.fill(' ');
    } // if (!found)
    return *this;
 } // PartType::operator=(uint16_t ID)
 
-// Return the English description of the partition type (e.g., "Linux/Windows data")
+// Return the English description of the partition type (e.g., "Linux filesystem")
 string PartType::TypeName(void) const {
    AType* theItem = allTypes;
    int found = 0;
@@ -272,7 +273,7 @@ string PartType::TypeName(void) const {
    return typeName;
 } // PartType::TypeName()
 
-// Return the Unicode description of the partition type (e.g., "Linux/Windows data")
+// Return the Unicode description of the partition type (e.g., "Linux filesystem")
 UnicodeString PartType::UTypeName(void) const {
    AType* theItem = allTypes;
    int found = 0;

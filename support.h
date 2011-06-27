@@ -8,20 +8,24 @@
 #ifndef __GPTSUPPORT
 #define __GPTSUPPORT
 
-#define GPTFDISK_VERSION "0.7.1.1"
+#define GPTFDISK_VERSION "0.7.2"
 
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
-// Darwin (Mac OS) only: disk IOCTLs are different, and there is no lseek64
-// This used to use __DARWIN_UNIX03 rather than __APPLE__, but __APPLE__
-// is more general. If the code fails to work on older versions of OS X/
-// Darwin, this may need to be changed back (and in various .cc files).
+// Darwin (Mac OS) & FreeBSD: disk IOCTLs are different, and there is no lseek64
 #include <sys/disk.h>
 #define lseek64 lseek
 #endif
 
-// Linux only....
-#ifdef __linux__
-#include <linux/fs.h>
+#if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
+#define DEFAULT_TYPE 0xA503
+#endif
+
+#ifdef __APPLE__
+#define DEFAULT_TYPE 0xAF00
+#endif
+
+#ifdef _WIN32
+#define DEFAULT_TYPE 0x0700
 #endif
 
 // Microsoft Visual C++ only
@@ -31,15 +35,22 @@
 #define sprintf sprintf_s
 #endif
 
+// Linux only....
+#ifdef __linux__
+#include <linux/fs.h>
+#define DEFAULT_TYPE 0x8300
+#endif
+
+#ifndef DEFAULT_TYPE
+#define DEFAULT_TYPE 0x8300
+#endif
+
 // Set this as a default
 #define SECTOR_SIZE UINT32_C(512)
 
 // Signatures for Apple (APM) disks, multiplied by 0x100000000
 #define APM_SIGNATURE1 UINT64_C(0x00004D5000000000)
 #define APM_SIGNATURE2 UINT64_C(0x0000535400000000)
-
-// Maximum line length on some input functions
-#define MAX_LINE_LENGTH 255
 
 /**************************
  * Some GPT constants.... *

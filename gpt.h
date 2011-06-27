@@ -155,9 +155,10 @@ public:
    void MakeProtectiveMBR(void) {protectiveMBR.MakeProtectiveMBR();}
    void RecomputeCHS(void);
    int Align(uint64_t* sector);
-
-   // Return data about the GPT structures....
    void SetProtectiveMBR(BasicMBRData & newMBR) {protectiveMBR = newMBR;}
+   
+   // Return data about the GPT structures....
+   WhichToUse GetState(void) {return whichWasUsed;}
    int GetPartRange(uint32_t* low, uint32_t* high);
    int FindFirstFreePart(void);
    uint32_t GetNumParts(void) {return mainHeader.numParts;}

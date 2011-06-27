@@ -38,19 +38,22 @@ int main(int argc, char* argv[]) {
 
    switch (argc) {
       case 1:
-         WinWarning();
          cout << "Type device filename, or press <Enter> to exit: ";
          device = ReadString();
          if (device.length() == 0)
             exit(0);
          else if (theGPT.LoadPartitions(device)) {
+            if (theGPT.GetState() != use_gpt)
+               WinWarning();
             MainMenu(device, &theGPT);
          } // if/elseif
          break;
       case 2: // basic usage
-         WinWarning();
-         if (theGPT.LoadPartitions(argv[1]))
+         if (theGPT.LoadPartitions(argv[1])) {
+            if (theGPT.GetState() != use_gpt)
+               WinWarning();
             MainMenu(argv[1], &theGPT);
+         } // if
          break;
       case 3: // usage with "-l" option
          if (strcmp(argv[1], "-l") == 0) {
@@ -433,8 +436,8 @@ void WinWarning(void) {
    cout << "\a************************************************************************\n"
    << "Most versions of Windows cannot boot from a GPT disk, and most varieties\n"
    << "prior to Vista cannot read GPT disks. Therefore, you should exit now\n"
-   << "unless you understand the implications of converting MBR to GPT, editing\n"
-   << "an existing GPT disk, or creating a new GPT disk layout!\n"
+   << "unless you understand the implications of converting MBR to GPT or creating\n"
+   << "a new GPT disk layout!\n"
    << "************************************************************************\n\n";
    cout << "Are you SURE you want to continue? ";
    if (GetYN() != 'Y')

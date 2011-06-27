@@ -323,7 +323,7 @@ GPTPart BSDData::AsGPT(int i) {
          case 27: // FreeBSD ZFS
             guid.SetType(0xa504); break;
          default:
-            guid.SetType(0x0700); break;
+            guid.SetType(0xa503); break;
       } // switch
       // Set the partition name to the name of the type code....
       guid.SetName(guid.GetTypeName());

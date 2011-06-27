@@ -15,7 +15,7 @@ DEPEND= makedepend $(CFLAGS)
 all:	gdisk fixparts
 
 gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
-	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o -luuid -static-libgcc -o gdisk.exe
+	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o -lrpcrt4 -static-libgcc -o gdisk.exe
 
 sgdisk: $(LIB_OBJS) sgdisk.o
 	$(CXX) $(LIB_OBJS) sgdisk.o -lpopt -static-libgcc -o sgdisk.exe

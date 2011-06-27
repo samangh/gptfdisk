@@ -230,7 +230,8 @@ void DiskIO::DiskSync(void) {
       platformFound++;
 #endif
 #ifdef __linux__
-      sleep(2);
+      sleep(1); // Theoretically unnecessary, but ioctl() fails sometimes if omitted....
+      fsync(fd);
       i = ioctl(fd, BLKRRPART);
       if (i)
          cout << "Warning: The kernel is still using the old partition table.\n"

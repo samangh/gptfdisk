@@ -74,7 +74,7 @@ class GPTPart {
       void SetAttributes(uint64_t a) {attributes = a;}
       void SetAttributes(void) {attributes.ChangeAttributes();}
       void SetName(const string & theName);
-#ifndef _WIN32
+#ifdef USE_UTF16
       void SetName(const UnicodeString & theName);
 #endif
       void SetDefaultDescription(void);

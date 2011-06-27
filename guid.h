@@ -5,7 +5,7 @@
 // Implements the GUIDData data structure and support methods
 //
 //
-// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2010
+// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2010-2011
 //
 // Copyright: See COPYING file that comes with this distribution
 //
@@ -18,10 +18,14 @@
 #include <string>
 
 // Have to play games with uuid_t since it's defined in incompatible ways
-// for Unix (libuuid) vs. Windows
+// for Unix (libuuid) vs. Windows (in rpc.h)
 #ifdef _WIN32
+#include <rpc.h>
+   #ifdef _MSC_VER
+   #pragma comment(lib, "Rpcrt4.lib")
+   #endif
 typedef unsigned char my_uuid_t[16];
-#else
+#else // Not Windows
 #include <uuid/uuid.h>
 typedef uuid_t my_uuid_t;
 #endif

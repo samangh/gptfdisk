@@ -1,6 +1,6 @@
 .\" Copyright 2011 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.7.1" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.7.2" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -286,20 +286,20 @@ but the original disk is not recommended.
 
 .TP 
 .B \-L, \-\-list\-types
-Display a summary of partition types. GPT uses a GUID to identify
-partition types for particular OSes and purposes. For ease of data entry,
+Display a summary of partition types. GPT uses a GUID to identify partition
+types for particular OSes and purposes. For ease of data entry,
 \fBsgdisk\fR compresses these into two\-byte (four\-digit hexadecimal)
 values that are related to their equivalent MBR codes. Specifically, the
 MBR code is multiplied by hexadecimal 0x0100. For instance, the code for
-Linux swap space in MBR is 0x82, and it's 0x8200 in \fBgdisk\fR.
-A one\-to\-one correspondence is impossible, though. Most notably, many DOS,
-Windows, and Linux data partition codes correspond to a single GPT code
+Linux swap space in MBR is 0x82, and it's 0x8200 in \fBgdisk\fR. A
+one\-to\-one correspondence is impossible, though. Most notably, the codes
+for all varieties of FAT and NTFS partition correspond to a single GPT code
 (entered as 0x0700 in \fBsgdisk\fR). Some OSes use a single MBR code but
-employ many more codes in GPT. For these, \fBsgdisk\fR
-adds code numbers sequentially, such as 0xa500 for a FreeBSD disklabel,
-0xa501 for FreeBSD boot, 0xa502 for FreeBSD swap, and so on. Note that
-these two\-byte codes are unique to \fBgdisk\fR and \fBsgdisk\fR. This
-option does not require you to specify a valid disk device filename.
+employ many more codes in GPT. For these, \fBsgdisk\fR adds code numbers
+sequentially, such as 0xa500 for a FreeBSD disklabel, 0xa501 for FreeBSD
+boot, 0xa502 for FreeBSD swap, and so on. Note that these two\-byte codes
+are unique to \fBgdisk\fR and \fBsgdisk\fR. This option does not require
+you to specify a valid disk device filename.
 
 .TP 
 .B \-m, \-\-gpttombr
@@ -470,7 +470,7 @@ Non\-GPT disk detected and no \fI\-g\fR option
 .B 4
 An error prevented saving changes
 .SH "BUGS"
-As of March 2011 (version 0.7.1), \fBsgdisk\fR
+As of June 2011 (version 0.7.2), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 

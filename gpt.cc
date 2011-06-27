@@ -1669,7 +1669,7 @@ uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64
          if (FindLastInFree(startSector) >= endSector) {
             partitions[partNum].SetFirstLBA(startSector);
             partitions[partNum].SetLastLBA(endSector);
-            partitions[partNum].SetType(0x0700);
+            partitions[partNum].SetType(DEFAULT_TYPE);
             partitions[partNum].RandomizeUniqueGUID();
          } else retval = 0; // if free space until endSector
       } else retval = 0; // if startSector is free
@@ -1858,10 +1858,9 @@ void GPTData::RecomputeCHS(void) {
 // was unchanged.
 int GPTData::Align(uint64_t* sector) {
    int retval = 0, sectorOK = 0;
-   uint64_t earlier, later, testSector, original;
+   uint64_t earlier, later, testSector;
 
    if ((*sector % sectorAlignment) != 0) {
-      original = *sector;
       earlier = (*sector / sectorAlignment) * sectorAlignment;
       later = earlier + (uint64_t) sectorAlignment;
 

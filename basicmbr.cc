@@ -130,9 +130,9 @@ int BasicMBRData::ReadMBRData(const string & deviceFilename) {
 
 // Read data from MBR. If checkBlockSize == 1 (the default), the block
 // size is checked; otherwise it's set to the default (512 bytes).
-// Note that any extended partition(s) present will be explicitly stored
-// in the partitions[] array, along with their contained partitions; the
-// extended container partition(s) should be ignored by other functions.
+// Note that any extended partition(s) present will be omitted from
+// in the partitions[] array; these partitions must be re-created when
+// the partition table is saved in MBR format.
 int BasicMBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
    int allOK = 1, i, logicalNum = 0;
    int err = 1;
@@ -1100,7 +1100,8 @@ void BasicMBRData::SortMBR(int start) {
 
 // Delete any partitions that are too big to fit on the disk
 // or that are too big for MBR (32-bit limits).
-// This really deletes the partitions by setting values to 0.
+// This deletes the partitions by setting values to 0, not just
+// by setting them as being omitted.
 // Returns the number of partitions deleted in this way.
 int BasicMBRData::DeleteOversizedParts() {
    int num = 0, i;
@@ -1108,6 +1109,8 @@ int BasicMBRData::DeleteOversizedParts() {
    for (i = 0; i < MAX_MBR_PARTS; i++) {
       if ((partitions[i].GetStartLBA() > diskSize) || (partitions[i].GetLastLBA() > diskSize) ||
           (partitions[i].GetStartLBA() > UINT32_MAX) || (partitions[i].GetLengthLBA() > UINT32_MAX)) {
+         cerr << "\aWarning: Deleting oversized partition #" << i + 1 << "! Start = "
+              << partitions[i].GetStartLBA() << ", length = " << partitions[i].GetLengthLBA() << "\n";
          partitions[i].Empty();
          num++;
       } // if

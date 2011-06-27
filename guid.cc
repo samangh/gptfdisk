@@ -128,20 +128,35 @@ void GUIDData::Zero(void) {
 // Set a completely random GUID value....
 // The uuid_generate() function returns a value that needs to have its
 // first three fields byte-reversed to conform to Intel's GUID layout.
-// If that function isn't defined (e.g., on Windows), set a completely
-// random GUID -- not completely kosher, but it doesn't seem to cause
-// any problems (so far...)
+// The Windows UuidCreate() function doesn't need this adjustment. If
+// neither function is defined, or if UuidCreate() fails, set a completely
+// random GUID -- not completely kosher, but it works on most platforms
+// (immediately after creating the UUID on Windows 7 being an important
+// exception).
 void GUIDData::Randomize(void) {
+   int i, uuidGenerated = 0;
+
 #ifdef _UUID_UUID_H
    uuid_generate(uuidData);
    ReverseBytes(&uuidData[0], 4);
    ReverseBytes(&uuidData[4], 2);
    ReverseBytes(&uuidData[6], 2);
-#else
-   int i;
-   for (i = 0; i < 16; i++)
-      uuidData[i] = (unsigned char) (256.0 * (rand() / (RAND_MAX + 1.0)));
+   uuidGenerated = 1;
 #endif
+#if defined (_RPC_H) || defined (__RPC_H__)
+   UUID MsUuid;
+   if (UuidCreate(&MsUuid) == RPC_S_OK) {
+      memcpy(uuidData, &MsUuid, 16);
+      uuidGenerated = 1;
+   } // if
+#endif
+
+   if (!uuidGenerated) {
+      cerr << "Warning! Unable to generate a proper UUID! Creating an improper one as a last\n"
+           << "resort! Windows 7 may crash if you save this partition table!\a\n";
+      for (i = 0; i < 16; i++)
+         uuidData[i] = (unsigned char) (256.0 * (rand() / (RAND_MAX + 1.0)));
+   } // if
 } // GUIDData::Randomize
 
 // Equality operator; returns 1 if the GUIDs are equal, 0 if they're unequal
