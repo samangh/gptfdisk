@@ -1,10 +1,10 @@
-GPT fdisk (aka gdisk and sgdisk) and FixParts
+GPT fdisk (aka gdisk, cgdisk, and sgdisk) and FixParts
 by Roderick W. Smith, rodsmith@rodsbooks.com
 
 Introduction
 ------------
 
-This package includes the source code for three related disk partitioning
+This package includes the source code for four related disk partitioning
 programs:
 
 - gdisk -- This program is modeled after Linux fdisk, but it operates on
@@ -14,13 +14,20 @@ programs:
   those partitions (usually filesystems, but sometimes swap space or other
   data).
 
+- cgdisk -- This program is modeled after Linux cfdisk, but it operates on
+  GPT disks rather than the MBR disks that cfdisk modifies. As such, cgdisk
+  is a curses-based text-mode tool for manipulating partitions, which is to
+  say that it uses an interface that relies on arrow keys and a dynamic
+  display rather than the command letters and a scrolling display like
+  gdisk uses.
+
 - sgdisk -- This program is conceptually similar to the Linux sfdisk and
   FreeBSD gpt programs, but its operational details differ. It enables
   manipulation of GPT disks using command-line options, so it's suitable
   for use in scripts or by experts to perform specific tasks that might
   take several commands in gdisk to accomplish.
 
-- fixparts -- This program, unlike the preceding two, operates on MBR
+- fixparts -- This program, unlike the preceding three, operates on MBR
   disks. It's intended to fix certain problems that can be created by
   various utilities. Specifically, it can fix mis-sized extended partitions
   and primary partitions located in the middle of extended partitions. It
@@ -31,19 +38,21 @@ programs:
 
 More details about the abilities of these tools follows.
 
-All three programs rely on the same set of underlying code base; they
-differ only in their control interfaces (defined in gdisk.cc, sgdisk.cc,
-and fixparts.cc, respectively) and in which support code they use.
+All four programs rely on the same set of underlying code base; they differ
+only in their control interfaces (defined in gdisk.cc, cgdisk.cc,
+sgdisk.cc, and fixparts.cc, respectively) and in which support code they
+use.
 
-GPT fdisk (gdisk and sgdisk) Details
-------------------------------------
+GPT fdisk (gdisk, cgdisk, and sgdisk) Details
+---------------------------------------------
 
 The gdisk program is intended as a (somewhat) fdisk-workalike program for
-GPT-partitioned disks, and sgdisk provides most of gdisk's functionality in
-a more script-friendly program. Although libparted and programs that use it
-(GNU Parted, gparted, etc.) provide the ability to handle GPT disks, they
-have certain limitations that gdisk overcomes. Specific advantages of gdisk
-and sgdisk include:
+GPT-partitioned disks, cgdisk is similarly a workalike for fdisk, and
+sgdisk provides most of gdisk's functionality in a more script-friendly
+program. Although libparted and programs that use it (GNU Parted, gparted,
+etc.) provide the ability to handle GPT disks, they have certain
+limitations that gdisk overcomes. Specific advantages of gdisk, cgdisk, and
+sgdisk include:
 
 * The ability to convert MBR-partitioned disks in-place to GPT format,
   without losing data
@@ -52,6 +61,7 @@ and sgdisk include:
   partitions, without losing data
 
 * The ability to convert from GPT format to MBR format without data loss
+  (gdisk and sgdisk only)
 
 * More flexible specification of filesystem type code GUIDs, which
   GNU Parted tends to corrupt
@@ -60,12 +70,12 @@ and sgdisk include:
   disk
 
 * A user interface that's familiar to long-time users of Linux
-  fdisk (gdisk only)
+  fdisk and cfdisk (gdisk and cgdisk only)
 
 * The MBR boot loader code is left alone
 
-* The ability to create a hybrid MBR, which permits GPT-unaware
-  OSes to access up to three GPT partitions on the disk
+* The ability to create a hybrid MBR, which permits GPT-unaware OSes to
+  access up to three GPT partitions on the disk (gdisk and sgdisk only)
 
 Of course, GPT fdisk isn't without its limitations. Most notably, it lacks
 the filesystem awareness and filesystem-related features of GNU Parted. You
@@ -73,11 +83,12 @@ can't resize a partition's filesystem or create a partition with a
 filesystem already in place with gdisk, for instance. There's no GUI
 version of gdisk.
 
-The GPT fdisk package provides two program files: the interactive text-mode
-gdisk and the command-line-driven sgdisk. The former is intended for use in
-manually partitioning disks or changing partitioning details; the latter is
-intended for use in scripts to help automate tasks such as disk cloning or
-preparing multiple disks for Linux installation.
+The GPT fdisk package provides three program files: the interactive
+text-mode gdisk, the curses-based interactive cgdisk, and the
+command-line-driven sgdisk. The first two are intended for use in manually
+partitioning disks or changing partitioning details; sgdisk is intended for
+use in scripts to help automate tasks such as disk cloning or preparing
+multiple disks for Linux installation.
 
 FixParts Details
 ----------------
@@ -171,15 +182,25 @@ used.) In addition, note these requirements:
   platforms) from the compilation options. Suitable lines are present, but
   commented out, in the Makefile, Makefile.mac, and Makefile.bsd files.
 
-* The sgdisk program also requires the popt library and its development
-  files (headers). Most Linux distributions install popt by default, but
-  you may need to install a package called popt-dev, popt-devel, or
-  something similar to obtain the header files. Mac OS users can find a
-  version of popt for Mac OS from Drawin Ports (http://popt.darwinports.com)
-  or Fink (http://www.finkproject.org); however, you'll first need to
-  install DarwinPorts or Fink (instructions exist on the relevant projects'
-  pages). Alternatively, you can compile gdisk alone, without sgdisk; gdisk
-  doesn't require popt.
+* The cgdisk program requires the ncurses library and its development files
+  (headers). Most Linux distributions install ncurses by default, but you
+  may need to install a package called libncurses5-dev, ncurses-devel, or
+  something similar to obtain the header files. These files were installed
+  already on my Mac OS X development system; however, they may have been
+  installed as dependencies of other programs I've installed. If you're
+  having problems installing ncurses, you can compile gdisk and/or sgdisk
+  without cgdisk by specifying only the targets you want to compile to
+  make.
+
+* The sgdisk program requires the popt library and its development files
+  (headers). Most Linux distributions install popt by default, but you may
+  need to install a package called popt-dev, popt-devel, or something
+  similar to obtain the header files. Mac OS users can find a version of
+  popt for Mac OS from Darwin Ports (http://popt.darwinports.com) or Fink
+  (http://www.finkproject.org); however, you'll first need to install
+  DarwinPorts or Fink (instructions exist on the relevant projects' pages).
+  Alternatively, you can compile gdisk and/or cgdisk alone, without sgdisk;
+  gdisk doesn't require popt.
 
 When all the necessary development tools and libraries are installed, you
 can uncompress the package and type "make" at the command prompt in the
@@ -188,11 +209,12 @@ X, "make -f Makefile.freebsd" on FreeBSD, or "make -f Makefile.mingw" to
 compile using MinGW for Windows.) You may also need to add header (include)
 directories or library directories by setting the CXXFLAGS environment
 variable or by editing the Makefile. The result should be program files
-called gdisk, sgdisk, and fixparts. Typing "make gdisk", "make sgdisk", or
-"make fixparts" will compile only the requested programs. You can use these
-programs in place or copy the files to a suitable directory, such as
-/usr/local/sbin. You can copy the man pages (gdisk.8, sgdisk.8, and
-fixparts.8) to /usr/local/man/man8 to make them available.
+called gdisk, sgdisk, and fixparts. Typing "make gdisk", "make cgdisk",
+"make sgdisk", or "make fixparts" will compile only the requested programs.
+You can use these programs in place or copy the files to a suitable
+directory, such as /usr/local/sbin. You can copy the man pages (gdisk.8,
+cgdisk.8, sgdisk.8, and fixparts.8) to /usr/local/man/man8 to make them
+available.
 
 Caveats
 -------
@@ -241,3 +263,5 @@ Additional code contributors include:
 - Dwight Schauer (dschauer@ti.com)
 
 - Florian Zumbiehl (florz@florz.de)
+
+- Guillaume Delacour (contributed the gdisk_test.sh script)
