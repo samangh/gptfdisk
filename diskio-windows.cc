@@ -158,9 +158,11 @@ uint32_t DiskIO::GetNumSecsPerTrack(void) {
 
 // Resync disk caches so the OS uses the new partition table. This code varies
 // a lot from one OS to another.
-void DiskIO::DiskSync(void) {
+// Returns 1 on success, 0 if the kernel continues to use the old partition table.
+int DiskIO::DiskSync(void) {
    DWORD i;
    GET_LENGTH_INFORMATION buf;
+   int retval = 0;
 
    // If disk isn't open, try to open it....
    if (!openForWrite) {
@@ -174,12 +176,14 @@ void DiskIO::DiskSync(void) {
       } else {
          cout << "Disk synchronization succeeded! The computer should now use the new\n"
               << "partition table.\n";
+         retval = 1;
       } // if/else
    } else {
       cout << "Unable to open the disk for synchronization operation! The computer will\n"
            << "continue to use the old partition table until you reboot or remove and\n"
            << "re-insert the disk!\n";
    } // if (isOpen)
+   return retval;
 } // DiskIO::DiskSync()
 
 // Seek to the specified sector. Returns 1 on success, 0 on failure.

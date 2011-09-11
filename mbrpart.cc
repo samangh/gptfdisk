@@ -121,10 +121,11 @@ bool MBRPart::operator<(const MBRPart &other) const {
  *                                                *
  **************************************************/
 
-void MBRPart::SetGeometry(uint32_t heads, uint32_t sectors, uint64_t diskSize,
-                          uint32_t blockSize) {
+void MBRPart::SetGeometry(uint32_t heads, uint32_t sectors, uint64_t ds, uint32_t bs) {
    numHeads = heads;
    numSecspTrack = sectors;
+   diskSize = ds;
+   blockSize = bs;
 } // MBRPart::SetGeometry
 
 // Empty the partition (zero out all values).
@@ -173,20 +174,23 @@ void MBRPart::SetLengthLBA(uint64_t length) {
 // values, sets them directly, and sets the CHS values based on the LBA
 // values and the current geometry settings.
 void MBRPart::SetLocation(uint64_t start, uint64_t length) {
+   int validCHS;
+
    if ((start > UINT32_MAX) || (length > UINT32_MAX)) {
       cerr << "Partition values out of range in MBRPart::SetLocation()!\n"
            << "Continuing, but strange problems are now likely!\n";
    } // if
    firstLBA = (uint32_t) start;
    lengthLBA = (uint32_t) length;
-   RecomputeCHS();
+   validCHS = RecomputeCHS();
 
    // If this is a complete 0xEE protective MBR partition, max out its
    // CHS last sector value, as per the GPT spec. (Set to 0xffffff,
    // although the maximum legal MBR value is 0xfeffff, which is
    // actually what GNU Parted and Apple's Disk Utility use, in
    // violation of the GPT spec.)
-   if ((partitionType == 0xEE) && (firstLBA == 1) && (lengthLBA == diskSize - 2)) {
+   if ((partitionType == 0xEE) && (!validCHS) && (firstLBA == 1) &&
+       ((lengthLBA == diskSize - 1) || (lengthLBA == UINT32_MAX))) {
       lastSector[0] = lastSector[1] = lastSector[2] = 0xFF;
    } // if
 } // MBRPart::SetLocation()
@@ -234,11 +238,17 @@ int MBRPart::DoTheyOverlap (const MBRPart& other) {
  *                                               *
  *************************************************/
 
-void MBRPart::RecomputeCHS(void) {
+// Recompute the CHS values for the start and end points.
+// Returns 1 if both computed values are within the range
+// that can be expressed by that CHS, 0 otherwise.
+int MBRPart::RecomputeCHS(void) {
+   int retval = 1;
+
    if (lengthLBA > 0) {
-      LBAtoCHS(firstLBA, firstSector);
-      LBAtoCHS(firstLBA + lengthLBA - 1, lastSector);
+      retval = LBAtoCHS(firstLBA, firstSector);
+      retval *= LBAtoCHS(firstLBA + lengthLBA - 1, lastSector);
    } // if
+   return retval;
 } // MBRPart::RecomputeCHS()
 
 // Converts 32-bit LBA value to MBR-style CHS value. Returns 1 if conversion

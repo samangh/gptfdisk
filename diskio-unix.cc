@@ -203,8 +203,11 @@ uint32_t DiskIO::GetNumSecsPerTrack(void) {
 
 // Resync disk caches so the OS uses the new partition table. This code varies
 // a lot from one OS to another.
-void DiskIO::DiskSync(void) {
-   int i, platformFound = 0;
+// Returns 1 on success, 0 if the kernel continues to use the old partition table.
+// (Note that for most OSes, the default of 0 is returned because I've not yet
+// looked into how to test for success in the underlying system calls...)
+int DiskIO::DiskSync(void) {
+   int i, retval = 0, platformFound = 0;
 
    // If disk isn't open, try to open it....
    if (!isOpen) {
@@ -233,9 +236,12 @@ void DiskIO::DiskSync(void) {
       sleep(1); // Theoretically unnecessary, but ioctl() fails sometimes if omitted....
       fsync(fd);
       i = ioctl(fd, BLKRRPART);
-      if (i)
+      if (i) {
          cout << "Warning: The kernel is still using the old partition table.\n"
               << "The new table will be used at the next reboot.\n";
+      } else {
+         retval = 1;
+      } // if/else
       platformFound++;
 #endif
       if (platformFound == 0)
@@ -243,6 +249,7 @@ void DiskIO::DiskSync(void) {
       if (platformFound > 1)
          cerr << "\nWarning: We seem to be running on multiple platforms!\n";
    } // if (isOpen)
+   return retval;
 } // DiskIO::DiskSync()
 
 // Seek to the specified sector. Returns 1 on success, 0 on failure.

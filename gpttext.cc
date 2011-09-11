@@ -33,11 +33,11 @@
 
 using namespace std;
 
-/*******************************************
-*                                          *
-* GPTDataText class and related structures *
-*                                          *
-********************************************/
+/********************************************
+ *                                          *
+ * GPTDataText class and related structures *
+ *                                          *
+ ********************************************/
 
 GPTDataTextUI::GPTDataTextUI(void) : GPTData() {
 } // default constructor
@@ -141,7 +141,8 @@ int GPTDataTextUI::XFormDisklabel(void) {
  *                                                                   *
  *********************************************************************/
 
-// Prompts user for partition number and returns the result.
+// Prompts user for partition number and returns the result. Returns "0"
+// (the first partition) if none are currently defined.
 uint32_t GPTDataTextUI::GetPartNum(void) {
    uint32_t partNum;
    uint32_t low, high;
@@ -257,7 +258,6 @@ void GPTDataTextUI::DeletePartition(void) {
 } // GPTDataTextUI::DeletePartition()
 
 // Prompt user for a partition number, then change its type code
-// using ChangeGPTType(struct GPTPartition*) function.
 void GPTDataTextUI::ChangePartType(void) {
    int partNum;
    uint32_t low, high;
@@ -493,6 +493,370 @@ int GPTDataTextUI::XFormToMBR(void) {
    protectiveMBR.MakeItLegal();
    return protectiveMBR.DoMenu();
 } // GPTDataTextUI::XFormToMBR()
+
+
+/*********************************************************************
+ *                                                                   *
+ * The following functions provide the main menus for the gdisk      *
+ * program....                                                       *
+ *                                                                   *
+ *********************************************************************/
+
+// Accept a command and execute it. Returns only when the user
+// wants to exit (such as after a 'w' or 'q' command).
+void GPTDataTextUI::MainMenu(string filename) {
+   int goOn = 1;
+   PartType typeHelper;
+   uint32_t temp1, temp2;
+   
+   do {
+      cout << "\nCommand (? for help): ";
+      switch (ReadString()[0]) {
+         case '\0':
+            break;
+         case 'b': case 'B':
+            cout << "Enter backup filename to save: ";
+            SaveGPTBackup(ReadString());
+            break;
+         case 'c': case 'C':
+            if (GetPartRange(&temp1, &temp2) > 0)
+               SetName(GetPartNum());
+            else
+               cout << "No partitions\n";
+            break;
+         case 'd': case 'D':
+            DeletePartition();
+            break;
+         case 'i': case 'I':
+            ShowDetails();
+            break;
+         case 'l': case 'L':
+            typeHelper.ShowAllTypes();
+            break;
+         case 'n': case 'N':
+            CreatePartition();
+            break;
+         case 'o': case 'O':
+            cout << "This option deletes all partitions and creates a new protective MBR.\n"
+                 << "Proceed? ";
+            if (GetYN() == 'Y') {
+               ClearGPTData();
+               MakeProtectiveMBR();
+            } // if
+            break;
+         case 'p': case 'P':
+            DisplayGPTData();
+            break;
+         case 'q': case 'Q':
+            goOn = 0;
+            break;
+         case 'r': case 'R':
+            RecoveryMenu(filename);
+            goOn = 0;
+            break;
+         case 's': case 'S':
+            SortGPT();
+            cout << "You may need to edit /etc/fstab and/or your boot loader configuration!\n";
+            break;
+         case 't': case 'T':
+            ChangePartType();
+            break;
+         case 'v': case 'V':
+            Verify();
+            break;
+         case 'w': case 'W':
+            if (SaveGPTData() == 1)
+               goOn = 0;
+            break;
+         case 'x': case 'X':
+            ExpertsMenu(filename);
+            goOn = 0;
+            break;
+         default:
+            ShowCommands();
+            break;
+      } // switch
+   } while (goOn);
+} // GPTDataTextUI::MainMenu()
+
+void GPTDataTextUI::ShowCommands(void) {
+   cout << "b\tback up GPT data to a file\n";
+   cout << "c\tchange a partition's name\n";
+   cout << "d\tdelete a partition\n";
+   cout << "i\tshow detailed information on a partition\n";
+   cout << "l\tlist known partition types\n";
+   cout << "n\tadd a new partition\n";
+   cout << "o\tcreate a new empty GUID partition table (GPT)\n";
+   cout << "p\tprint the partition table\n";
+   cout << "q\tquit without saving changes\n";
+   cout << "r\trecovery and transformation options (experts only)\n";
+   cout << "s\tsort partitions\n";
+   cout << "t\tchange a partition's type code\n";
+   cout << "v\tverify disk\n";
+   cout << "w\twrite table to disk and exit\n";
+   cout << "x\textra functionality (experts only)\n";
+   cout << "?\tprint this menu\n";
+} // GPTDataTextUI::ShowCommands()
+
+// Accept a recovery & transformation menu command. Returns only when the user
+// issues an exit command, such as 'w' or 'q'.
+void GPTDataTextUI::RecoveryMenu(string filename) {
+   uint32_t numParts;
+   int goOn = 1, temp1;
+   
+   do {
+      cout << "\nRecovery/transformation command (? for help): ";
+      switch (ReadString()[0]) {
+         case '\0':
+            break;
+         case 'b': case 'B':
+            RebuildMainHeader();
+            break;
+         case 'c': case 'C':
+            cout << "Warning! This will probably do weird things if you've converted an MBR to\n"
+            << "GPT form and haven't yet saved the GPT! Proceed? ";
+            if (GetYN() == 'Y')
+               LoadSecondTableAsMain();
+            break;
+         case 'd': case 'D':
+            RebuildSecondHeader();
+            break;
+         case 'e': case 'E':
+            cout << "Warning! This will probably do weird things if you've converted an MBR to\n"
+            << "GPT form and haven't yet saved the GPT! Proceed? ";
+            if (GetYN() == 'Y')
+               LoadMainTable();
+            break;
+         case 'f': case 'F':
+            cout << "Warning! This will destroy the currently defined partitions! Proceed? ";
+            if (GetYN() == 'Y') {
+               if (LoadMBR(filename) == 1) { // successful load
+                  XFormPartitions();
+               } else {
+                  cout << "Problem loading MBR! GPT is untouched; regenerating protective MBR!\n";
+                  MakeProtectiveMBR();
+               } // if/else
+            } // if
+            break;
+         case 'g': case 'G':
+            numParts = GetNumParts();
+            temp1 = XFormToMBR();
+            if (temp1 > 0)
+               cout << "\nConverted " << temp1 << " partitions. Finalize and exit? ";
+            if ((temp1 > 0) && (GetYN() == 'Y')) {
+               if ((DestroyGPT() > 0) && (SaveMBR())) {
+                  goOn = 0;
+               } // if
+            } else {
+               MakeProtectiveMBR();
+               SetGPTSize(numParts);
+               cout << "Note: New protective MBR created\n\n";
+            } // if/else
+            break;
+         case 'h': case 'H':
+            MakeHybrid();
+            break;
+         case 'i': case 'I':
+            ShowDetails();
+            break;
+         case 'l': case 'L':
+            cout << "Enter backup filename to load: ";
+            LoadGPTBackup(ReadString());
+            break;
+         case 'm': case 'M':
+            MainMenu(filename);
+            goOn = 0;
+            break;
+         case 'o': case 'O':
+            DisplayMBRData();
+            break;
+         case 'p': case 'P':
+            DisplayGPTData();
+            break;
+         case 'q': case 'Q':
+            goOn = 0;
+            break;
+         case 't': case 'T':
+            XFormDisklabel();
+            break;
+         case 'v': case 'V':
+            Verify();
+            break;
+         case 'w': case 'W':
+            if (SaveGPTData() == 1) {
+               goOn = 0;
+            } // if
+            break;
+         case 'x': case 'X':
+            ExpertsMenu(filename);
+            goOn = 0;
+            break;
+         default:
+            ShowRecoveryCommands();
+            break;
+      } // switch
+   } while (goOn);
+} // GPTDataTextUI::RecoveryMenu()
+
+void GPTDataTextUI::ShowRecoveryCommands(void) {
+   cout << "b\tuse backup GPT header (rebuilding main)\n";
+   cout << "c\tload backup partition table from disk (rebuilding main)\n";
+   cout << "d\tuse main GPT header (rebuilding backup)\n";
+   cout << "e\tload main partition table from disk (rebuilding backup)\n";
+   cout << "f\tload MBR and build fresh GPT from it\n";
+   cout << "g\tconvert GPT into MBR and exit\n";
+   cout << "h\tmake hybrid MBR\n";
+   cout << "i\tshow detailed information on a partition\n";
+   cout << "l\tload partition data from a backup file\n";
+   cout << "m\treturn to main menu\n";
+   cout << "o\tprint protective MBR data\n";
+   cout << "p\tprint the partition table\n";
+   cout << "q\tquit without saving changes\n";
+   cout << "t\ttransform BSD disklabel partition\n";
+   cout << "v\tverify disk\n";
+   cout << "w\twrite table to disk and exit\n";
+   cout << "x\textra functionality (experts only)\n";
+   cout << "?\tprint this menu\n";
+} // GPTDataTextUI::ShowRecoveryCommands()
+
+// Accept an experts' menu command. Returns only after the user
+// selects an exit command, such as 'w' or 'q'.
+void GPTDataTextUI::ExpertsMenu(string filename) {
+   GPTData secondDevice;
+   uint32_t temp1, temp2;
+   int goOn = 1;
+   string guidStr, device;
+   GUIDData aGUID;
+   ostringstream prompt;
+   
+   do {
+      cout << "\nExpert command (? for help): ";
+      switch (ReadString()[0]) {
+         case '\0':
+            break;
+         case 'a': case 'A':
+            if (GetPartRange(&temp1, &temp2) > 0)
+               SetAttributes(GetPartNum());
+            else
+               cout << "No partitions\n";
+            break;
+         case 'c': case 'C':
+            ChangeUniqueGuid();
+            break;
+         case 'd': case 'D':
+            cout << "Partitions will begin on " << GetAlignment()
+            << "-sector boundaries.\n";
+            break;
+         case 'e': case 'E':
+            cout << "Relocating backup data structures to the end of the disk\n";
+            MoveSecondHeaderToEnd();
+            break;
+         case 'f': case 'F':
+            RandomizeGUIDs();
+            break;
+         case 'g': case 'G':
+            cout << "Enter the disk's unique GUID ('R' to randomize): ";
+            guidStr = ReadString();
+            if ((guidStr.length() >= 32) || (guidStr[0] == 'R') || (guidStr[0] == 'r')) {
+               SetDiskGUID((GUIDData) guidStr);
+               cout << "The new disk GUID is " << GetDiskGUID() << "\n";
+            } else {
+               cout << "GUID is too short!\n";
+            } // if/else
+            break;
+         case 'h': case 'H':
+            RecomputeCHS();
+            break;
+         case 'i': case 'I':
+            ShowDetails();
+            break;
+         case 'l': case 'L':
+            prompt.seekp(0);
+            prompt << "Enter the sector alignment value (1-" << MAX_ALIGNMENT << ", default = "
+                   << DEFAULT_ALIGNMENT << "): ";
+            temp1 = GetNumber(1, MAX_ALIGNMENT, DEFAULT_ALIGNMENT, prompt.str());
+            SetAlignment(temp1);
+            break;
+         case 'm': case 'M':
+            MainMenu(filename);
+            goOn = 0;
+            break;
+         case 'n': case 'N':
+            MakeProtectiveMBR();
+            break;
+         case 'o': case 'O':
+            DisplayMBRData();
+            break;
+         case 'p': case 'P':
+            DisplayGPTData();
+            break;
+         case 'q': case 'Q':
+            goOn = 0;
+            break;
+         case 'r': case 'R':
+            RecoveryMenu(filename);
+            goOn = 0;
+            break;
+         case 's': case 'S':
+            ResizePartitionTable();
+            break;
+         case 't': case 'T':
+            SwapPartitions();
+            break;
+         case 'u': case 'U':
+            cout << "Type device filename, or press <Enter> to exit: ";
+            device = ReadString();
+            if (device.length() > 0) {
+               secondDevice = *this;
+               secondDevice.SetDisk(device);
+               secondDevice.SaveGPTData(0);
+            } // if
+            break;
+         case 'v': case 'V':
+            Verify();
+            break;
+         case 'w': case 'W':
+            if (SaveGPTData() == 1) {
+               goOn = 0;
+            } // if
+            break;
+         case 'z': case 'Z':
+            if (DestroyGPTwPrompt() == 1) {
+               goOn = 0;
+            }
+            break;
+         default:
+            ShowExpertCommands();
+            break;
+      } // switch
+   } while (goOn);
+} // GPTDataTextUI::ExpertsMenu()
+
+void GPTDataTextUI::ShowExpertCommands(void) {
+   cout << "a\tset attributes\n";
+   cout << "c\tchange partition GUID\n";
+   cout << "d\tdisplay the sector alignment value\n";
+   cout << "e\trelocate backup data structures to the end of the disk\n";
+   cout << "g\tchange disk GUID\n";
+   cout << "h\trecompute CHS values in protective/hybrid MBR\n";
+   cout << "i\tshow detailed information on a partition\n";
+   cout << "l\tset the sector alignment value\n";
+   cout << "m\treturn to main menu\n";
+   cout << "n\tcreate a new protective MBR\n";
+   cout << "o\tprint protective MBR data\n";
+   cout << "p\tprint the partition table\n";
+   cout << "q\tquit without saving changes\n";
+   cout << "r\trecovery and transformation options (experts only)\n";
+   cout << "s\tresize partition table\n";
+   cout << "t\ttranspose two partition table entries\n";
+   cout << "u\tReplicate partition table on new device\n";
+   cout << "v\tverify disk\n";
+   cout << "w\twrite table to disk and exit\n";
+   cout << "z\tzap (destroy) GPT data structures and exit\n";
+   cout << "?\tprint this menu\n";
+} // GPTDataTextUI::ShowExpertCommands()
+
+
 
 /********************************
  *                              *

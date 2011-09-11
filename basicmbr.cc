@@ -606,8 +606,12 @@ int BasicMBRData::BlankGPTData(void) {
 // the most common value for big disks (255 heads, 63 sectors per
 // track, & however many cylinders that computes to).
 void BasicMBRData::ReadCHSGeom(void) {
+   int err;
+
    numHeads = myDisk->GetNumHeads();
    numSecspTrack = myDisk->GetNumSecsPerTrack();
+   diskSize = myDisk->DiskSize(&err);
+   blockSize = myDisk->GetBlockSize();
    partitions[0].SetGeometry(numHeads, numSecspTrack, diskSize, blockSize);
 } // BasicMBRData::ReadCHSGeom()
 

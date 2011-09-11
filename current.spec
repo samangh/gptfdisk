@@ -1,21 +1,20 @@
 Summary: GPT partitioning and MBR repair software
 Name: gptfdisk
-Version: 0.7.2
+Version: 0.8.0
 Release: 1%{?dist}
 License: GPLv2
 URL: http://www.rodsbooks.com/gdisk
 Group: Applications/System
-Source: http://www.rodsbooks.com/gdisk/gptfdisk-0.7.2.tar.gz
+Source: http://www.rodsbooks.com/gdisk/gptfdisk-0.8.0.tar.gz
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
 
-Partitioning software for GPT disks and to repair MBR
-disks. The gdisk and sgdisk utilities (in the gdisk
-package) are GPT-enabled partitioning tools; the
-fixparts utility (in the fixparts package) fixes some
-problems with MBR disks that can be created by buggy
-partitioning software.
+Partitioning software for GPT disks and to repair MBR disks. The gdisk,
+cgdisk, and sgdisk utilities (in the gdisk package) are GPT-enabled
+partitioning tools; the fixparts utility (in the fixparts package) fixes
+some problems with MBR disks that can be created by buggy partitioning
+software.
 
 %package -n gdisk
 
@@ -41,9 +40,11 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/sbin
 install -Dp -m0755 gdisk $RPM_BUILD_ROOT/usr/sbin
 install -Dp -m0755 sgdisk $RPM_BUILD_ROOT/usr/sbin
+install -Dp -m0755 cgdisk $RPM_BUILD_ROOT/usr/sbin
 install -Dp -m0755 fixparts $RPM_BUILD_ROOT/usr/sbin
 install -Dp -m0644 gdisk.8 $RPM_BUILD_ROOT/%{_mandir}/man8/gdisk.8
 install -Dp -m0644 sgdisk.8 $RPM_BUILD_ROOT/%{_mandir}/man8/sgdisk.8
+install -Dp -m0644 cgdisk.8 $RPM_BUILD_ROOT/%{_mandir}/man8/cgdisk.8
 install -Dp -m0644 fixparts.8 $RPM_BUILD_ROOT/%{_mandir}/man8/fixparts.8
 
 %clean
@@ -54,8 +55,10 @@ rm -rf $RPM_BUILD_ROOT
 %doc NEWS COPYING README
 /usr/sbin/gdisk
 /usr/sbin/sgdisk
+/usr/sbin/cgdisk
 %doc %{_mandir}/man8/gdisk.8*
 %doc %{_mandir}/man8/sgdisk.8*
+%doc %{_mandir}/man8/cgdisk.8*
 
 %package -n fixparts
 
@@ -77,5 +80,5 @@ provides a few additional partition manipulation features.
 
 
 %changelog
-* Sun Jun 26 2011 R Smith <rodsmith@rodsbooks.com> - 0.7.2
-- Created spec file for 0.7.2 release
+* Sat Sep 10 2011 R Smith <rodsmith@rodsbooks.com> - 0.8.0
+- Created spec file for 0.8.0 release

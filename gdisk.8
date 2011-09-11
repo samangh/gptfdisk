@@ -1,6 +1,6 @@
 .\" Copyright 2011 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "GDISK" "8" "0.7.2" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "GDISK" "8" "0.8.0" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 gdisk \- Interactive GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -93,7 +93,7 @@ and in whatever sizes are desired.
 .B *
 Boot disks for EFI\-based systems require an \fIEFI System
 Partition\fR (\fBgdisk\fR internal code 0xEF00) formatted as FAT\-32.
-The recommended size of this partition is between 100 and 200 MiB.
+The recommended size of this partition is between 100 and 300 MiB.
 Boot\-related files are stored here. (Note that GNU Parted identifies
 such partitions as having the "boot flag" set.)
 
@@ -467,15 +467,15 @@ option on the main menu.
 .TP 
 .B l
 Change the sector alignment value. Disks with more logical sectors per
-physical sectors (such as some Western Digital models introduced in
-December of 2009) and some RAID configurations can suffer performance
-problems if partitions are not aligned properly for their internal data
-structures. On new disks, GPT fdisk attempts to align partitions on
-2048\-sector (1MiB) boundaries by default, which optimizes performance for
-both of these disk types. On pre\-partitioned disks, GPT fdisk attempts to
-identify the alignment value used on that disk, but will set 8-sector
-alignment on disks larger than 300 GB even if lesser alignment values are
-detected. In either case, it can be changed by using this option.
+physical sectors (such as modern Advanced Format drives), some RAID
+configurations, and many SSD devices, can suffer performance problems if
+partitions are not aligned properly for their internal data structures. On
+new disks, GPT fdisk attempts to align partitions on 2048\-sector (1MiB)
+boundaries by default, which optimizes performance for all of these disk
+types. On pre\-partitioned disks, GPT fdisk attempts to identify the
+alignment value used on that disk, but will set 8-sector alignment on disks
+larger than 300 GB even if lesser alignment values are detected. In either
+case, it can be changed by using this option.
 
 .TP 
 .B m
@@ -561,7 +561,7 @@ entering data. When only one option is possible, \fBgdisk\fR
 usually bypasses the prompt entirely.
 
 .SH "BUGS"
-As of June 2011 (version 0.7.2), \fBgdisk\fR
+As of September 2011 (version 0.8.0), \fBgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
@@ -649,10 +649,6 @@ options in this case.
 
 .PP 
 
-The support for big\-endian CPUs (PowerPC, for example) is new, as of
-version 0.3.5. I advise using caution on such CPUs, particularly with the
-more obscure features of the program.
-
 .SH "AUTHORS"
 Primary author: Roderick W. Smith (rodsmith@rodsbooks.com)
 
@@ -671,6 +667,7 @@ Contributors:
 
 .SH "SEE ALSO"
 \fBcfdisk (8)\fR,
+\fBcgdisk (8)\fR,
 \fBfdisk (8)\fR,
 \fBmkfs (8)\fR,
 \fBparted (8)\fR,

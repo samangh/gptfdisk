@@ -11,15 +11,19 @@ MBR_LIB_OBJS=$(MBR_LIBS:=.o)
 LIB_HEADERS=$(LIB_NAMES:=.h)
 DEPEND= makedepend $(CFLAGS)
 
-all:	gdisk sgdisk fixparts
+all:	gdisk sgdisk cgdisk fixparts
 
 gdisk:	$(LIB_OBJS) gpttext.o gdisk.o
 #	$(CXX) $(LIB_OBJS) gpttext.o gdisk.o -o gdisk
 	$(CXX) $(LIB_OBJS) -L/usr/lib -licucore gpttext.o gdisk.o -o gdisk
 
-sgdisk: $(LIB_OBJS) sgdisk.o
-#	$(CXX) $(LIB_OBJS) sgdisk.o -L/sw/lib -lpopt -o sgdisk
-	$(CXX) $(LIB_OBJS) sgdisk.o -L/sw/lib -licucore -lpopt -o sgdisk
+cgdisk: $(LIB_OBJS) cgdisk.o gptcurses.o
+#	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -lncurses -o sgdisk
+	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -licucore -lncurses -o cgdisk
+
+sgdisk: $(LIB_OBJS) gptcl.o sgdisk.o
+#	$(CXX) $(LIB_OBJS) gptcl.o sgdisk.o -L/sw/lib -lpopt -o sgdisk
+	$(CXX) $(LIB_OBJS) gptcl.o sgdisk.o -L/sw/lib -licucore -lpopt -o sgdisk
 
 fixparts: $(MBR_LIB_OBJS) fixparts.o
 	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -o fixparts

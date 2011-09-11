@@ -1,5 +1,5 @@
 /*
-    <one line to give the program's name and a brief idea of what it does.>
+    Implementation of GPTData class derivative with basic text-mode interaction
     Copyright (C) 2010-2011 Roderick W. Smith
 
     This program is free software; you can redistribute it and/or modify
@@ -33,7 +33,7 @@ class GPTDataTextUI : public GPTData {
       ~GPTDataTextUI(void);
 
       // This one needs to be explicitly defined, even though it does nothing new....
-      const GPTPart & operator[](uint32_t partNum) {return GPTData::operator[](partNum);}
+//      const GPTPart & operator[](uint32_t partNum) {return GPTData::operator[](partNum);}
 
       // Extended (interactive) versions of some base-class functions
       WhichToUse UseWhichPartitions(void);
@@ -53,6 +53,14 @@ class GPTDataTextUI : public GPTData {
       void ShowDetails(void);
       void MakeHybrid(void);
       int XFormToMBR(void); // convert GPT to MBR, wiping GPT afterwards. Returns 1 if successful
+
+      // Main menu functions
+      void MainMenu(string filename);
+      void ShowCommands(void);
+      void ExpertsMenu(string filename);
+      void ShowExpertCommands(void);
+      void RecoveryMenu(string filename);
+      void ShowRecoveryCommands(void);
 }; // class GPTDataTextUI
 
 int GetMBRTypeCode(int defType);

@@ -108,7 +108,6 @@ void PartType::AddAllTypes(void) {
    // Linux-specific partition types....
    AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris)
    AddType(0x8300, "0FC63DAF-8483-4772-8E79-3D69D8477DE4", "Linux filesystem"); // Linux native
-//   AddType(0x8300, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Linux/Windows data", 0); // Linux native
    AddType(0x8301, "8DA63339-0007-60C0-C436-083AC8230908", "Linux reserved");
    AddType(0x8e00, "E6D6D379-F507-44C2-A23C-238F2A3DF928", "Linux LVM");
 
@@ -142,6 +141,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xaf02, "52414944-5F4F-11AA-AA11-00306543ECAC", "Apple RAID offline");
    AddType(0xaf03, "4C616265-6C00-11AA-AA11-00306543ECAC", "Apple label");
    AddType(0xaf04, "5265636F-7665-11AA-AA11-00306543ECAC", "AppleTV recovery");
+   AddType(0xaf05, "53746F72-6167-11AA-AA11-00306543ECAC", "Apple Core Storage");
 
    // Solaris partition types (one of which is shared with MacOS)
    AddType(0xbe00, "6A82CB45-1DD2-11B2-99A6-080020736631", "Solaris boot");
@@ -214,7 +214,7 @@ PartType & PartType::operator=(const string & orig) {
       if (IsHex(orig)) {
          sscanf(orig.c_str(), "%x", &hexCode);
          *this = hexCode;
-      } // if
+      }
    } else {
       GUIDData::operator=(orig);
    } // if/else hexCode or GUID

@@ -110,7 +110,7 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize,
 // to 2. If value includes a "+", adds low and subtracts 1; if SIValue
 // inclues a "-", subtracts from high. If IeeeValue is empty, returns def.
 // Returns final sector value. In case inValue is invalid, returns 0 (a
-// sector value that's always is use on GPT and therefore invalid); and if
+// sector value that's always in use on GPT and therefore invalid); and if
 // inValue works out to something outside the range low-high, returns the
 // computed value; the calling function is responsible for checking the
 // validity of this value.
@@ -304,3 +304,19 @@ void ReverseBytes(void* theValue, int numBytes) {
       exit(1);
    } // if/else
 } // ReverseBytes()
+
+// On Windows, display a warning and ask whether to continue. If the user elects
+// not to continue, exit immediately.
+void WinWarning(void) {
+   #ifdef _WIN32
+   cout << "\a************************************************************************\n"
+   << "Most versions of Windows cannot boot from a GPT disk, and most varieties\n"
+   << "prior to Vista cannot read GPT disks. Therefore, you should exit now\n"
+   << "unless you understand the implications of converting MBR to GPT or creating\n"
+   << "a new GPT disk layout!\n"
+   << "************************************************************************\n\n";
+   cout << "Are you SURE you want to continue? ";
+   if (GetYN() != 'Y')
+      exit(0);
+   #endif
+} // WinWarning()

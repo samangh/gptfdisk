@@ -77,7 +77,7 @@ public:
     bool operator<(const MBRPart &other) const;
 
     // Set information on partitions or disks...
-    void SetGeometry(uint32_t heads, uint32_t sectors, uint64_t diskSize, uint32_t blockSize);
+    void SetGeometry(uint32_t heads, uint32_t sectors, uint64_t ds, uint32_t bs);
     void Empty(void);
     void SetStartLBA(uint64_t s);
     void SetLengthLBA(uint64_t l);
@@ -101,7 +101,7 @@ public:
     int DoTheyOverlap (const MBRPart& other);
 
     // Adjust information on partitions or disks...
-    void RecomputeCHS(void);
+    int RecomputeCHS(void);
     int LBAtoCHS(uint32_t lba, uint8_t * chs);
     void ReverseByteOrder(void);
 

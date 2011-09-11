@@ -1,6 +1,6 @@
 .\" Copyright 2011 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.7.2" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.8.0" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -89,7 +89,7 @@ and in whatever sizes are desired.
 .B *
 Boot disks for EFI\-based systems require an \fIEFI System
 Partition\fR (\fBsgdisk\fR internal code 0xEF00) formatted as FAT\-32.
-The recommended size of this partition is between 100 and 200 MiB.
+The recommended size of this partition is between 100 and 300 MiB.
 Boot\-related files are stored here. (Note that GNU Parted identifies
 such partitions as having the "boot flag" set.)
 
@@ -151,7 +151,8 @@ Set the sector alignment multiple. GPT fdisk aligns the start of partitions
 to sectors that are multiples of this value, which defaults to 2048 on
 freshly formatted disks. This alignment value is necessary to obtain optimum
 performance with Western Digital Advanced Format and similar drives with larger
-physical than logical sector sizes and with some types of RAID arrays.
+physical than logical sector sizes, with some types of RAID arrays, and
+with SSD devices.
 
 .TP
 .B \-A, \-\-attributes=list|[partnum:show|or|nand|xor|=|set|clear|toggle|get[:bitnum|hexbitmask]]
@@ -282,7 +283,9 @@ displays this information for a single partition.
 .B \-l, \-\-load\-backup=file
 Load partition data from a backup file. This option is the reverse of the
 \fI\-b\fR option. Note that restoring partition data from anything
-but the original disk is not recommended.
+but the original disk is not recommended. This option will work even if the
+disk's original partition table is bad; however, most other options on the
+same command line will be ignored.
 
 .TP 
 .B \-L, \-\-list\-types
@@ -340,8 +343,13 @@ use the first available partition number.
 
 .TP 
 .B \-o, \-\-clear
-Clear out all partition data. This includes GPT header data,
-all partition definitions, and the protective MBR.
+Clear out all partition data. This includes GPT header data, all partition
+definitions, and the protective MBR. Note that this operation will, like
+most other operations, fail on a damaged disk. If you want to prepare a
+disk you know to be damaged for GPT use, you should first wipe it with -Z
+and then partition it normally. This option will work even if the
+disk's original partition table is bad; however, most other options on the
+same command line will be ignored.
 
 .TP 
 .B \-p, \-\-print
@@ -415,9 +423,11 @@ Print a brief summary of available options.
 .B \-v, \-\-verify
 Verify disk. This option checks for a variety of problems, such as
 incorrect CRCs and mismatched main and backup data. This option does not
-automatically correct most problems, though; for that, you must use
-options on the recovery & transformation menu. If no problems are found,
-this command displays a summary of unallocated disk space.
+automatically correct most problems, though; for that, you must use options
+on the recovery & transformation menu. If no problems are found, this
+command displays a summary of unallocated disk space. This option will work
+even if the disk's original partition table is bad; however, most other
+options on the same command line will be ignored.
 
 .TP 
 .B \-V, \-\-version
@@ -469,8 +479,13 @@ Non\-GPT disk detected and no \fI\-g\fR option
 .TP 
 .B 4
 An error prevented saving changes
+
+.TP
+.B 8
+Disk replication operation (-R) failed
+
 .SH "BUGS"
-As of June 2011 (version 0.7.2), \fBsgdisk\fR
+As of September 2011 (version 0.8.0), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
@@ -544,11 +559,7 @@ from GPT disks. Creating a hybrid MBR (using the 'h' option on the recovery &
 transformation menu) or abandoning GPT in favor of MBR may be your only
 options in this case.
 
-.PP 
-
-The support for big\-endian CPUs (PowerPC, for example) is new, as of
-version 0.3.5. I advise using caution on such systems, particularly with
-the more obscure features of the program.
+.PP
 
 .SH "AUTHORS"
 Primary author: Roderick W. Smith (rodsmith@rodsbooks.com)
@@ -568,6 +579,7 @@ Contributors:
 
 .SH "SEE ALSO"
 \fBcfdisk (8)\fR,
+\fBcgdisk (8)\fR,
 \fBfdisk (8)\fR,
 \fBgdisk (8)\fR,
 \fBmkfs (8)\fR,

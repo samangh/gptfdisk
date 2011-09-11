@@ -1,3 +1,36 @@
+0.8.0 (9/10/2011):
+------------------
+
+- Added new return option for sgdisk: 8, which means that a replication
+  operation (-R or --replicate) failed. Note that other operations on
+  the same command line might still have succeeded.
+
+- Added gdisk_test.sh shell script, contributed by Guillaume Delacour.
+  This script tests some common gdisk and sgdisk operations to be sure
+  they're working correctly.
+
+- Enable sgdisk's -l (--load-backup) and -o (--clear) options to work
+  even on disks that are damaged. Most other options will still be ignored,
+  though, so if you suspect a disk may be bad and want to use one of these
+  options, you should do so on a line by itself, followed by a separate
+  command to perform other actions (such as adding new partitions).
+
+- Added check for mis-matched primary and backup partition tables.
+  A mismatch is reported as a CRC error.
+
+- Added Apple Core Storage partition type code (hex code AF05, GUID
+  53746F72-6167-11AA-AA11-00306543ECAC).
+
+- Added cgdisk program to the family. This program is a rough workalike
+  to cfdisk, much as gdisk is a rough workalike to fdisk. See the cgdisk
+  man page or http://www.rodsbooks.com/gdisk/cgdisk-walkthrough.html for
+  details about its operation.
+
+- Fixed bug that caused CHS end point for protective MBR to be set to
+  0xfeffff rather than the spec-mandated 0xffffff on disks over ~8GB. This
+  is a very minor bug, since not much cares about this, and most other GPT
+  tools get it wrong in the same way, too.
+
 0.7.2 (6/26/2011):
 ------------------
 

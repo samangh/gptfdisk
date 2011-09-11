@@ -899,36 +899,41 @@ int GPTData::LoadPartitionTable(const struct GPTHeader & header, DiskIO & disk, 
 
 // Check the partition table pointed to by header, but don't keep it
 // around.
-// Returns 1 if the CRC is OK, 0 if not or if there was a read error.
+// Returns 1 if the CRC is OK & this table matches the one already in memory,
+// 0 if not or if there was a read error.
 int GPTData::CheckTable(struct GPTHeader *header) {
    uint32_t sizeOfParts, newCRC;
-   uint8_t *storage;
-   int newCrcOk = 0;
+   GPTPart *partsToCheck;
+   int allOK = 0;
 
    // Load partition table into temporary storage to check
    // its CRC and store the results, then discard this temporary
    // storage, since we don't use it in any but recovery operations
    if (myDisk.Seek(header->partitionEntriesLBA)) {
+      partsToCheck = new GPTPart[header->numParts];
       sizeOfParts = header->numParts * header->sizeOfPartitionEntries;
-      storage = new uint8_t[sizeOfParts];
-      if (storage == NULL) {
+      if (partsToCheck == NULL) {
          cerr << "Could not allocate memory in GPTData::CheckTable()! Terminating!\n";
          exit(1);
       } // if
-      if (myDisk.Read(storage, sizeOfParts) != (int) sizeOfParts) {
+      if (myDisk.Read(partsToCheck, sizeOfParts) != (int) sizeOfParts) {
          cerr << "Warning! Error " << errno << " reading partition table for CRC check!\n";
       } else {
-         newCRC = chksum_crc32((unsigned char*) storage,  sizeOfParts);
-         newCrcOk = (newCRC == header->partitionEntriesCRC);
+         newCRC = chksum_crc32((unsigned char*) partsToCheck,  sizeOfParts);
+         allOK = (newCRC == header->partitionEntriesCRC);
+         if (memcmp(partitions, partsToCheck, sizeOfParts) != 0) {
+            cerr << "Warning! Main and backup partition tables differ! Use the 'c' and 'e' options\n"
+                 << "on the recovery & transformation menu to examine the two tables.\n\n";
+            allOK = 0;
+         } // if
       } // if/else
-      delete[] storage;
+      delete[] partsToCheck;
    } // if
-   return newCrcOk;
+   return allOK;
 } // GPTData::CheckTable()
 
 // Writes GPT (and protective MBR) to disk. If quiet==1, 
-// Returns 1 on successful
-// write, 0 if there was a problem.
+// Returns 1 on successful write, 0 if there was a problem.
 int GPTData::SaveGPTData(int quiet) {
    int allOK = 1, littleEndian;
    char answer;
@@ -1227,7 +1232,7 @@ int GPTData::DestroyGPT(void) {
       tableSize = numParts * mainHeader.sizeOfPartitionEntries;
       emptyTable = new uint8_t[tableSize];
       if (emptyTable == NULL) {
-         cerr << "Could not allocate memory in GPTData::CheckTable()! Terminating!\n";
+         cerr << "Could not allocate memory in GPTData::DestroyGPT()! Terminating!\n";
          exit(1);
       } // if
       memset(emptyTable, 0, tableSize);

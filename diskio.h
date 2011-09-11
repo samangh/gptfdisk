@@ -65,7 +65,7 @@ class DiskIO {
       int Seek(uint64_t sector);
       int Read(void* buffer, int numBytes);
       int Write(void* buffer, int numBytes);
-      void DiskSync(void); // resync disk caches to use new partitions
+      int DiskSync(void); // resync disk caches to use new partitions
       int GetBlockSize(void);
       uint32_t GetNumHeads(void);
       uint32_t GetNumSecsPerTrack(void);

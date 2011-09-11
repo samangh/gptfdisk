@@ -11,15 +11,19 @@ MBR_LIB_OBJS=$(MBR_LIBS:=.o)
 LIB_HEADERS=$(LIB_NAMES:=.h)
 DEPEND= makedepend $(CXXFLAGS)
 
-all:	gdisk sgdisk fixparts
+all:	cgdisk gdisk sgdisk fixparts
 
 gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
 #	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -luuid -o gdisk
 	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -licuio -licuuc -luuid -o gdisk
 
-sgdisk: $(LIB_OBJS) sgdisk.o
-#	$(CXX) $(LIB_OBJS) sgdisk.o $(LDFLAGS) -luuid -lpopt -o sgdisk
-	$(CXX) $(LIB_OBJS) sgdisk.o $(LDFLAGS) -licuio -licuuc -luuid -lpopt -o sgdisk
+cgdisk: $(LIB_OBJS) cgdisk.o gptcurses.o
+#	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -luuid -lncurses -o cgdisk
+	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -licuio -licuuc -luuid -lncurses -o cgdisk
+
+sgdisk: $(LIB_OBJS) sgdisk.o gptcl.o
+#	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) -luuid -lpopt -o sgdisk
+	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) -licuio -licuuc -luuid -lpopt -o sgdisk
 
 fixparts: $(MBR_LIB_OBJS) fixparts.o
 	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -o fixparts
@@ -28,7 +32,7 @@ lint:	#no pre-reqs
 	lint $(SRCS)
 
 clean:	#no pre-reqs
-	rm -f core *.o *~ gdisk sgdisk fixparts
+	rm -f core *.o *~ gdisk sgdisk cgdisk fixparts
 
 # what are the source dependencies
 depend: $(SRCS)
@@ -38,3 +42,4 @@ $(OBJS):
 	$(CRITICAL_CXX_FLAGS) 
 
 # DO NOT DELETE
+
