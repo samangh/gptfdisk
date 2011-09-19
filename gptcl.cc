@@ -51,6 +51,15 @@ void GPTDataCL::LoadBackupFile(string backupFile, int &saveData, int &neverSaveD
    } // else
 } // 
 
+// Perform the actions specified on the command line. This is necessarily one
+// monster of a function!
+// Returns values:
+// 0 = success
+// 1 = too few arguments
+// 2 = error when reading partition table
+// 3 = non-GPT disk and no -g option
+// 4 = unable to save changes
+// 8 = disk replication operation (-R) failed
 int GPTDataCL::DoOptions(int argc, char* argv[]) {
    GPTData secondDevice;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
@@ -109,7 +118,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
    
    if (argc < 2) {
       poptPrintUsage(poptCon, stderr, 0);
-      exit(1);
+      return 1;
    }
    
    // Do one loop through the options to find the device filename and deal

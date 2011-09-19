@@ -27,7 +27,6 @@
 #include "parttypes.h"
 #include "attributes.h"
 #include "diskio.h"
-//#include "partnotes.h"
 
 using namespace std;
 
@@ -65,6 +64,8 @@ GPTData::GPTData(void) {
    mainHeader.numParts = 0;
    numParts = 0;
    SetGPTSize(NUM_GPT_ENTRIES);
+   // Initialize CRC functions...
+   chksum_crc32gentab();
 } // GPTData default constructor
 
 // The following constructor loads GPT data from a device file
@@ -86,6 +87,8 @@ GPTData::GPTData(string filename) {
    whichWasUsed = use_new;
    mainHeader.numParts = 0;
    numParts = 0;
+   // Initialize CRC functions...
+   chksum_crc32gentab();
    if (!LoadPartitions(filename))
       exit(2);
 } // GPTData(string filename) constructor
@@ -129,7 +132,8 @@ GPTData & GPTData::operator=(const GPTData & orig) {
    } // if
    for (i = 0; i < numParts; i++) {
       partitions[i] = orig.partitions[i];
-   }
+   } // for
+
    return *this;
 } // GPTData::operator=()
 
@@ -353,8 +357,8 @@ int GPTData::CheckGPTSize(void) {
 
 // Check the validity of the GPT header. Returns 1 if the main header
 // is valid, 2 if the backup header is valid, 3 if both are valid, and
-// 0 if neither is valid. Note that this function just checks the GPT
-// signature and revision numbers, not CRCs or other data.
+// 0 if neither is valid. Note that this function checks the GPT signature,
+// revision value, and CRCs in both headers.
 int GPTData::CheckHeaderValidity(void) {
    int valid = 3;
 
@@ -363,7 +367,7 @@ int GPTData::CheckHeaderValidity(void) {
 
    // Note: failed GPT signature checks produce no error message because
    // a message is displayed in the ReversePartitionBytes() function
-   if (mainHeader.signature != GPT_SIGNATURE) {
+   if ((mainHeader.signature != GPT_SIGNATURE) || (!CheckHeaderCRC(&mainHeader, 1))) {
       valid -= 1;
    } else if ((mainHeader.revision != 0x00010000) && valid) {
       valid -= 1;
@@ -374,7 +378,7 @@ int GPTData::CheckHeaderValidity(void) {
       cout << UINT32_C(0x00010000) << dec << "\n";
    } // if/else/if
 
-   if (secondHeader.signature != GPT_SIGNATURE) {
+   if ((secondHeader.signature != GPT_SIGNATURE) || (!CheckHeaderCRC(&secondHeader))) {
       valid -= 2;
    } else if ((secondHeader.revision != 0x00010000) && valid) {
       valid -= 2;
@@ -396,27 +400,50 @@ int GPTData::CheckHeaderValidity(void) {
 } // GPTData::CheckHeaderValidity()
 
 // Check the header CRC to see if it's OK...
-// Note: Must be called with header in LITTLE-ENDIAN
-// (x86, x86-64, etc.) byte order.
-int GPTData::CheckHeaderCRC(struct GPTHeader* header) {
+// Note: Must be called with header in platform-ordered byte order.
+// Returns 1 if header's computed CRC matches the stored value, 0 if the
+// computed and stored values don't match
+int GPTData::CheckHeaderCRC(struct GPTHeader* header, int warn) {
    uint32_t oldCRC, newCRC, hSize;
+   uint8_t *temp;
 
    // Back up old header CRC and then blank it, since it must be 0 for
    // computation to be valid
    oldCRC = header->headerCRC;
    header->headerCRC = UINT32_C(0);
+
    hSize = header->headerSize;
 
-   // If big-endian system, reverse byte order
-   if (IsLittleEndian() == 0) {
-      ReverseBytes(&oldCRC, 4);
-   } // if
+   if (IsLittleEndian() == 0)
+      ReverseHeaderBytes(header);
 
-   // Initialize CRC functions...
-   chksum_crc32gentab();
+   if ((hSize > blockSize) || (hSize < HEADER_SIZE)) {
+      if (warn) {
+         cerr << "\aWarning! Header size is specified as " << hSize << ", which is invalid.\n";
+         cerr << "Setting the header size for CRC computation to " << HEADER_SIZE << "\n";
+      } // if
+      hSize = HEADER_SIZE;
+   } else if ((hSize > sizeof(GPTHeader)) && warn) {
+      cout << "\aCaution! Header size for CRC check is " << hSize << ", which is greater than " << sizeof(GPTHeader) << ".\n";
+      cout << "If stray data exists after the header on the header sector, it will be ignored,\n"
+           << "which may result in a CRC false alarm.\n";
+   } // if/elseif
+   temp = new uint8_t[hSize];
+   if (temp != NULL) {
+      memset(temp, 0, hSize);
+      if (hSize < sizeof(GPTHeader))
+         memcpy(temp, header, hSize);
+      else
+         memcpy(temp, header, sizeof(GPTHeader));
 
-   // Compute CRC, restore original, and return result of comparison
-   newCRC = chksum_crc32((unsigned char*) header, HEADER_SIZE);
+      newCRC = chksum_crc32((unsigned char*) temp, hSize);
+      delete[] temp;
+   } else {
+      cerr << "Could not allocate memory in GPTData::CheckHeaderCRC()! Aborting!\n";
+      exit(1);
+   }
+   if (IsLittleEndian() == 0)
+      ReverseHeaderBytes(header);
    header->headerCRC = oldCRC;
    return (oldCRC == newCRC);
 } // GPTData::CheckHeaderCRC()
@@ -428,11 +455,12 @@ void GPTData::RecomputeCRCs(void) {
    uint32_t crc, hSize;
    int littleEndian = 1;
 
-   // Initialize CRC functions...
-   chksum_crc32gentab();
-
-   // Save some key data from header before reversing byte order....
-   hSize = mainHeader.headerSize;
+   // If the header size is bigger than the GPT header data structure, reset it;
+   // otherwise, set both header sizes to whatever the main one is....
+   if (mainHeader.headerSize > sizeof(GPTHeader))
+      hSize = secondHeader.headerSize = mainHeader.headerSize = HEADER_SIZE;
+   else
+      hSize = secondHeader.headerSize = mainHeader.headerSize;
 
    if ((littleEndian = IsLittleEndian()) == 0) {
       ReversePartitionBytes();
@@ -449,11 +477,10 @@ void GPTData::RecomputeCRCs(void) {
       ReverseBytes(&secondHeader.partitionEntriesCRC, 4);
    } // if
 
-   // Zero out GPT tables' own CRCs (required for correct computation)
+   // Zero out GPT headers' own CRCs (required for correct computation)
    mainHeader.headerCRC = 0;
    secondHeader.headerCRC = 0;
 
-   // Compute & store CRCs of main & secondary headers...
    crc = chksum_crc32((unsigned char*) &mainHeader, hSize);
    if (littleEndian == 0)
       ReverseBytes(&crc, 4);
@@ -463,7 +490,7 @@ void GPTData::RecomputeCRCs(void) {
       ReverseBytes(&crc, 4);
    secondHeader.headerCRC = crc;
 
-   if ((littleEndian = IsLittleEndian()) == 0) {
+   if (littleEndian == 0) {
       ReverseHeaderBytes(&mainHeader);
       ReverseHeaderBytes(&secondHeader);
       ReversePartitionBytes();
@@ -524,9 +551,9 @@ int GPTData::FindHybridMismatches(void) {
       if ((protectiveMBR.GetType(i) != 0xEE) && (protectiveMBR.GetType(i) != 0x00)) {
          j = 0;
          found = 0;
+         mbrFirst = (uint64_t) protectiveMBR.GetFirstSector(i);
+         mbrLast = mbrFirst + (uint64_t) protectiveMBR.GetLength(i) - UINT64_C(1);
          do {
-            mbrFirst = (uint64_t) protectiveMBR.GetFirstSector(i);
-            mbrLast = mbrFirst + (uint64_t) protectiveMBR.GetLength(i) - UINT64_C(1);
             if ((partitions[j].GetFirstLBA() == mbrFirst) &&
                 (partitions[j].GetLastLBA() == mbrLast))
                found = 1;
@@ -551,6 +578,7 @@ int GPTData::FindHybridMismatches(void) {
 
 // Find overlapping partitions and warn user about them. Returns number of
 // overlapping partitions.
+// Returns number of overlapping segments found.
 int GPTData::FindOverlaps(void) {
    int problems = 0;
    uint32_t i, j;
@@ -574,6 +602,7 @@ int GPTData::FindOverlaps(void) {
 // big for the disk. (The latter should duplicate detection of overlaps
 // with GPT backup data structures, but better to err on the side of
 // redundant tests than to miss something....)
+// Returns number of problems found.
 int GPTData::FindInsanePartitions(void) {
    uint32_t i;
    int problems = 0;
@@ -841,12 +870,12 @@ int GPTData::LoadHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector
       cerr << "Warning! Read error " << errno << "; strange behavior now likely!\n";
       allOK = 0;
    } // if
-   *crcOk = CheckHeaderCRC(&tempHeader);
 
    // Reverse byte order, if necessary
    if (IsLittleEndian() == 0) {
       ReverseHeaderBytes(&tempHeader);
    } // if
+   *crcOk = CheckHeaderCRC(&tempHeader);
 
    if (allOK && (numParts != tempHeader.numParts) && *crcOk) {
       allOK = SetGPTSize(tempHeader.numParts);
@@ -904,6 +933,7 @@ int GPTData::LoadPartitionTable(const struct GPTHeader & header, DiskIO & disk, 
 int GPTData::CheckTable(struct GPTHeader *header) {
    uint32_t sizeOfParts, newCRC;
    GPTPart *partsToCheck;
+   GPTHeader *otherHeader;
    int allOK = 0;
 
    // Load partition table into temporary storage to check
@@ -919,9 +949,13 @@ int GPTData::CheckTable(struct GPTHeader *header) {
       if (myDisk.Read(partsToCheck, sizeOfParts) != (int) sizeOfParts) {
          cerr << "Warning! Error " << errno << " reading partition table for CRC check!\n";
       } else {
-         newCRC = chksum_crc32((unsigned char*) partsToCheck,  sizeOfParts);
+         newCRC = chksum_crc32((unsigned char*) partsToCheck, sizeOfParts);
          allOK = (newCRC == header->partitionEntriesCRC);
-         if (memcmp(partitions, partsToCheck, sizeOfParts) != 0) {
+         if (header == &mainHeader)
+            otherHeader = &secondHeader;
+         else
+            otherHeader = &mainHeader;
+         if (newCRC != otherHeader->partitionEntriesCRC) {
             cerr << "Warning! Main and backup partition tables differ! Use the 'c' and 'e' options\n"
                  << "on the recovery & transformation menu to examine the two tables.\n\n";
             allOK = 0;

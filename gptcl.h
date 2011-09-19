@@ -35,8 +35,8 @@ class GPTDataCL : public GPTData {
       char *partGUID, *diskGUID;
       int alignment, deletePartNum, infoPartNum, largestPartNum, bsdPartNum;
       uint32_t tableSize;
-
       poptContext poptCon;
+
       int BuildMBR(char* argument, int isHybrid);
    public:
       GPTDataCL(void);

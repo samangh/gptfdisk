@@ -98,7 +98,7 @@ public:
    int Verify(void);
    int CheckGPTSize(void);
    int CheckHeaderValidity(void);
-   int CheckHeaderCRC(struct GPTHeader* header);
+   int CheckHeaderCRC(struct GPTHeader* header, int warn = 0);
    void RecomputeCRCs(void);
    void RebuildMainHeader(void);
    void RebuildSecondHeader(void);
