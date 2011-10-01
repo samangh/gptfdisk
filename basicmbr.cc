@@ -39,6 +39,7 @@ BasicMBRData::BasicMBRData(void) {
    numSecspTrack = MAX_SECSPERTRACK;
    myDisk = NULL;
    canDeleteMyDisk = 0;
+//   memset(&EbrLocations, 0, MAX_MBR_PARTS * sizeof(uint32_t));
    EmptyMBR();
 } // BasicMBRData default constructor
 
@@ -51,7 +52,8 @@ BasicMBRData::BasicMBRData(string filename) {
    numSecspTrack = MAX_SECSPERTRACK;
    myDisk = NULL;
    canDeleteMyDisk = 0;
-
+//   memset(&EbrLocations, 0, MAX_MBR_PARTS * sizeof(uint32_t));
+   
    // Try to read the specified partition table, but if it fails....
    if (!ReadMBRData(filename)) {
       EmptyMBR();
@@ -134,7 +136,7 @@ int BasicMBRData::ReadMBRData(const string & deviceFilename) {
 // in the partitions[] array; these partitions must be re-created when
 // the partition table is saved in MBR format.
 int BasicMBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
-   int allOK = 1, i, logicalNum = 0;
+   int allOK = 1, i, logicalNum = 3;
    int err = 1;
    TempMBR tempMBR;
 
@@ -194,10 +196,9 @@ int BasicMBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
          for (i = 0; i < 4; i++) {
             if ((partitions[i].GetType() == 0x05) || (partitions[i].GetType() == 0x0f)
                 || (partitions[i].GetType() == 0x85)) {
-               // Found it, so call a recursive algorithm to load everything from them....
-               logicalNum = ReadLogicalPart(partitions[i].GetStartLBA(), UINT32_C(0), 4);
-               if ((logicalNum < 0) || (logicalNum >= MAX_MBR_PARTS)) {
-                  allOK = 0;
+               // Found it, so call a function to load everything from them....
+               logicalNum = ReadLogicalParts(partitions[i].GetStartLBA(), abs(logicalNum) + 1);
+               if (logicalNum < 0) {
                   cerr << "Error reading logical partitions! List may be truncated!\n";
                } // if maxLogicals valid
                DeletePartition(i);
@@ -226,7 +227,7 @@ int BasicMBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
             if ((partitions[i].GetType() != UINT8_C(0xEE)) &&
                 (partitions[i].GetType() != UINT8_C(0x00)))
                state = hybrid;
-            if (logicalNum > 0)
+            if (logicalNum != 3)
                cerr << "Warning! MBR Logical partitions found on a hybrid MBR disk! This is an\n"
                     << "EXTREMELY dangerous configuration!\n\a";
          } // for
@@ -235,32 +236,40 @@ int BasicMBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize) {
    return allOK;
 } // BasicMBRData::ReadMBRData(DiskIO * theDisk, int checkBlockSize)
 
-// This is a recursive function to read all the logical partitions, following the
+// This is a function to read all the logical partitions, following the
 // logical partition linked list from the disk and storing the basic data in the
-// partitions[] array. Returns last index to partitions[] used, or -1 if there was
-// a problem.
+// partitions[] array. Returns last index to partitions[] used, or -1 times the
+// that index if there was a problem. (Some problems can leave valid logical
+// partition data.)
 // Parameters:
 // extendedStart = LBA of the start of the extended partition
-// diskOffset = LBA offset WITHIN the extended partition of the one to be read
-// partNum = location in partitions[] array to store retrieved data
-int BasicMBRData::ReadLogicalPart(uint64_t extendedStart, uint64_t diskOffset, int partNum) {
+// partNum = number of first partition in extended partition (normally 4).
+int BasicMBRData::ReadLogicalParts(uint64_t extendedStart, int partNum) {
    struct TempMBR ebr;
+   int i, another = 1, allOK = 1;
    uint8_t ebrType;
    uint64_t offset;
+   uint64_t EbrLocations[MAX_MBR_PARTS];
 
-   // Check for a valid partition number. Note that partitions MAY be read into
-   // the area normally used by primary partitions, although the only calling
-   // functions as of GPT fdisk version 0.7.0 don't do so.
-   if ((partNum < MAX_MBR_PARTS) && (partNum >= 0)) {
-      offset = (uint64_t) (extendedStart + diskOffset);
+   offset = extendedStart;
+   memset(&EbrLocations, 0, MAX_MBR_PARTS * sizeof(uint64_t));
+   while (another && (partNum < MAX_MBR_PARTS) && (partNum >= 0) && (allOK > 0)) {
+      for (i = 0; i < MAX_MBR_PARTS; i++) {
+         if (EbrLocations[i] == offset) { // already read this one; infinite logical partition loop!
+            cerr << "Logical partition infinite loop detected! This is being corrected.\n";
+            allOK = -1;
+            partNum -= 1;
+         } // if
+      } // for
+      EbrLocations[partNum] = offset;
       if (myDisk->Seek(offset) == 0) { // seek to EBR record
          cerr << "Unable to seek to " << offset << "! Aborting!\n";
-         partNum = -1;
+         allOK = -1;
       }
       if (myDisk->Read(&ebr, 512) != 512) { // Load the data....
          cerr << "Error seeking to or reading logical partition data from " << offset
-              << "!\nAborting!\n";
-         partNum = -1;
+              << "!\nSome logical partitions may be missing!\n";
+         allOK = -1;
       } else if (IsLittleEndian() != 1) { // Reverse byte ordering of some data....
          ReverseBytes(&ebr.MBRSignature, 2);
          ReverseBytes(&ebr.partitions[0].firstLBA, 4);
@@ -270,8 +279,8 @@ int BasicMBRData::ReadLogicalPart(uint64_t extendedStart, uint64_t diskOffset, i
       } // if/else/if
 
       if (ebr.MBRSignature != MBR_SIGNATURE) {
-         partNum = -1;
-         cerr << "MBR signature in logical partition invalid; read 0x";
+         allOK = -1;
+         cerr << "EBR signature for logical partition invalid; read 0x";
          cerr.fill('0');
          cerr.width(4);
          cerr.setf(ios::uppercase);
@@ -281,31 +290,32 @@ int BasicMBRData::ReadLogicalPart(uint64_t extendedStart, uint64_t diskOffset, i
          cerr.fill(' ');
       } // if
 
-      // Sometimes an EBR points directly to another EBR, rather than defining
-      // a logical partition and then pointing to another EBR. Thus, we recurse
-      // directly if this is detected, else extract partition data and then
-      // recurse on the second entry in the EBR...
-      ebrType = ebr.partitions[0].partitionType;
-      if ((ebrType == 0x05) || (ebrType == 0x0f) || (ebrType == 0x85)) {
-         partNum = ReadLogicalPart(extendedStart, ebr.partitions[0].firstLBA, partNum);
-      } else {
-         // Copy over the basic data....
-         partitions[partNum] = ebr.partitions[0];
-         // Adjust the start LBA, since it's encoded strangely....
-         partitions[partNum].SetStartLBA(ebr.partitions[0].firstLBA + diskOffset + extendedStart);
-         partitions[partNum].SetInclusion(LOGICAL);
-
-         // Find the next partition (if there is one) and recurse....
-         if ((ebr.partitions[1].firstLBA != UINT32_C(0)) && (partNum >= 4) &&
-            (partNum < (MAX_MBR_PARTS - 1))) {
-            partNum = ReadLogicalPart(extendedStart, ebr.partitions[1].firstLBA,
-                                      partNum + 1);
+      if ((partNum >= 0) && (partNum < MAX_MBR_PARTS) && (allOK > 0)) {
+         // Sometimes an EBR points directly to another EBR, rather than defining
+         // a logical partition and then pointing to another EBR. Thus, we skip
+         // the logical partition when this is the case....
+         ebrType = ebr.partitions[0].partitionType;
+         if ((ebrType == 0x05) || (ebrType == 0x0f) || (ebrType == 0x85)) {
+            cout << "EBR describes a logical partition!\n";
+            offset = extendedStart + ebr.partitions[0].firstLBA;
          } else {
-            partNum++;
-         } // if another partition
-      } // if/else
-   } // Not enough space for all the logicals (or previous error encountered)
-   return (partNum);
+            // Copy over the basic data....
+            partitions[partNum] = ebr.partitions[0];
+            // Adjust the start LBA, since it's encoded strangely....
+            partitions[partNum].SetStartLBA(ebr.partitions[0].firstLBA + offset);
+            partitions[partNum].SetInclusion(LOGICAL);
+            
+            // Find the next partition (if there is one)
+            if ((ebr.partitions[1].firstLBA != UINT32_C(0)) && (partNum < (MAX_MBR_PARTS - 1))) {
+               offset = extendedStart + ebr.partitions[1].firstLBA;
+               partNum++;
+            } else {
+               another = 0;
+            } // if another partition
+         } // if/else
+      } // if
+   } // while()
+   return (partNum * allOK);
 } // BasicMBRData::ReadLogicalPart()
 
 // Write the MBR data to the default defined device. This writes both the
@@ -365,7 +375,7 @@ int BasicMBRData::WriteMBRData(DiskIO *theDisk) {
    partNum = FindNextInUse(4);
    writeEbrTo = (uint64_t) extFirstLBA;
    // Write logicals...
-   while (allOK && moreLogicals && (partNum < MAX_MBR_PARTS)) {
+   while (allOK && moreLogicals && (partNum < MAX_MBR_PARTS) && (partNum >= 0)) {
       partitions[partNum].StoreInStruct(&tempMBR.partitions[0]);
       tempMBR.partitions[0].firstLBA = 1;
       // tempMBR.partitions[1] points to next EBR or terminates EBR linked list...
@@ -698,7 +708,7 @@ int BasicMBRData::FindOverlaps(void) {
 
    for (i = 0; i < MAX_MBR_PARTS; i++) {
       for (j = i + 1; j < MAX_MBR_PARTS; j++) {
-         if ((partitions[i].GetInclusion() != NONE) &&
+         if ((partitions[i].GetInclusion() != NONE) && (partitions[j].GetInclusion() != NONE) &&
              (partitions[i].DoTheyOverlap(partitions[j]))) {
             numProbs++;
             cout << "\nProblem: MBR partitions " << i + 1 << " and " << j + 1
@@ -1411,7 +1421,10 @@ uint64_t BasicMBRData::FindFirstInFree(uint64_t start) {
    return (bestLastLBA);
 } // BasicMBRData::FindFirstInFree()
 
-// Returns NONE (unused), PRIMARY, LOGICAL, EBR (for EBR or MBR), or INVALID
+// Returns NONE (unused), PRIMARY, LOGICAL, EBR (for EBR or MBR), or INVALID.
+// Note: If the sector immediately before a logical partition is in use by
+// another partition, this function returns PRIMARY or LOGICAL for that
+// sector, rather than EBR.
 int BasicMBRData::SectorUsedAs(uint64_t sector, int topPartNum) {
    int i = 0, usedAs = NONE;
 
@@ -1425,7 +1438,7 @@ int BasicMBRData::SectorUsedAs(uint64_t sector, int topPartNum) {
       if (sector >= diskSize)
          usedAs = INVALID;
       i++;
-   } while ((i < topPartNum) && (usedAs == NONE));
+   } while ((i < topPartNum) && ((usedAs == NONE) || (usedAs == EBR)));
    return usedAs;
 } // BasicMBRData::SectorUsedAs()
 

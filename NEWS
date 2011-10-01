@@ -1,16 +1,29 @@
-0.8.1 (?/??/2011):
+0.8.1 (10/1/2011):
 ------------------
+
+- Fixed bug that could cause FixParts to keep a partition's assignment
+  as logical when FixPart could not actually do so. This could happen
+  when there are no gaps between two logical partitions. Some partitioning
+  tools can create such configurations, but FixParts can't. Such
+  configurations are extremely rare. I've only encountered them when
+  logical partitions are out of order.
+
+- Added code to detect infinite loops of logical partitions when reading
+  MBR data. When detected, the program now stops reading after the first
+  loop, so no duplicates appear in the partition list.
+
+- Fixed bug in partition overlap detection in MBR code.
 
 - Changed GPT reading code to use the size encoded in GPT headers to
   determine how much of the header to use in computing a CRC, with the
   restriction that the size be equal to or less than the disk's sector
   size. This should work around problems with libefi in ZFS, which sets the
-  header size to 512 rather than the standard 92. A caveat: If the disk's
-  sector size is larger than the GPTHeader data structure size (512 bytes),
-  then the rest of the sector's contents are ignored and replaced with 0
-  values. This could produce false positives on CRC checks on disks with
-  over-512-byte sector sizes if the header sector is padded with something
-  other than 0 values.
+  header size to 512 rather than the more common 92. A caveat: If the
+  disk's sector size is larger than the GPTHeader data structure size (512
+  bytes), then the rest of the sector's contents are ignored and replaced
+  with 0 values. This could produce false positives on CRC checks on disks
+  with over-512-byte sector sizes if the header sector is padded with
+  something other than 0 values.
 
 - Fixed bug in new (as of 0.8.0) check that main and backup partition
   tables are identical on big-endian (PowerPC, etc.) hardware.

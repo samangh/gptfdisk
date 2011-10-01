@@ -68,10 +68,7 @@ public:
    // File I/O functions...
    int ReadMBRData(const string & deviceFilename);
    int ReadMBRData(DiskIO * theDisk, int checkBlockSize = 1);
-   // ReadLogicalPart() returns last partition # read to logicals[] array,
-   // or -1 if there was a problem....
-   int ReadLogicalPart(uint64_t extendedStart, uint64_t diskOffset,
-                       int partNum);
+   int ReadLogicalParts(uint64_t extendedStart, int partNum);
    int WriteMBRData(void);
    int WriteMBRData(DiskIO *theDisk);
    int WriteMBRData(const string & deviceFilename);

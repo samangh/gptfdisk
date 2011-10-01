@@ -766,8 +766,7 @@ int GPTData::ForceLoadGPTData(void) {
    // Return valid headers code: 0 = both headers bad; 1 = main header
    // good, backup bad; 2 = backup header good, main header bad;
    // 3 = both headers good. Note these codes refer to valid GPT
-   // signatures and version numbers; more subtle problems will elude
-   // this check!
+   // signatures, version numbers, and CRCs.
    validHeaders = CheckHeaderValidity();
 
    // Read partitions (from primary array)
