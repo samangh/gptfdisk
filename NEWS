@@ -1,3 +1,15 @@
+0.8.2 (??/??/2011):
+-------------------
+
+- Fixed a bug that caused an infinite loop of input prompts if the user
+  pressed Ctrl+D.
+
+- Changed gdisk's first-sector input operation to specify a sector number
+  that's properly aligned as the default value. This eliminates the need
+  to alter that value and notify the user of the change when the user
+  hits "Enter" for the default value as the first partition on an empty
+  disk (as well as in some other situations).
+
 0.8.1 (10/1/2011):
 ------------------
 

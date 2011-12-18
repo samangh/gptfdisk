@@ -194,6 +194,7 @@ void GPTDataTextUI::CreatePartition(void) {
        (firstFreePart < numParts)) {
       lastBlock = FindLastAvailable();
       firstInLargest = FindFirstInLargest();
+      Align(&firstInLargest);
 
       // Get partition number....
       do {

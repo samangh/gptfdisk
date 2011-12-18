@@ -38,6 +38,8 @@ string ReadString(void) {
    string inString;
 
    getline(cin, inString);
+   if (!cin)
+      cin.clear();
    return inString;
 } // ReadString()
 

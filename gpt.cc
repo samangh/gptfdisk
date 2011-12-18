@@ -968,10 +968,8 @@ int GPTData::CheckTable(struct GPTHeader *header) {
 // Writes GPT (and protective MBR) to disk. If quiet==1, 
 // Returns 1 on successful write, 0 if there was a problem.
 int GPTData::SaveGPTData(int quiet) {
-   int allOK = 1, littleEndian;
+   int allOK = 1;
    char answer;
-
-   littleEndian = IsLittleEndian();
 
    // First do some final sanity checks....
 
@@ -1172,14 +1170,10 @@ int GPTData::SavePartitionTable(DiskIO & disk, uint64_t sector) {
 // set of partitions.
 int GPTData::LoadGPTBackup(const string & filename) {
    int allOK = 1, val, err;
-   uint32_t sizeOfEntries;
-   int littleEndian = 1, shortBackup = 0;
+   int shortBackup = 0;
    DiskIO backupFile;
 
    if (backupFile.OpenForRead(filename)) {
-      if (IsLittleEndian() == 0)
-         littleEndian = 0;
-
       // Let the MBRData class load the saved MBR...
       protectiveMBR.ReadMBRData(&backupFile, 0); // 0 = don't check block size
       protectiveMBR.SetDisk(&myDisk);
@@ -1207,10 +1201,8 @@ int GPTData::LoadGPTBackup(const string & filename) {
       if ((val = CheckHeaderValidity()) > 0) {
          if (val == 2) { // only backup header seems to be good
             SetGPTSize(secondHeader.numParts);
-            sizeOfEntries = secondHeader.sizeOfPartitionEntries;
          } else { // main header is OK
             SetGPTSize(mainHeader.numParts);
-            sizeOfEntries = mainHeader.sizeOfPartitionEntries;
          } // if/else
 
          if (secondHeader.currentLBA != diskSize - UINT64_C(1)) {
