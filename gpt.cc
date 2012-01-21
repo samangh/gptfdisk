@@ -317,8 +317,7 @@ int GPTData::CheckGPTSize(void) {
    lastUsedBlock = 0;
    for (i = 0; i < numParts; i++) {
       if (partitions[i].IsUsed()) {
-         if ((partitions[i].GetFirstLBA() < firstUsedBlock) &&
-            (partitions[i].GetFirstLBA() != 0))
+         if (partitions[i].GetFirstLBA() < firstUsedBlock)
             firstUsedBlock = partitions[i].GetFirstLBA();
          if (partitions[i].GetLastLBA() > lastUsedBlock) {
             lastUsedBlock = partitions[i].GetLastLBA();
@@ -519,7 +518,7 @@ void GPTData::RebuildMainHeader(void) {
    mainHeader.partitionEntriesCRC = secondHeader.partitionEntriesCRC;
    memcpy(mainHeader.reserved2, secondHeader.reserved2, sizeof(mainHeader.reserved2));
    mainCrcOk = secondCrcOk;
-   SetGPTSize(mainHeader.numParts);
+   SetGPTSize(mainHeader.numParts, 0);
 } // GPTData::RebuildMainHeader()
 
 // Rebuild the secondary GPT header, using the main header as a model.
@@ -540,7 +539,7 @@ void GPTData::RebuildSecondHeader(void) {
    secondHeader.partitionEntriesCRC = mainHeader.partitionEntriesCRC;
    memcpy(secondHeader.reserved2, mainHeader.reserved2, sizeof(secondHeader.reserved2));
    secondCrcOk = mainCrcOk;
-   SetGPTSize(secondHeader.numParts);
+   SetGPTSize(secondHeader.numParts, 0);
 } // GPTData::RebuildSecondHeader()
 
 // Search for hybrid MBR entries that have no corresponding GPT partition.
@@ -883,7 +882,7 @@ int GPTData::LoadHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector
    *crcOk = CheckHeaderCRC(&tempHeader);
 
    if (allOK && (numParts != tempHeader.numParts) && *crcOk) {
-      allOK = SetGPTSize(tempHeader.numParts);
+      allOK = SetGPTSize(tempHeader.numParts, 0);
    }
 
    *header = tempHeader;
@@ -906,7 +905,7 @@ int GPTData::LoadPartitionTable(const struct GPTHeader & header, DiskIO & disk, 
          retval = disk.Seek(sector);
       } // if/else
       if (retval == 1)
-         retval = SetGPTSize(header.numParts);
+         retval = SetGPTSize(header.numParts, 0);
       if (retval == 1) {
          sizeOfParts = header.numParts * header.sizeOfPartitionEntries;
          if (disk.Read(partitions, sizeOfParts) != (int) sizeOfParts) {
@@ -1206,9 +1205,9 @@ int GPTData::LoadGPTBackup(const string & filename) {
       // this check!
       if ((val = CheckHeaderValidity()) > 0) {
          if (val == 2) { // only backup header seems to be good
-            SetGPTSize(secondHeader.numParts);
+            SetGPTSize(secondHeader.numParts, 0);
          } else { // main header is OK
-            SetGPTSize(mainHeader.numParts);
+            SetGPTSize(mainHeader.numParts, 0);
          } // if/else
 
          if (secondHeader.currentLBA != diskSize - UINT64_C(1)) {
@@ -1593,19 +1592,21 @@ int GPTData::OnePartToMBR(uint32_t gptPart, int mbrPart) {
  **********************************************************************/
 
 // Resizes GPT to specified number of entries. Creates a new table if
-// necessary, copies data if it already exists. Returns 1 if all goes
-// well, 0 if an error is encountered.
-int GPTData::SetGPTSize(uint32_t numEntries) {
+// necessary, copies data if it already exists. If fillGPTSectors is 1
+// (the default), rounds numEntries to fill all the sectors necessary to
+// hold the GPT.
+// Returns 1 if all goes well, 0 if an error is encountered.
+int GPTData::SetGPTSize(uint32_t numEntries, int fillGPTSectors) {
    GPTPart* newParts;
-   uint32_t i, high, copyNum;
+   uint32_t i, high, copyNum, entriesPerSector;
    int allOK = 1;
 
    // First, adjust numEntries upward, if necessary, to get a number
    // that fills the allocated sectors
-   i = blockSize / GPT_SIZE;
-   if ((numEntries % i) != 0) {
+   entriesPerSector = blockSize / GPT_SIZE;
+   if (fillGPTSectors && ((numEntries % entriesPerSector) != 0)) {
       cout << "Adjusting GPT size from " << numEntries << " to ";
-      numEntries = ((numEntries / i) + 1) * i;
+      numEntries = ((numEntries / entriesPerSector) + 1) * entriesPerSector;
       cout << numEntries << " to fill the sector\n";
    } // if
 
@@ -1641,7 +1642,7 @@ int GPTData::SetGPTSize(uint32_t numEntries) {
             partitions = newParts;
          } // if/else existing partitions
          numParts = numEntries;
-         mainHeader.firstUsableLBA = ((numEntries * GPT_SIZE) / blockSize) + 2 ;
+         mainHeader.firstUsableLBA = ((numEntries * GPT_SIZE) / blockSize) + (((numEntries * GPT_SIZE) % blockSize) != 0) + 2 ;
          secondHeader.firstUsableLBA = mainHeader.firstUsableLBA;
          MoveSecondHeaderToEnd();
          if (diskSize > 0)

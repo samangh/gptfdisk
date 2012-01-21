@@ -1,6 +1,14 @@
 0.8.2 (??/??/2011):
 -------------------
 
+- Adjusted the code to support a number of partitions that's not a multiple
+  of the number of partition table entries that fits in a sector (normally
+  4 per sector). The program still rounds up, when necessary, when resizing
+  the partition table manually, but not when loading a partition table that
+  contains a peculiar number of partitions. This helps prevent spurious
+  error messages about CRC problems when loading some Solaris partition
+  tables.
+
 - Fixed bugs relating to the handling of empty partitions; Solaris's ZFS
   tools create weird empty partitions that are legal but that gdisk wasn't
   handling properly. (Specifically, they sometimes have non-zero end

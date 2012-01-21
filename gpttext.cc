@@ -650,7 +650,7 @@ void GPTDataTextUI::RecoveryMenu(string filename) {
                } // if
             } else {
                MakeProtectiveMBR();
-               SetGPTSize(numParts);
+               SetGPTSize(numParts, 0);
                cout << "Note: New protective MBR created\n\n";
             } // if/else
             break;

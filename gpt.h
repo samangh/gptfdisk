@@ -139,7 +139,7 @@ public:
    int OnePartToMBR(uint32_t gptPart, int mbrPart); // add one partition to MBR. Returns 1 if successful
 
    // Adjust GPT structures WITHOUT user interaction...
-   int SetGPTSize(uint32_t numEntries);
+   int SetGPTSize(uint32_t numEntries, int fillGPTSectors = 1);
    void BlankPartitions(void);
    int DeletePartition(uint32_t partNum);
    uint32_t CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector);
