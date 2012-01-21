@@ -1,6 +1,11 @@
 0.8.2 (??/??/2011):
 -------------------
 
+- Fixed bugs relating to the handling of empty partitions; Solaris's ZFS
+  tools create weird empty partitions that are legal but that gdisk wasn't
+  handling properly. (Specifically, they sometimes have non-zero end
+  points; gdisk assumed empty partitions had end points of 0.)
+
 - Fixed a bug that caused an infinite loop of input prompts if the user
   pressed Ctrl+D.
 

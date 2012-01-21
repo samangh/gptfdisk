@@ -277,7 +277,7 @@ int GPTData::Verify(void) {
    // Check that partitions are aligned on proper boundaries (for WD Advanced
    // Format and similar disks)....
    for (i = 0; i < numParts; i++) {
-      if ((partitions[i].GetFirstLBA() % sectorAlignment) != 0) {
+      if ((partitions[i].IsUsed()) && (partitions[i].GetFirstLBA() % sectorAlignment) != 0) {
          cout << "\nCaution: Partition " << i + 1 << " doesn't begin on a "
               << sectorAlignment << "-sector boundary. This may\nresult "
               << "in degraded performance on some modern (2009 and later) hard disks.\n";
@@ -316,11 +316,14 @@ int GPTData::CheckGPTSize(void) {
    firstUsedBlock = UINT64_MAX;
    lastUsedBlock = 0;
    for (i = 0; i < numParts; i++) {
-      if ((partitions[i].GetFirstLBA() < firstUsedBlock) &&
-           (partitions[i].GetFirstLBA() != 0))
-         firstUsedBlock = partitions[i].GetFirstLBA();
-      if (partitions[i].GetLastLBA() > lastUsedBlock)
-         lastUsedBlock = partitions[i].GetLastLBA();
+      if (partitions[i].IsUsed()) {
+         if ((partitions[i].GetFirstLBA() < firstUsedBlock) &&
+            (partitions[i].GetFirstLBA() != 0))
+            firstUsedBlock = partitions[i].GetFirstLBA();
+         if (partitions[i].GetLastLBA() > lastUsedBlock) {
+            lastUsedBlock = partitions[i].GetLastLBA();
+         } // if
+      } // if
    } // for
 
    // If the disk size is 0 (the default), then it means that various
@@ -555,7 +558,7 @@ int GPTData::FindHybridMismatches(void) {
          mbrLast = mbrFirst + (uint64_t) protectiveMBR.GetLength(i) - UINT64_C(1);
          do {
             if ((partitions[j].GetFirstLBA() == mbrFirst) &&
-                (partitions[j].GetLastLBA() == mbrLast))
+                (partitions[j].GetLastLBA() == mbrLast) && (partitions[j].IsUsed()))
                found = 1;
             j++;
          } while ((!found) && (j < numParts));
@@ -585,7 +588,8 @@ int GPTData::FindOverlaps(void) {
 
    for (i = 1; i < numParts; i++) {
       for (j = 0; j < i; j++) {
-         if (partitions[i].DoTheyOverlap(partitions[j])) {
+         if ((partitions[i].IsUsed()) && (partitions[j].IsUsed()) &&
+             (partitions[i].DoTheyOverlap(partitions[j]))) {
             problems++;
             cout << "\nProblem: partitions " << i + 1 << " and " << j + 1 << " overlap:\n";
             cout << "  Partition " << i + 1 << ": " << partitions[i].GetFirstLBA()
@@ -608,13 +612,15 @@ int GPTData::FindInsanePartitions(void) {
    int problems = 0;
 
    for (i = 0; i < numParts; i++) {
-      if (partitions[i].GetFirstLBA() > partitions[i].GetLastLBA()) {
-         problems++;
-         cout << "\nProblem: partition " << i + 1 << " ends before it begins.\n";
-      } // if
-      if (partitions[i].GetLastLBA() >= diskSize) {
-         problems++;
-      cout << "\nProblem: partition " << i + 1 << " is too big for the disk.\n";
+      if (partitions[i].IsUsed()) {
+         if (partitions[i].GetFirstLBA() > partitions[i].GetLastLBA()) {
+            problems++;
+            cout << "\nProblem: partition " << i + 1 << " ends before it begins.\n";
+         } // if
+         if (partitions[i].GetLastLBA() >= diskSize) {
+            problems++;
+         cout << "\nProblem: partition " << i + 1 << " is too big for the disk.\n";
+         } // if
       } // if
    } // for
    return problems;
@@ -1834,7 +1840,7 @@ int GPTData::SetPartitionGUID(uint32_t pn, GUIDData theGUID) {
    int retval = 0;
 
    if (pn < numParts) {
-      if (partitions[pn].GetFirstLBA() != UINT64_C(0)) {
+      if (partitions[pn].IsUsed()) {
          partitions[pn].SetUniqueGUID(theGUID);
          retval = 1;
       } // if
@@ -1944,7 +1950,7 @@ int GPTData::GetPartRange(uint32_t *low, uint32_t *high) {
    *low = numParts + 1; // code for "not found"
    *high = 0;
    for (i = 0; i < numParts; i++) {
-      if (partitions[i].GetFirstLBA() != UINT64_C(0)) { // it exists
+      if (partitions[i].IsUsed()) { // it exists
          *high = i; // since we're counting up, set the high value
          // Set the low value only if it's not yet found...
          if (*low == (numParts + 1)) *low = i;
@@ -2012,7 +2018,7 @@ uint64_t GPTData::FindFirstAvailable(uint64_t start) {
    do {
       firstMoved = 0;
       for (i = 0; i < numParts; i++) {
-         if ((first >= partitions[i].GetFirstLBA()) &&
+         if ((partitions[i].IsUsed()) && (first >= partitions[i].GetFirstLBA()) &&
              (first <= partitions[i].GetLastLBA())) { // in existing part.
             first = partitions[i].GetLastLBA() + 1;
             firstMoved = 1;
@@ -2298,7 +2304,8 @@ int GPTData::ManageAttributes(int partNum, const string & command, const string 
 
 // Show all attributes for a specified partition....
 void GPTData::ShowAttributes(const uint32_t partNum) {
-   partitions[partNum].ShowAttributes(partNum);
+   if (partitions[partNum].IsUsed())
+      partitions[partNum].ShowAttributes(partNum);
 } // GPTData::ShowAttributes
 
 // Show whether a single attribute bit is set (terse output)...
