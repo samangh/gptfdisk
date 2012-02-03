@@ -64,8 +64,8 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
    GPTData secondDevice;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
    int partNum = 0, saveNonGPT = 1, retval = 0, pretend = 0;
-   uint32_t gptPartNum = 0, low, high;
-   uint64_t startSector, endSector, sSize;
+   uint32_t gptPartNum = 0;
+   uint64_t low, high, startSector, endSector, sSize;
    uint64_t temp; // temporary variable; free to use in any case
    char *device;
    string cmd, typeGUID, name;

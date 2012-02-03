@@ -1,4 +1,10 @@
-0.8.2 (1/22/2011):
+0.8.3 (?/??/2012):
+------------------
+
+- Fixed bug that caused creation of >2TiB partitions to be truncated in
+  sgdisk.
+
+0.8.2 (1/22/2012):
 ------------------
 
 - Adjusted the code to support a number of partitions that's not a multiple
