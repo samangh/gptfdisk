@@ -338,6 +338,15 @@ EOF
 	echo ""
 }
 
+#####################################
+# Test stdin EOF
+#####################################
+eof_stdin() {
+	$SGDISK_BIN $TEMP_DISK << EOF
+^D
+EOF
+	pretty_print "SUCCESS" "EOF successfully exit gdisk"
+}
 
 ###################################
 # Main
@@ -369,6 +378,7 @@ do
 	restore_table         # only with gdisk
 	change_disk_uid       "$binary"
 	wipe_table            "$binary"
+	eof_stdin             # only with gdisk
 done
 
 # remove temp files

@@ -1,8 +1,14 @@
-0.8.3 (?/??/2012):
+0.8.3 (3/23/2012):
 ------------------
 
-- Fixed bug that caused creation of >2TiB partitions to be truncated in
-  sgdisk.
+- Fixed compilation problem on GCC 4.7.
+
+- Improved handling of Ctrl+D on some systems.
+
+- Added disk's name to message stating that a disk write was successful.
+
+- Fixed bug that caused creation of >2TiB partitions on 32-bit systems to
+  be truncated in sgdisk.
 
 0.8.2 (1/22/2012):
 ------------------

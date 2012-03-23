@@ -514,6 +514,7 @@ void GPTDataTextUI::MainMenu(string filename) {
       cout << "\nCommand (? for help): ";
       switch (ReadString()[0]) {
          case '\0':
+            goOn = !cin.eof();
             break;
          case 'b': case 'B':
             cout << "Enter backup filename to save: ";
@@ -609,6 +610,7 @@ void GPTDataTextUI::RecoveryMenu(string filename) {
       cout << "\nRecovery/transformation command (? for help): ";
       switch (ReadString()[0]) {
          case '\0':
+            goOn = !cin.eof();
             break;
          case 'b': case 'B':
             RebuildMainHeader();

@@ -238,7 +238,7 @@ int DiskIO::Read(void* buffer, int numBytes) {
          cerr << "Unable to allocate memory in DiskIO::Read()! Terminating!\n";
          exit(1);
       } // if
-      
+
       // Read the data into temporary space, then copy it to buffer
       ReadFile(fd, tempSpace, numBlocks * blockSize, &retval, NULL);
       for (i = 0; i < numBytes; i++) {

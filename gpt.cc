@@ -1031,7 +1031,7 @@ int GPTData::SaveGPTData(int quiet) {
            << "PARTITIONS!!\n\nDo you want to proceed? ";
       answer = GetYN();
       if (answer == 'Y') {
-         cout << "OK; writing new GUID partition table (GPT).\n";
+         cout << "OK; writing new GUID partition table (GPT) to " << myDisk.GetName() << ".\n";
       } else {
          allOK = 0;
       } // if/else
