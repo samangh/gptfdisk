@@ -1,6 +1,6 @@
 .\" Copyright 2011, 2012 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.8.3" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.8.4" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -481,11 +481,16 @@ Non\-GPT disk detected and no \fI\-g\fR option
 An error prevented saving changes
 
 .TP
+.B 5
+An error occurred while reading standard input (should never occur with
+sgdisk, but may with gdisk)
+
+.TP
 .B 8
 Disk replication operation (-R) failed
 
 .SH "BUGS"
-As of March 2012 (version 0.8.3), \fBsgdisk\fR
+As of March 2012 (version 0.8.4), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 

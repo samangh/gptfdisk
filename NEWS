@@ -1,3 +1,12 @@
+0.8.4 (3/25/2012):
+------------------
+
+- REALLY fixed Ctrl+D problems! Now gdisk terminates upon receiving a
+  Ctrl+D. In all previous versions, it could lock itself into a CPU-hogging
+  loop if launched via "sudo" from a terminal window that was then closed
+  or if Ctrl+D was pressed at certain input prompts (for a partition name
+  or sector number, for instance).
+
 0.8.3 (3/23/2012):
 ------------------
 

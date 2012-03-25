@@ -74,6 +74,6 @@ class DiskIO {
       string GetName(void) const {return realFilename;}
 
       uint64_t DiskSize(int* err);
-}; // struct GPTPart
+}; // class DiskIO
 
 #endif

@@ -38,8 +38,8 @@ string ReadString(void) {
    string inString;
 
    getline(cin, inString);
-   if (!cin)
-      cin.clear();
+   if (!cin.good())
+      exit(5);
    return inString;
 } // ReadString()
 
@@ -56,6 +56,8 @@ int GetNumber(int low, int high, int def, const string & prompt) {
       do {
          cout << prompt;
          cin.getline(line, 255);
+         if (!cin.good())
+            exit(5);
          num = sscanf(line, "%d", &response);
          if (num == 1) { // user provided a response
             if ((response < low) || (response > high))
@@ -100,6 +102,8 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize,
    do {
       cout << prompt;
       cin.getline(line, 255);
+      if (!cin.good())
+         exit(5);
       response = IeeeToInt(line, sSize, low, high, def);
    } while ((response < low) || (response > high));
    return response;

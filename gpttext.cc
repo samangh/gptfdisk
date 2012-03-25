@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <cstdio>
 #include "attributes.h"
@@ -509,12 +510,12 @@ void GPTDataTextUI::MainMenu(string filename) {
    int goOn = 1;
    PartType typeHelper;
    uint32_t temp1, temp2;
-   
+
    do {
       cout << "\nCommand (? for help): ";
       switch (ReadString()[0]) {
          case '\0':
-            goOn = !cin.eof();
+            goOn = cin.good();
             break;
          case 'b': case 'B':
             cout << "Enter backup filename to save: ";
@@ -610,7 +611,7 @@ void GPTDataTextUI::RecoveryMenu(string filename) {
       cout << "\nRecovery/transformation command (? for help): ";
       switch (ReadString()[0]) {
          case '\0':
-            goOn = !cin.eof();
+            goOn = cin.good();
             break;
          case 'b': case 'B':
             RebuildMainHeader();
@@ -736,6 +737,7 @@ void GPTDataTextUI::ExpertsMenu(string filename) {
       cout << "\nExpert command (? for help): ";
       switch (ReadString()[0]) {
          case '\0':
+            goOn = cin.good();
             break;
          case 'a': case 'A':
             if (GetPartRange(&temp1, &temp2) > 0)

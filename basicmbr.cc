@@ -1532,7 +1532,7 @@ int BasicMBRData::DoMenu(const string& prompt) {
       cout << prompt;
       switch (ReadString()[0]) {
          case '\0':
-            goOn = !cin.eof();
+            goOn = cin.good();
             break;
          case 'a': case 'A':
             num = GetNumber(1, MAX_MBR_PARTS, 1, "Toggle active flag for partition: ") - 1;
