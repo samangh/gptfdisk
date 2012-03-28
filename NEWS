@@ -1,3 +1,11 @@
+0.8.5 (?/??/2012):
+------------------
+
+- Added type codes for Midnight BSD (0xA580 - 0xA585). I used these codes
+  because Midnight BSD uses the same 0xA5 type code as FreeBSD on MBR
+  disks, so I'm starting Midnight BSD's numbering halfway through the
+  0xA5## range.
+
 0.8.4 (3/25/2012):
 ------------------
 
