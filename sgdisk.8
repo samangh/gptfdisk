@@ -1,6 +1,6 @@
 .\" Copyright 2011, 2012 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.8.4" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.8.5" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -161,7 +161,7 @@ attribute values. Omit the partition number (and even the device filename)
 when using this option. The others require a partition number. The
 \fIshow\fR and \fIget\fR options show the current attribute settings
 (all attributes or for a particular bit, respectively). The \fIor\fR,
-\fInand\fR, \fIxor\fR, \fI\=\fR, \fIset\fR, \fIclear\fR, and
+\fInand\fR, \fIxor\fR, \fI=\fR, \fIset\fR, \fIclear\fR, and
 \fItoggle\fR options enable you to change the attribute bit value. The
 \fIset\fR, \fIclear\fR, \fItoggle\fR, and \fIget\fR options work on a
 bit number; the others work on a hexadecimal bit mask. For example, type 
@@ -490,7 +490,7 @@ sgdisk, but may with gdisk)
 Disk replication operation (-R) failed
 
 .SH "BUGS"
-As of March 2012 (version 0.8.4), \fBsgdisk\fR
+As of May 2012 (version 0.8.5), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 

@@ -1,5 +1,12 @@
-0.8.5 (?/??/2012):
+0.8.5 (5/30/2012):
 ------------------
+
+- Changed code that writes the partition table so that a disk sync
+  operation occurs even if one or more write operations failed (but not if
+  they all failed). This is intended to work around a bug that a user
+  reported on a Windows system on which the write of the protective MBR
+  failed, although everything else worked. (I suspect anti-virus software
+  may have been blocking write access to the MBR.)
 
 - Added type codes for Midnight BSD (0xA580 - 0xA585). I used these codes
   because Midnight BSD uses the same 0xA5 type code as FreeBSD on MBR

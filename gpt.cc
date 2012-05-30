@@ -970,10 +970,14 @@ int GPTData::CheckTable(struct GPTHeader *header) {
    return allOK;
 } // GPTData::CheckTable()
 
-// Writes GPT (and protective MBR) to disk. If quiet==1, 
+// Writes GPT (and protective MBR) to disk. If quiet==1, moves the second
+// header later on the disk without asking for permission, if necessary, and
+// doesn't confirm the operation before writing. If quiet==0, asks permission
+// before moving the second header and asks for final confirmation of any
+// write.
 // Returns 1 on successful write, 0 if there was a problem.
 int GPTData::SaveGPTData(int quiet) {
-   int allOK = 1;
+   int allOK = 1, syncIt = 1;
    char answer;
 
    // First do some final sanity checks....
@@ -1042,9 +1046,11 @@ int GPTData::SaveGPTData(int quiet) {
       if (myDisk.OpenForWrite()) {
          // As per UEFI specs, write the secondary table and GPT first....
          allOK = SavePartitionTable(myDisk, secondHeader.partitionEntriesLBA);
-         if (!allOK)
+         if (!allOK) {
             cerr << "Unable to save backup partition table! Perhaps the 'e' option on the experts'\n"
                  << "menu will resolve this problem.\n";
+            syncIt = 0;
+         } // if
 
          // Now write the secondary GPT header...
          allOK = allOK && SaveHeader(&secondHeader, myDisk, mainHeader.backupLBA);
@@ -1059,15 +1065,21 @@ int GPTData::SaveGPTData(int quiet) {
          allOK = allOK && protectiveMBR.WriteMBRData(&myDisk);
 
          // re-read the partition table
-         if (allOK) {
+         // Note: Done even if some write operations failed, but not if all of them failed.
+         // Done this way because I've received one problem report from a user one whose
+         // system the MBR write failed but everything else was OK (on a GPT disk under
+         // Windows), and the failure to sync therefore caused Windows to restore the
+         // original partition table from its cache. OTOH, such restoration might be
+         // desirable if the error occurs later; but that seems unlikely unless the initial
+         // write fails....
+         if (syncIt)
             myDisk.DiskSync();
-         } // if
 
          if (allOK) { // writes completed OK
             cout << "The operation has completed successfully.\n";
          } else {
             cerr << "Warning! An error was reported when writing the partition table! This error\n"
-                 << "MIGHT be harmless, but you may have trashed the disk!\n";
+                 << "MIGHT be harmless, or the disk might be damaged! Checking it is advisable.\n";
          } // if/else
 
          myDisk.Close();

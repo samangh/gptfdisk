@@ -254,9 +254,7 @@ int DiskIO::Read(void* buffer, int numBytes) {
    return retval;
 } // DiskIO::Read()
 
-// A variant on the standard write() function. Done to work around
-// limitations in FreeBSD concerning the matching of the sector
-// size with the number of bytes read.
+// A variant on the standard write() function.
 // Returns the number of bytes written.
 int DiskIO::Write(void* buffer, int numBytes) {
    int blockSize = 512, i, numBlocks, retval = 0;
