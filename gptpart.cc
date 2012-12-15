@@ -114,6 +114,7 @@ void GPTPart::SetName(const string & theName) {
 // Set the name for a partition to theName, using a Unicode string as
 // input.
 void GPTPart::SetName(const UnicodeString & theName) {
+   cout << "Entering GPTPart::SetName(const UnicodeString...)\n";
    if (theName.isBogus()) {
       cerr << "Bogus UTF-16 name found in GPTPart::SetName()! Name not changed!\n";
    } else {
@@ -138,7 +139,7 @@ void GPTPart::SetName(const string & theName) {
    memset(name, 0, NAME_SIZE);
    for (i = 0; i < length; i++)
       name[i * 2] = theName[i];
-} // GPTPart::SetName(), Windows version
+} // GPTPart::SetName(), ASCII version
 #endif
 
 // Set the name for the partition based on the current GUID partition type

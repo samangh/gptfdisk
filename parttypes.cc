@@ -2,7 +2,7 @@
 // Class to manage partition type codes -- a slight variant on MBR type
 // codes, GUID type codes, and associated names.
 
-/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2012 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -72,7 +72,8 @@ void PartType::AddAllTypes(void) {
    // on empty partition table entries....
    AddType(0x0000, "00000000-0000-0000-0000-000000000000", "Unused entry", 0);
 
-   // DOS/Windows partition types, which confusingly Linux also uses in GPT
+   // DOS/Windows partition types, most of which are hidden from the "L" listing
+   // (they're available mainly for MBR-to-GPT conversions).
    AddType(0x0100, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-12
    AddType(0x0400, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-16 < 32M
    AddType(0x0600, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-16
@@ -106,7 +107,7 @@ void PartType::AddAllTypes(void) {
    AddType(0x7f02, "2E0A753D-9E48-43B0-8337-B15192CB1B5E", "ChromeOS reserved");
 
    // Linux-specific partition types....
-   AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris)
+   AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris on MBR)
    AddType(0x8300, "0FC63DAF-8483-4772-8E79-3D69D8477DE4", "Linux filesystem"); // Linux native
    AddType(0x8301, "8DA63339-0007-60C0-C436-083AC8230908", "Linux reserved");
    AddType(0x8e00, "E6D6D379-F507-44C2-A23C-238F2A3DF928", "Linux LVM");
@@ -171,10 +172,18 @@ void PartType::AddAllTypes(void) {
    AddType(0xc001, "75894C1E-3AEB-11D3-B7C1-7B03A0000000", "HP-UX data");
    AddType(0xc002, "E2A1E728-32E3-11D6-A682-7B03A0000000", "HP-UX service");
 
+   // Sony uses this GUID on some of its computers.
+   AddType(0xed00, "F4019732-066E-4E12-8273-346C5641494F", "Sony system partition");
+
    // EFI system and related partitions
    AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted identifies these as having the "boot flag" set
    AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
-   AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Boot loader
+   AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Used by GRUB
+
+   // VMWare ESX partition types codes
+   AddType(0xfb00, "AA31E02A-400F-11DB-9590-000C2911D1B8", "VMWare VMFS");
+   AddType(0xfb01, "9198EFFC-31C0-11DB-8F78-000C2911D1B8", "VMWare reserved");
+   AddType(0xfc00, "9D275380-40AD-11DB-BF97-000C2911D1B8", "VMWare kcore crash protection");
 
    // A straggler Linux partition type....
    AddType(0xfd00, "A19D880F-05FC-4D3B-A006-743F0F84911E", "Linux RAID");

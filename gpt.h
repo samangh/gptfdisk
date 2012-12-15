@@ -183,7 +183,7 @@ public:
    int IsFree(uint64_t sector, uint32_t *partNum = NULL);
    int IsFreePartNum(uint32_t partNum);
    int IsUsedPartNum(uint32_t partNum);
-   
+
    // Change how functions work, or return information on same
    void SetAlignment(uint32_t n);
    uint32_t ComputeAlignment(void); // Set alignment based on current partitions

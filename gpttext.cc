@@ -452,7 +452,7 @@ void GPTDataTextUI::MakeHybrid(void) {
       if (eeFirst == 'Y') {
          hybridMBR.AddPart(0, hybridPart);
       } else {
-         hybridMBR.AddPart(3, hybridPart);
+         hybridMBR.AddPart(numPartsToCvt, hybridPart);
       } // else
       hybridMBR.SetHybrid();
 

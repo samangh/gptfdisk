@@ -3,7 +3,7 @@
 
 /* By Rod Smith, initial coding January to February, 2009 */
 
-/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2012 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -258,6 +258,14 @@ int GPTData::Verify(void) {
            << mainHeader.backupLBA + UINT64_C(1) << " sectors.)\n"
            << "The 'e' option on the experts' menu may fix this problem.\n";
    } // if
+
+   if ((mainHeader.lastUsableLBA >= diskSize) || (mainHeader.lastUsableLBA > mainHeader.backupLBA)) {
+      problems++;
+      cout << "\nProblem: GPT claims the disk is larger than it is!\n";
+      cout << "(Claimed last usable sector is " << mainHeader.lastUsableLBA << ", but\n";
+      cout << "backup header is at " << mainHeader.backupLBA << " and disk size is\n";
+      cout << diskSize << "sectors\n";
+   }
 
    // Check for overlapping partitions....
    problems += FindOverlaps();
@@ -1014,6 +1022,21 @@ int GPTData::SaveGPTData(int quiet) {
             cout << "Have not corrected the problem. Strange problems may occur in the future!\n";
          } // if correction requested
       } else { // Go ahead and do correction automatically
+         MoveSecondHeaderToEnd();
+      } // if/else quiet
+   } // if
+
+   if ((mainHeader.lastUsableLBA >= diskSize) || (mainHeader.lastUsableLBA > mainHeader.backupLBA)) {
+      if (quiet == 0) {
+         cout << "Warning! The claimed last usable sector is incorrect! Do you want to correct\n"
+              << "this problem? ";
+         if (GetYN() == 'Y') {
+            MoveSecondHeaderToEnd();
+            cout << "Have adjusted the second header and last usable sector value.\n";
+         } else {
+            cout << "Have not corrected the problem. Strange problems may occur in the future!\n";
+         } // if correction requested
+      } else { // go ahead and do correction automatically
          MoveSecondHeaderToEnd();
       } // if/else quiet
    } // if
@@ -2196,12 +2219,12 @@ void GPTData::SetAlignment(uint32_t n) {
 // sector size), but not by the previously-located alignment value, then the
 // alignment value is adjusted down. If the computed alignment is less than 8
 // and the disk is bigger than SMALLEST_ADVANCED_FORMAT, resets it to 8. This
-// is a safety measure for WD Advanced Format and similar drives. If no partitions
-// are defined, the alignment value is set to DEFAULT_ALIGNMENT (2048) (or an
+// is a safety measure for Advanced Format drives. If no partitions are
+// defined, the alignment value is set to DEFAULT_ALIGNMENT (2048) (or an
 // adjustment of that based on the current sector size). The result is that new
 // drives are aligned to 2048-sector multiples but the program won't complain
 // about other alignments on existing disks unless a smaller-than-8 alignment
-// is used on big disks (as safety for WD Advanced Format drives).
+// is used on big disks (as safety for Advanced Format drives).
 // Returns the computed alignment value.
 uint32_t GPTData::ComputeAlignment(void) {
    uint32_t i = 0, found, exponent = 31;

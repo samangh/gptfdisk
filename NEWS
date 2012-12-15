@@ -1,3 +1,23 @@
+0.8.6 (?/??/2012):
+------------------
+
+- Added a new check to the verification code.
+
+- Added partition type code for Sony system partition
+  (F4019732-066E-4E12-8273-346C5641494F). I'm not entirely clear what this
+  is used for, but it's appearing on some new Sony computers.
+
+- Tweaked hybrid MBR creation options to fix a problem that caused the main
+  0xEE MBR partition to NOT be created if the user told gdisk to NOT place
+  it at the start of the disk AND IF fewer than three partitions are
+  hybridize AND IF the user opted to create a second protective partition.
+
+- Changed default build options for Mac OS X to *NOT* use libicu,
+  since it seems to have broken somewhere along the line. It still
+  works on Linux, though.
+
+- Added partition type codes for VMWare ESX (FB00, FB01, and FC00).
+
 0.8.5 (5/30/2012):
 ------------------
 
