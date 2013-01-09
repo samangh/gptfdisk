@@ -172,6 +172,9 @@ void PartType::AddAllTypes(void) {
    AddType(0xc001, "75894C1E-3AEB-11D3-B7C1-7B03A0000000", "HP-UX data");
    AddType(0xc002, "E2A1E728-32E3-11D6-A682-7B03A0000000", "HP-UX service");
 
+   // Type code for Haiku; uses BeOS MBR code as hex code base
+   AddType(0xeb00, "42465331-3BA3-10F1-802A-4861696B7521", "Haiku BFS");
+
    // Sony uses this GUID on some of its computers.
    AddType(0xed00, "F4019732-066E-4E12-8273-346C5641494F", "Sony system partition");
 
