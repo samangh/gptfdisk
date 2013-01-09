@@ -78,7 +78,7 @@ sgdisk include:
   access up to three GPT partitions on the disk (gdisk and sgdisk only)
 
 Of course, GPT fdisk isn't without its limitations. Most notably, it lacks
-the filesystem awareness and filesystem-related features of GNU Parted. You
+the filesystem awareness and filesystem-related features of GParted. You
 can't resize a partition's filesystem or create a partition with a
 filesystem already in place with gdisk, for instance. There's no GUI
 version of gdisk.
@@ -166,10 +166,10 @@ installed, most notably the GNU Compiler Collection (GCC) and its g++
 compiler for C++. (Under Windows, Microsoft Visual C++ 2008 can also be
 used.) In addition, note these requirements:
 
-* On Linux, FreeBSD, and OS X, libuuid must be installed. This is the
-  standard for Linux and OS X, although you may need to install a package
-  called uuid-dev or something similar to get the headers. On FreeBSD, the
-  e2fsprogs-libuuid port must be installed.
+* On Linux, FreeBSD, OS X, and Solaris, libuuid must be installed. This is
+  the standard for Linux and OS X, although you may need to install a
+  package called uuid-dev or something similar to get the headers. On
+  FreeBSD, the e2fsprogs-libuuid port must be installed.
 
 * The ICU library (http://site.icu-project.org), which provides support for
   Unicode partition names, is recommended on all
@@ -180,7 +180,9 @@ used.) In addition, note these requirements:
   "-D USE_UTF16" part from the CXXFLAGS line and remove references to
   -licuio, -licuuc, -licudata, and -licucore (details vary between
   platforms) from the compilation options. Suitable lines are present, but
-  commented out, in the Makefile, Makefile.mac, and Makefile.bsd files.
+  commented out, in the Makefile, Makefile.solaris, Makefile.freebsd files.
+  Because of problems with ICU under OS X, the Makefile.mac file doesn't
+  build against ICU by default.
 
 * The cgdisk program requires the ncurses library and its development files
   (headers). Most Linux distributions install ncurses by default, but you
@@ -205,16 +207,16 @@ used.) In addition, note these requirements:
 When all the necessary development tools and libraries are installed, you
 can uncompress the package and type "make" at the command prompt in the
 resulting directory. (You may need to type "make -f Makefile.mac" on Mac OS
-X, "make -f Makefile.freebsd" on FreeBSD, or "make -f Makefile.mingw" to
-compile using MinGW for Windows.) You may also need to add header (include)
-directories or library directories by setting the CXXFLAGS environment
-variable or by editing the Makefile. The result should be program files
-called gdisk, sgdisk, and fixparts. Typing "make gdisk", "make cgdisk",
-"make sgdisk", or "make fixparts" will compile only the requested programs.
-You can use these programs in place or copy the files to a suitable
-directory, such as /usr/local/sbin. You can copy the man pages (gdisk.8,
-cgdisk.8, sgdisk.8, and fixparts.8) to /usr/local/man/man8 to make them
-available.
+X, "make -f Makefile.freebsd" on FreeBSD, "make -f Makefile.solaris" on
+Solaris, or "make -f Makefile.mingw" to compile using MinGW for Windows.)
+You may also need to add header (include) directories or library
+directories by setting the CXXFLAGS environment variable or by editing the
+Makefile. The result should be program files called gdisk, cgdisk, sgdisk,
+and fixparts. Typing "make gdisk", "make cgdisk", "make sgdisk", or "make
+fixparts" will compile only the requested programs. You can use these
+programs in place or copy the files to a suitable directory, such as
+/usr/local/sbin. You can copy the man pages (gdisk.8, cgdisk.8, sgdisk.8,
+and fixparts.8) to /usr/local/man/man8 to make them available.
 
 Caveats
 -------
@@ -230,9 +232,9 @@ virtual QEMU and VirtualBox disks. I've received user reports of success with
 RAID arrays over 2TiB in size, though.
 
 My main development platform is a system running the 64-bit version of
-Gentoo Linux (previously Ubuntu 8.04). I've also tested on several other
-32- and 64-bit Linux distributions, Intel-based Mac OS X 10.5 and 10.6,
-64-bit FreeBSD 7.1, and Windows 7.
+Gentoo Linux. I've also tested on several other 32- and 64-bit Linux
+distributions, Intel-based Mac OS X 10.5 and 10.6, 64-bit FreeBSD 7.1, and
+Windows 7.
 
 Redistribution
 --------------

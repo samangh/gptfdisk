@@ -261,10 +261,10 @@ int GPTData::Verify(void) {
 
    if ((mainHeader.lastUsableLBA >= diskSize) || (mainHeader.lastUsableLBA > mainHeader.backupLBA)) {
       problems++;
-      cout << "\nProblem: GPT claims the disk is larger than it is!\n";
-      cout << "(Claimed last usable sector is " << mainHeader.lastUsableLBA << ", but\n";
-      cout << "backup header is at " << mainHeader.backupLBA << " and disk size is\n";
-      cout << diskSize << "sectors\n";
+      cout << "\nProblem: GPT claims the disk is larger than it is! (Claimed last usable\n"
+           << "sector is " << mainHeader.lastUsableLBA << ", but backup header is at\n"
+           << mainHeader.backupLBA << " and disk size is " << diskSize << " sectors.\n"
+           << "The 'e' option on the experts' menu will probably fix this problem\n";
    }
 
    // Check for overlapping partitions....
@@ -1741,7 +1741,7 @@ uint32_t GPTData::CreatePartition(uint32_t partNum, uint64_t startSector, uint64
          if (FindLastInFree(startSector) >= endSector) {
             partitions[partNum].SetFirstLBA(startSector);
             partitions[partNum].SetLastLBA(endSector);
-            partitions[partNum].SetType(DEFAULT_TYPE);
+            partitions[partNum].SetType(DEFAULT_GPT_TYPE);
             partitions[partNum].RandomizeUniqueGUID();
          } else retval = 0; // if free space until endSector
       } else retval = 0; // if startSector is free

@@ -49,7 +49,7 @@ void GPTDataCL::LoadBackupFile(string backupFile, int &saveData, int &neverSaveD
       neverSaveData = 1;
       cerr << "Error loading backup file!\n";
    } // else
-} // 
+} // GPTDataCL::LoadBackupFile()
 
 // Perform the actions specified on the command line. This is necessarily one
 // monster of a function!
@@ -64,7 +64,6 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
    GPTData secondDevice;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
    int partNum = 0, saveNonGPT = 1, retval = 0, pretend = 0;
-   uint32_t gptPartNum = 0;
    uint64_t low, high, startSector, endSector, sSize;
    uint64_t temp; // temporary variable; free to use in any case
    char *device;
@@ -113,14 +112,14 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
 
    // Create popt context...
    poptCon = poptGetContext(NULL, argc, (const char**) argv, theOptions, 0);
-   
+
    poptSetOtherOptionHelp(poptCon, " [OPTION...] <device>");
-   
+
    if (argc < 2) {
       poptPrintUsage(poptCon, stderr, 0);
       return 1;
    }
-   
+
    // Do one loop through the options to find the device filename and deal
    // with options that don't require a device filename, to flag destructive
    // (o, z, or Z) options, and to flag presence of an
@@ -145,11 +144,11 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
       } // switch
       numOptions++;
    } // while
-   
+
    // Assume first non-option argument is the device filename....
    device = (char*) poptGetArg(poptCon);
    poptResetContext(poptCon);
-   
+
    if (device != NULL) {
       JustLooking(); // reset as necessary
       BeQuiet(); // Tell called functions to be less verbose & interactive
@@ -194,15 +193,17 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                case 'c':
                   JustLooking(0);
                   partNum = (int) GetInt(partName, 1) - 1;
-                  name = GetString(partName, 2);
-                  if (SetName(partNum, (UnicodeString) name.c_str())) {
-                     saveData = 1;
-                  } else {
-                     cerr << "Unable to set partition " << partNum + 1
-                     << "'s name to '" << GetString(partName, 2) << "'!\n";
-                     neverSaveData = 1;
-                  } // if/else
-                  free(partName);
+                  if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
+                     name = GetString(partName, 2);
+                     if (SetName(partNum, (UnicodeString) name.c_str())) {
+                        saveData = 1;
+                     } else {
+                        cerr << "Unable to set partition " << partNum + 1
+                             << "'s name to '" << GetString(partName, 2) << "'!\n";
+                        neverSaveData = 1;
+                     } // if/else
+                     free(partName);
+                  }
                   break;
                case 'C':
                   JustLooking(0);
@@ -348,16 +349,18 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                case 't':
                   JustLooking(0);
                   partNum = (int) GetInt(typeCode, 1) - 1;
-                  typeHelper = GetString(typeCode, 2);
-                  if ((typeHelper != (GUIDData) "00000000-0000-0000-0000-000000000000") &&
-                     (ChangePartType(partNum, typeHelper))) {
-                     saveData = 1;
-                     } else {
-                        cerr << "Could not change partition " << partNum + 1
-                        << "'s type code to " << GetString(typeCode, 2) << "!\n";
-                        neverSaveData = 1;
-                     } // if/else
+                  if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
+                     typeHelper = GetString(typeCode, 2);
+                     if ((typeHelper != (GUIDData) "00000000-0000-0000-0000-000000000000") &&
+                         (ChangePartType(partNum, typeHelper))) {
+                        saveData = 1;
+                        } else {
+                           cerr << "Could not change partition " << partNum + 1
+                           << "'s type code to " << GetString(typeCode, 2) << "!\n";
+                           neverSaveData = 1;
+                        } // if/else
                      free(typeCode);
+                  }
                   break;
                case 'T':
                   JustLooking(0);
@@ -367,8 +370,10 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                case 'u':
                   JustLooking(0);
                   saveData = 1;
-                  gptPartNum = (int) GetInt(partGUID, 1) - 1;
-                  SetPartitionGUID(gptPartNum, GetString(partGUID, 2).c_str());
+                  partNum = (int) GetInt(partGUID, 1) - 1;
+                  if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
+                     SetPartitionGUID(partNum, GetString(partGUID, 2).c_str());
+                  }
                   break;
                case 'U':
                   JustLooking(0);
@@ -499,17 +504,17 @@ int GPTDataCL::BuildMBR(char* argument, int isHybrid) {
 // does).
 int CountColons(char* argument) {
    int num = 0;
-   
+
    while ((argument[0] != '\0') && (argument = strchr(&argument[1], ':')))
       num++;
-   
+
    return num;
 } // GPTDataCL::CountColons()
 
 // Extract integer data from argument string, which should be colon-delimited
 uint64_t GetInt(const string & argument, int itemNum) {
    uint64_t retval;
-   
+
    istringstream inString(GetString(argument, itemNum));
    inString >> retval;
    return retval;
@@ -523,7 +528,7 @@ string GetString(string argument, int itemNum) {
    string retVal = "";
    int foundLast = 0;
    int numFound = 0;
-   
+
    if (argument[0] == ':')
       argument.erase(0, 1);
    while ((numFound < itemNum) && (!foundLast)) {
@@ -538,6 +543,6 @@ string GetString(string argument, int itemNum) {
    } // while
    if ((numFound == itemNum) && (numFound > 0))
       retVal = argument.substr(startPos, endPos - startPos);
-   
+
    return retVal;
 } // GetString()

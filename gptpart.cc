@@ -277,13 +277,13 @@ void GPTPart::ChangeType(void) {
 
    cout << "Current type is '" << GetTypeName() << "'\n";
    do {
-      cout << "Hex code or GUID (L to show codes, Enter = " << hex << DEFAULT_TYPE << dec << "): ";
+      cout << "Hex code or GUID (L to show codes, Enter = " << hex << DEFAULT_GPT_TYPE << dec << "): ";
       line = ReadString();
       if ((line[0] == 'L') || (line[0] == 'l')) {
          partitionType.ShowAllTypes();
       } else {
          if (line.length() == 0)
-            tempType= DEFAULT_TYPE;
+            tempType = DEFAULT_GPT_TYPE;
          else
             tempType = line;
       } // if/else

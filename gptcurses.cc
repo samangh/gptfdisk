@@ -219,7 +219,9 @@ void GPTDataCurses::IdentifySpaces(void) {
 Space* GPTDataCurses::ShowSpace(int spaceNum, int lineNum) {
    Space *space;
    int i = 0;
+#ifdef USE_UTF16
    char temp[40];
+#endif
 
    space = firstSpace;
    while ((space != NULL) && (i < spaceNum)) {
@@ -308,7 +310,9 @@ void GPTDataCurses::DeletePartition(int partNum) {
 // Displays information on the specified partition
 void GPTDataCurses::ShowInfo(int partNum) {
    uint64_t size;
+#ifdef USE_UTF16
    char temp[NAME_SIZE / 2 + 1];
+#endif
 
    clear();
    move(2, (COLS - 29) / 2);

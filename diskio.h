@@ -25,6 +25,10 @@
 #include <sys/ioctl.h>
 #endif
 
+#ifdef __sun__
+#include <sys/dkio.h>
+#endif
+
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 #define fstat64 fstat
 #define stat64 stat

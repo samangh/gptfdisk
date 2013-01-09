@@ -132,6 +132,9 @@ void DiskIO::Close(void) {
 // (512). If the disk can't be opened at all, return a value of 0.
 int DiskIO::GetBlockSize(void) {
    int err = -1, blockSize = 0;
+#ifdef __sun__
+   struct dk_minfo minfo;
+#endif
 
    // If disk isn't open, try to open it....
    if (!isOpen) {
@@ -141,6 +144,11 @@ int DiskIO::GetBlockSize(void) {
    if (isOpen) {
 #ifdef __APPLE__
       err = ioctl(fd, DKIOCGETBLOCKSIZE, &blockSize);
+#endif
+#ifdef __sun__
+      err = ioctl(fd, DKIOCGMEDIAINFO, &minfo);
+      if (err == 0)
+          blockSize = minfo.dki_lbsize;
 #endif
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
       err = ioctl(fd, DIOCGSECTORSIZE, &blockSize);
@@ -217,13 +225,17 @@ int DiskIO::DiskSync(void) {
 
    if (isOpen) {
       sync();
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__sun__)
       cout << "Warning: The kernel may continue to use old or deleted partitions.\n"
            << "You should reboot or remove the drive.\n";
                /* don't know if this helps
                * it definitely will get things on disk though:
                * http://topiks.org/mac-os-x/0321278542/ch12lev1sec8.html */
+#ifdef __sun__
+      i = ioctl(fd, DKIOCFLUSHWRITECACHE);
+#else
       i = ioctl(fd, DKIOCSYNCHRONIZECACHE);
+#endif
       platformFound++;
 #endif
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
@@ -377,6 +389,9 @@ uint64_t DiskIO::DiskSize(int *err) {
    off_t bytes = 0; // size in bytes
    struct stat64 st;
    int platformFound = 0;
+#ifdef __sun__
+   struct dk_minfo minfo;
+#endif
 
    // If disk isn't open, try to open it....
    if (!isOpen) {
@@ -391,6 +406,12 @@ uint64_t DiskIO::DiskSize(int *err) {
       // 32/64-bit issues on MacOS....
 #ifdef __APPLE__
       *err = ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors);
+      platformFound++;
+#endif
+#ifdef __sun__
+      *err = ioctl(fd, DKIOCGMEDIAINFO, &minfo);
+      if (*err == 0)
+          sectors = minfo.dki_capacity;
       platformFound++;
 #endif
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)

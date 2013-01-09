@@ -1,5 +1,10 @@
-0.8.6 (?/??/2012):
-------------------
+0.8.6 (1/9/2013):
+-----------------
+
+- Fixed a bug that could cause sgdisk to crash when passing a partition
+  number of 0 to the -t option.
+
+- Added support for building under Solaris.
 
 - Added a new check to the verification code.
 

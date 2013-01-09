@@ -259,7 +259,7 @@ PartType & PartType::operator=(uint16_t ID) {
    } // while
    if (!found) {
       // Assign a default value....
-      operator=(DEFAULT_TYPE);
+      operator=(DEFAULT_GPT_TYPE);
       cout.setf(ios::uppercase);
       cout.fill('0');
       cout << "Exact type match not found for type code ";

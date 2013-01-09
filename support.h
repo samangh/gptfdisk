@@ -8,7 +8,7 @@
 #ifndef __GPTSUPPORT
 #define __GPTSUPPORT
 
-#define GPTFDISK_VERSION "0.8.5.4"
+#define GPTFDISK_VERSION "0.8.6"
 
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 // Darwin (Mac OS) & FreeBSD: disk IOCTLs are different, and there is no lseek64
@@ -17,15 +17,19 @@
 #endif
 
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
-#define DEFAULT_TYPE 0xA503
+#define DEFAULT_GPT_TYPE 0xA503
 #endif
 
 #ifdef __APPLE__
-#define DEFAULT_TYPE 0xAF00
+#define DEFAULT_GPT_TYPE 0xAF00
 #endif
 
 #ifdef _WIN32
-#define DEFAULT_TYPE 0x0700
+#define DEFAULT_GPT_TYPE 0x0700
+#endif
+
+#ifdef __sun__
+#define DEFAULT_GPT_TYPE 0xbf01
 #endif
 
 // Microsoft Visual C++ only
@@ -38,11 +42,11 @@
 // Linux only....
 #ifdef __linux__
 #include <linux/fs.h>
-#define DEFAULT_TYPE 0x8300
+#define DEFAULT_GPT_TYPE 0x8300
 #endif
 
-#ifndef DEFAULT_TYPE
-#define DEFAULT_TYPE 0x8300
+#ifndef DEFAULT_GPT_TYPE
+#define DEFAULT_GPT_TYPE 0x8300
 #endif
 
 // Set this as a default
