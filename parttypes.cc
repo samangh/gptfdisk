@@ -182,6 +182,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted identifies these as having the "boot flag" set
    AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
    AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Used by GRUB
+   AddType(0xef03, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Fast Flash"); // Used by Intel Rapid Start technology
 
    // VMWare ESX partition types codes
    AddType(0xfb00, "AA31E02A-400F-11DB-9590-000C2911D1B8", "VMWare VMFS");

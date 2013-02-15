@@ -280,6 +280,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   if (partNum < 0)
                      partNum = FindFirstFreePart();
                   low = FindFirstInLargest();
+                  Align(&low);
                   high = FindLastInFree(low);
                   startSector = IeeeToInt(GetString(newPartInfo, 2), sSize, low, high, low);
                   endSector = IeeeToInt(GetString(newPartInfo, 3), sSize, startSector, high, high);
@@ -295,6 +296,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                case 'N':
                   JustLooking(0);
                   startSector = FindFirstInLargest();
+                  Align(&startSector);
                   endSector = FindLastInFree(startSector);
                   if (largestPartNum < 0)
                      largestPartNum = FindFirstFreePart();

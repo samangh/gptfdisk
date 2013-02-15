@@ -2088,7 +2088,7 @@ uint64_t GPTData::FindFirstInLargest(void) {
 } // GPTData::FindFirstInLargest()
 
 // Find the last available block on the disk.
-// Returns 0 if there are no available partitions
+// Returns 0 if there are no available sectors
 uint64_t GPTData::FindLastAvailable(void) {
    uint64_t last;
    uint32_t i;

@@ -1,3 +1,26 @@
+0.8.7 (?/?/2013):
+-----------------
+
+- Adjusted alignment code when using -n or -N in sgdisk to keep the
+  requested partition size (if specified using +###{MGT} terminology)
+  as the requested value rather than relative to the requested start
+  point. This gives you the requested partition size rather than be
+  slightly smaller if sgdisk needs to adjust the start point up a bit and
+  it prevents gaps from appearing between partitions if several are created
+  in succession using automatic placement of the start point.
+
+- Fixed small bugs in gdisk_test.sh script.
+
+- Removed stray debug message that would appear when reading MBR disks.
+
+- Added partition type code for Intel Fast Flash (GUID
+  D3BFE2DE-3DAF-11DF-BA40-E3A556D89593, code EF03), used by systems that
+  implement Intel's Rapid Start technology. See
+  http://blog.adios.tw/2012/10/funtoo-linux-and-intel-rapid-start.html.
+
+- Added partition type code for Haiku BFS (GUID
+  42465331-3BA3-10F1-802A-4861696B7521; code EB00).
+
 0.8.6 (1/9/2013):
 -----------------
 
