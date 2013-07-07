@@ -132,7 +132,7 @@ int GPTDataTextUI::XFormDisklabel(void) {
       numDone = GPTData::XFormDisklabel(partNum);
 
    return numDone;
-} // GPTData::XFormDisklabel(int i)
+} // GPTData::XFormDisklabel(void)
 
 
 /*********************************************************************

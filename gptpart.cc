@@ -91,7 +91,6 @@ string GPTPart::GetDescription(void) {
 // Return 1 if the partition is in use
 int GPTPart::IsUsed(void) {
    return (partitionType != GUIDData("0x00"));
-//   return (firstLBA != UINT64_C(0));
 } // GPTPart::IsUsed()
 
 // Set the type code to the specified one. Also changes the partition

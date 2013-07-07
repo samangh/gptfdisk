@@ -53,6 +53,7 @@ GPTDataCurses::GPTDataCurses(void) {
    currentSpaceNum = -1;
    whichOptions = ""; // current set of options
    currentKey = 'b'; // currently selected option
+   displayType = USE_CURSES;
 } // GPTDataCurses constructor
 
 GPTDataCurses::~GPTDataCurses(void) {
@@ -273,10 +274,16 @@ int GPTDataCurses::DisplayParts(int selected) {
    for (i = pageNum * numToShow; i <= (pageNum + 1) * numToShow - 1; i++) {
       if (i < numSpaces) { // real space; show it
          if (i == selected) {
-            attron(A_REVERSE);
             currentSpaceNum = i;
-            currentSpace = ShowSpace(i, lineNum++);
-            attroff(A_REVERSE);
+            if (displayType == USE_CURSES) {
+               attron(A_REVERSE);
+               currentSpace = ShowSpace(i, lineNum++);
+               attroff(A_REVERSE);
+            } else {
+               currentSpace = ShowSpace(i, lineNum);
+               move(lineNum++, 0);
+               printw(">");
+            }
             DisplayOptions(i);
             retval = selected;
          } else {

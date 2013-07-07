@@ -20,7 +20,7 @@
 /* This class implements an interactive curses-based interface atop the
    GPTData class */
 
-#include <string>
+#include <string.h>
 #include "gptcurses.h"
 
 using namespace std;
@@ -29,6 +29,7 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
    string device = "";
+   int displayType = USE_CURSES;
 
    if (!SizesOK())
       exit(1);
@@ -41,16 +42,28 @@ int main(int argc, char *argv[]) {
             exit(0);
          break;
       case 2: // basic usage
-         device = argv[1];
+         device = (string) argv[1];
+         break;
+      case 3: // "-a" usage or illegal
+         if (strcmp(argv[1], "-a") == 0) {
+            device = (string) argv[2];
+         } else if (strcmp(argv[2], "-a") == 0) {
+            device = (string) argv[1];
+         } else {
+            cerr << "Usage: " << argv[0] << " [-a] device_file\n";
+            exit(1);
+         } // if/elseif/else
+         displayType = USE_ARROW;
          break;
       default:
-         cerr << "Usage: " << argv[0] << " device_file\n";
+         cerr << "Usage: " << argv[0] << " [-a] device_file\n";
          exit(1);
          break;
    } // switch
 
    GPTDataCurses theGPT;
 
+   theGPT.SetDisplayType(displayType);
    if (theGPT.LoadPartitions(device)) {
       if (theGPT.GetState() != use_gpt) {
          Report("Warning! Non-GPT or damaged disk detected! This program will attempt to\n"

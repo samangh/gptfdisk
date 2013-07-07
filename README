@@ -163,8 +163,10 @@ Installing
 
 To compile GPT fdisk, you must have appropriate development tools
 installed, most notably the GNU Compiler Collection (GCC) and its g++
-compiler for C++. (Under Windows, Microsoft Visual C++ 2008 can also be
-used.) In addition, note these requirements:
+compiler for C++. I've also tested compilation with Clang, which seems to
+work; however, I've not done extensive testing of the resulting binaries,
+beyond checking a few basics. Under Windows, Microsoft Visual C++ 2008 can
+be used instead. In addition, note these requirements:
 
 * On Linux, FreeBSD, OS X, and Solaris, libuuid must be installed. This is
   the standard for Linux and OS X, although you may need to install a

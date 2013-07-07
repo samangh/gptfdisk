@@ -1,6 +1,14 @@
 0.8.7 (?/?/2013):
 -----------------
 
+- Modified "converting MBR to GPT" message to clarify that the conversion
+  is being held in memory, since some people have mistakenly assumed that a
+  "gdisk -l" operation will change an MBR disk to a GPT disk without
+  prompting.
+
+- Added partition type code for freedesktop.org's proposed $BOOT partition
+  (bc13c2ff-59e6-4262-a352-b275fd6f7172; GPT fdisk type code EA00)
+
 - Adjusted alignment code when using -n or -N in sgdisk to keep the
   requested partition size (if specified using +###{MGT} terminology)
   as the requested value rather than relative to the requested start
@@ -13,10 +21,11 @@
 
 - Removed stray debug message that would appear when reading MBR disks.
 
-- Added partition type code for Intel Fast Flash (GUID
-  D3BFE2DE-3DAF-11DF-BA40-E3A556D89593, code EF03), used by systems that
+- Added partition type code for Intel Rapid Start partition (GUID
+  D3BFE2DE-3DAF-11DF-BA40-E3A556D89593, code 8400), used by systems that
   implement Intel's Rapid Start technology. See
-  http://blog.adios.tw/2012/10/funtoo-linux-and-intel-rapid-start.html.
+  http://blog.adios.tw/2012/10/funtoo-linux-and-intel-rapid-start.html or
+  http://mjg59.dreamwidth.org/26022.html.
 
 - Added partition type code for Haiku BFS (GUID
   42465331-3BA3-10F1-802A-4861696B7521; code EB00).

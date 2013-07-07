@@ -1429,12 +1429,14 @@ WhichToUse GPTData::UseWhichPartitions(void) {
 
    if ((state == gpt_invalid) && ((mbrState == mbr) || (mbrState == hybrid))) {
       cout << "\n***************************************************************\n"
-           << "Found invalid GPT and valid MBR; converting MBR to GPT format.\n";
+           << "Found invalid GPT and valid MBR; converting MBR to GPT format\n"
+           << "in memory. ";
       if (!justLooking) {
-         cout << "\aTHIS OPERATION IS POTENTIALLY DESTRUCTIVE! Exit by typing 'q' if\n"
-              << "you don't want to convert your MBR partitions to GPT format!\n";
+         cout << "\aTHIS OPERATION IS POTENTIALLY DESTRUCTIVE! Exit by\n"
+              << "typing 'q' if you don't want to convert your MBR partitions\n"
+              << "to GPT format!";
       } // if
-      cout << "***************************************************************\n\n";
+      cout << "\n***************************************************************\n\n";
       which = use_mbr;
    } // if
 

@@ -319,7 +319,7 @@ void MBRPart::ReverseByteOrder(void) {
 void MBRPart::ShowData(int isGpt) {
    char bootCode = ' ';
 
-   if (status && 0x80) // it's bootable
+   if (status & 0x80) // it's bootable
       bootCode = '*';
    cout.fill(' ');
    cout << bootCode << "  ";

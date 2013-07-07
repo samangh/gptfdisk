@@ -110,6 +110,11 @@ void PartType::AddAllTypes(void) {
    AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris on MBR)
    AddType(0x8300, "0FC63DAF-8483-4772-8E79-3D69D8477DE4", "Linux filesystem"); // Linux native
    AddType(0x8301, "8DA63339-0007-60C0-C436-083AC8230908", "Linux reserved");
+
+   // Used by Intel Rapid Start technology
+   AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");
+
+   // Another Linux type code....
    AddType(0x8e00, "E6D6D379-F507-44C2-A23C-238F2A3DF928", "Linux LVM");
 
    // FreeBSD partition types....
@@ -172,6 +177,9 @@ void PartType::AddAllTypes(void) {
    AddType(0xc001, "75894C1E-3AEB-11D3-B7C1-7B03A0000000", "HP-UX data");
    AddType(0xc002, "E2A1E728-32E3-11D6-A682-7B03A0000000", "HP-UX service");
 
+   // See http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec
+   AddType(0xea00, "BC13C2FF-59E6-4262-A352-B275FD6F7172", "Freedesktop $BOOT");
+
    // Type code for Haiku; uses BeOS MBR code as hex code base
    AddType(0xeb00, "42465331-3BA3-10F1-802A-4861696B7521", "Haiku BFS");
 
@@ -182,7 +190,6 @@ void PartType::AddAllTypes(void) {
    AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted identifies these as having the "boot flag" set
    AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
    AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Used by GRUB
-   AddType(0xef03, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Fast Flash"); // Used by Intel Rapid Start technology
 
    // VMWare ESX partition types codes
    AddType(0xfb00, "AA31E02A-400F-11DB-9590-000C2911D1B8", "VMWare VMFS");

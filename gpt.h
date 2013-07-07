@@ -134,7 +134,7 @@ public:
    // Convert between GPT and other formats
    virtual WhichToUse UseWhichPartitions(void);
    void XFormPartitions(void);
-   virtual int XFormDisklabel(uint32_t partNum);
+   int XFormDisklabel(uint32_t partNum);
    int XFormDisklabel(BSDData* disklabel);
    int OnePartToMBR(uint32_t gptPart, int mbrPart); // add one partition to MBR. Returns 1 if successful
 
