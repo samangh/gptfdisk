@@ -73,7 +73,7 @@ int DiskIO::OpenForRead(void) {
          if (fstat64(fd, &st) == 0) {
             if (S_ISDIR(st.st_mode))
                cerr << "The specified path is a directory!\n";
-#ifndef __FreeBSD__
+#if !defined(__FreeBSD__) && !defined(__APPLE__)
             else if (S_ISCHR(st.st_mode))
                cerr << "The specified path is a character device!\n";
 #endif
@@ -104,6 +104,7 @@ int DiskIO::OpenForWrite(void) {
 #ifdef __APPLE__
    // MacOS X requires a shared lock under some circumstances....
    if (fd < 0) {
+      cerr << "Warning: Devices opened with shared lock will not have their\npartition table automatically reloaded!\n";
       fd = open(realFilename.c_str(), O_WRONLY | O_SHLOCK);
    } // if
 #endif

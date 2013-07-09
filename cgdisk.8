@@ -1,10 +1,11 @@
 .\" Copyright 2011-2013 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "CGDISK" "8" "0.8.6" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "CGDISK" "8" "0.8.7" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 cgdisk \- Curses-based GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
 .BI "cgdisk "
+[ \-a ]
 .I device
 
 .SH "DESCRIPTION"
@@ -104,6 +105,13 @@ instance) to simplify creating such gaps.
 .SH "OPTIONS"
 
 .PP 
+
+Only one command-line option is accepted, aside from the device filename:
+\fI\-a\fR. This option alters the highlighting of partitions and blocks of
+free space: Instead of using ncurses, when \fI\-a\fR is used \fBcgdisk\fR
+uses a ">" symbol to the left of the selected partition or free space.
+This option is intended for use on limited display devices such as
+teletypes and screen readers.
 
 Interactions with \fBcgdisk\fR occur with its interactive text\-mode menus.
 The display is broken into two interactive parts:
@@ -268,7 +276,7 @@ Write data. Use this command to save your changes.
 
 .SH "BUGS"
 
-As of January 2013 (version 0.8.6), \fBcgdisk\fR should be considered
+As of July 2013 (version 0.8.7), \fBcgdisk\fR should be considered
 beta software. Although the underlying partition manipulation code is much
 older, the \fBcgdisk\fR ncurses user interface is brand new with GPT fdisk
 version 0.8.0. Known bugs and limitations include:

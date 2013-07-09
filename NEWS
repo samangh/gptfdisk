@@ -1,5 +1,13 @@
-0.8.7 (?/?/2013):
+0.8.7 (7/8/2013):
 -----------------
+
+- Modified Mac version so that it can work on /dev/rdisk* devices as well
+  as /dev/disk* devices. The result is that, when using the /dev/rdisk*
+  devices, the partition table can sometimes be re-read without removing
+  the disk or rebooting.
+
+- Added "-a" option to cgdisk to use a ">" symbol to the left of the
+  selected partition rather than ncurses highlighting.
 
 - Modified "converting MBR to GPT" message to clarify that the conversion
   is being held in memory, since some people have mistakenly assumed that a
