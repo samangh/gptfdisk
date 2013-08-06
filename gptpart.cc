@@ -213,12 +213,12 @@ void GPTPart::ShowDetails(uint32_t blockSize) {
       cout << "Partition unique GUID: " << uniqueGUID << "\n";
 
       cout << "First sector: " << firstLBA << " (at "
-            << BytesToIeee(firstLBA, blockSize) << ")\n";
+           << BytesToIeee(firstLBA, blockSize) << ")\n";
       cout << "Last sector: " << lastLBA << " (at "
-            << BytesToIeee(lastLBA, blockSize) << ")\n";
+           << BytesToIeee(lastLBA, blockSize) << ")\n";
       size = (lastLBA - firstLBA + 1);
       cout << "Partition size: " << size << " sectors ("
-            << BytesToIeee(size, blockSize) << ")\n";
+           << BytesToIeee(size, blockSize) << ")\n";
       cout << "Attribute flags: ";
       cout.fill('0');
       cout.width(16);
