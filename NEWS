@@ -1,7 +1,10 @@
 0.8.8 (?/??/2013):
 ------------------
 
-
+- Added check for an active/bootable 0xEE protective partition to the
+  verify ('v') function. If found, this is not counted as an error, but
+  it is called out to the user, since it can cause some EFIs (such as
+  VirtualBox's EFI) to ignore the disk.
 
 0.8.7 (7/8/2013):
 -----------------

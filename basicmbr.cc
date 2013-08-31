@@ -921,6 +921,18 @@ int BasicMBRData::IsLegal(void) {
    return allOK;
 } // BasicMBRData::IsLegal()
 
+// Returns 1 if the 0xEE partition in the protective/hybrid MBR is marked as
+// active/bootable.
+int BasicMBRData::IsEEActive(void) {
+   int i, IsActive = FALSE;
+
+   for (i = 0; i < MAX_MBR_PARTS; i++) {
+      if (partitions[i].GetStatus() & 0x80)
+         IsActive = TRUE;
+   }
+   return IsActive;
+} // BasicMBRData::IsEEActive()
+
 // Finds the next in-use partition, starting with start (will return start
 // if it's in use). Returns -1 if no subsequent partition is in use.
 int BasicMBRData::FindNextInUse(int start) {

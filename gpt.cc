@@ -279,6 +279,15 @@ int GPTData::Verify(void) {
    // Check for MBR-specific problems....
    problems += VerifyMBR();
 
+   // Check for a 0xEE protective partition that's marked as active....
+   if (protectiveMBR.IsEEActive()) {
+      cout << "\nWarning: The 0xEE protective partition in the MBR is marked as active. This is\n"
+           << "technically a violation of the GPT specification, and can cause some EFIs to\n"
+           << "ignore the disk, but it is required to boot from a GPT disk on some BIOS-based\n"
+           << "computers. You can clear this flag by creating a fresh protective MBR using\n"
+           << "the 'n' option on the experts' menu.\n";
+   }
+
    // Verify that partitions don't run into GPT data areas....
    problems += CheckGPTSize();
 

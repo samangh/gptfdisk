@@ -103,6 +103,7 @@ public:
    int DoTheyFit(void);
    int SpaceBeforeAllLogicals(void);
    int IsLegal(void);
+   int IsEEActive(void);
    int FindNextInUse(int start);
 
    // Functions to create, delete, or change partitions
