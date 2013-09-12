@@ -701,10 +701,11 @@ int BasicMBRData::LBAtoCHS(uint64_t lba, uint8_t * chs) {
    return (retval);
 } // BasicMBRData::LBAtoCHS()
 
-// Look for overlapping partitions.
+// Look for overlapping partitions. Also looks for a couple of non-error
+// conditions that the user should be told about.
 // Returns the number of problems found
 int BasicMBRData::FindOverlaps(void) {
-   int i, j, numProbs = 0, numEE = 0;
+   int i, j, numProbs = 0, numEE = 0, ProtectiveOnOne = 0;
 
    for (i = 0; i < MAX_MBR_PARTS; i++) {
       for (j = i + 1; j < MAX_MBR_PARTS; j++) {
@@ -717,14 +718,17 @@ int BasicMBRData::FindOverlaps(void) {
       } // for (j...)
       if (partitions[i].GetType() == 0xEE) {
          numEE++;
-         if (partitions[i].GetStartLBA() != 1)
-            cout << "\nWarning: 0xEE partition doesn't start on sector 1. This can cause "
-                 << "problems\nin some OSes.\n";
+         if (partitions[i].GetStartLBA() == 1)
+            ProtectiveOnOne = 1;
       } // if
    } // for (i...)
+
    if (numEE > 1)
       cout << "\nCaution: More than one 0xEE MBR partition found. This can cause problems\n"
            << "in some OSes.\n";
+   if (!ProtectiveOnOne)
+      cout << "\nWarning: 0xEE partition doesn't start on sector 1. This can cause "
+           << "problems\nin some OSes.\n";
 
    return numProbs;
 } // BasicMBRData::FindOverlaps()
@@ -927,7 +931,7 @@ int BasicMBRData::IsEEActive(void) {
    int i, IsActive = FALSE;
 
    for (i = 0; i < MAX_MBR_PARTS; i++) {
-      if (partitions[i].GetStatus() & 0x80)
+      if ((partitions[i].GetStatus() & 0x80) && (partitions[i].GetType() == 0xEE))
          IsActive = TRUE;
    }
    return IsActive;
@@ -1056,6 +1060,7 @@ int BasicMBRData::MakeBiggestPart(int i, int type) {
    uint64_t selectedSegment = UINT64_C(0); // location of largest segment
    uint64_t selectedSize = UINT64_C(0); // size of largest segment in blocks
    int found = 0;
+   string anything;
 
    do {
       firstBlock = FindFirstAvailable(start);
@@ -1374,6 +1379,9 @@ uint64_t BasicMBRData::FindFirstAvailable(uint64_t start) {
    uint64_t first;
    uint64_t i;
    int firstMoved;
+
+   if ((start >= (UINT32_MAX - 1)) || (start >= (diskSize - 1)))
+      return 0;
 
    first = start;
 

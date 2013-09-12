@@ -1,6 +1,20 @@
 0.8.8 (?/??/2013):
 ------------------
 
+- Fine-tuned verification ('v') check for 0xEE partition that doesn't begin
+  on sector 1: Previously, a disk with multiple 0xEE partitions would
+  always trigger this warning. Now, the warning occurs only if NONE of the
+  0xEE partitions begins on sector 1.
+
+- Fixed hybrid MBR creation on disks larger than 2TiB: Previously, if one
+  opted to create an extra partition to cover unused space following
+  hybridized partitions, gdisk would hang.
+
+- Added support for new partition type code,
+  47CB5633-7E3E-408B-B7B8-2D915B7B21B1 (0x8302), which parted (git versions
+  leading up to 3.2) uses for HFS+ partitions that hold Linux boot files on
+  Macs. This type code corresponds to the "hfs_esp" flag in parted.
+
 - Added check for an active/bootable 0xEE protective partition to the
   verify ('v') function. If found, this is not counted as an error, but
   it is called out to the user, since it can cause some EFIs (such as
