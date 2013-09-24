@@ -1,7 +1,7 @@
 /*
     Implementation of GPTData class derivative with popt-based command
     line processing
-    Copyright (C) 2010-2011 Roderick W. Smith
+    Copyright (C) 2010-2013 Roderick W. Smith
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -131,7 +131,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                Attributes::ListAttributes();
             break;
          case 'L':
-            typeHelper.ShowAllTypes();
+            typeHelper.ShowAllTypes(0);
             break;
          case 'P':
             pretend = 1;

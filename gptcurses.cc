@@ -1,7 +1,7 @@
 /*
  *    Implementation of GPTData class derivative with curses-based text-mode
  *    interaction
- *    Copyright (C) 2011 Roderick W. Smith
+ *    Copyright (C) 2011-2013 Roderick W. Smith
  *
  *    This program is free software; you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -737,8 +737,9 @@ void GPTDataCurses::DrawMenu(void) {
    string drive="Disk Drive: ";
    drive += device;
    ostringstream size;
+
    size << "Size: " << diskSize << ", " << BytesToIeee(diskSize, blockSize);
-   
+
    clear();
    move(0, (COLS - title.length()) / 2);
    printw(title.c_str());
@@ -811,7 +812,7 @@ void ShowTypes(void) {
 
    def_prog_mode();
    endwin();
-   tempType.ShowAllTypes();
+   tempType.ShowAllTypes(LINES - 3);
    cout << "\nPress the <Enter> key to continue: ";
    cin.get(junk);
    reset_prog_mode();

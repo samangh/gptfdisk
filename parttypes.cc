@@ -2,7 +2,7 @@
 // Class to manage partition type codes -- a slight variant on MBR type
 // codes, GUID type codes, and associated names.
 
-/* This program is copyright (c) 2009-2012 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2013 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -110,7 +110,6 @@ void PartType::AddAllTypes(void) {
    AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris on MBR)
    AddType(0x8300, "0FC63DAF-8483-4772-8E79-3D69D8477DE4", "Linux filesystem"); // Linux native
    AddType(0x8301, "8DA63339-0007-60C0-C436-083AC8230908", "Linux reserved");
-   AddType(0x8302, "47CB5633-7E3E-408B-B7B8-2D915B7B21B1", "Linux HFS+"); // Used by Fedora on Macs
 
    // Used by Intel Rapid Start technology
    AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");
@@ -349,11 +348,14 @@ uint16_t PartType::GetHexType() const {
 // Displays the available types and my extended MBR codes for same....
 // Note: This function assumes an 80-column display. On wider displays,
 // it stops at under 80 columns; on narrower displays, lines will wrap
-// in an ugly way.
-void PartType::ShowAllTypes(void) const {
-   int colCount = 1; // column count
+// in an ugly way. The maxLines value is the maximum number of lines
+// to display before prompting to continue, or 0 (or a negative value)
+// for no limit.
+void PartType::ShowAllTypes(int maxLines) const {
+   int colCount = 1, lineCount = 1;
    size_t i;
    AType* thisType = allTypes;
+   string line;
 
    cout.unsetf(ios::uppercase);
    while (thisType != NULL) {
@@ -364,17 +366,24 @@ void PartType::ShowAllTypes(void) const {
          cout << thisType->name.substr(0, 20);
          for (i = 0; i < (20 - (thisType->name.substr(0, 20).length())); i++)
             cout << " ";
-         if ((colCount % 3) == 0)
-            cout << "\n";
-         else
+         if ((colCount % 3) == 0) {
+            if (thisType->next) {
+               cout << "\n";
+               if ((maxLines > 0) && (lineCount++ % maxLines) == 0) {
+                  cout << "Press the <Enter> key to see more codes: ";
+                  getline(cin, line);
+               } // if reached screen line limit
+            } // if there's another entry following this one
+         } else {
             cout << "  ";
+         }
          colCount++;
       } // if
       thisType = thisType->next;
    } // while
    cout.fill(' ');
    cout << "\n" << dec;
-} // PartType::ShowTypes()
+} // PartType::ShowAllTypes(int maxLines)
 
 // Returns 1 if code is a valid extended MBR code, 0 if it's not
 int PartType::Valid(uint16_t code) const {

@@ -3,7 +3,7 @@
 
 /* Initial coding by Rod Smith, January to February, 2009 */
 
-/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2013 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -907,7 +907,7 @@ int BasicMBRData::SpaceBeforeAllLogicals(void) {
 } // BasicMBRData::SpaceBeforeAllLogicals()
 
 // Returns 1 if the partitions describe a legal layout -- all logicals
-// are contiguous and have at least one preceding empty partitions,
+// are contiguous and have at least one preceding empty sector,
 // the number of primaries is under 4 (or under 3 if there are any
 // logicals), there are no overlapping partitions, etc.
 // Does NOT assume that primaries are numbered 1-4; uses the
@@ -928,11 +928,11 @@ int BasicMBRData::IsLegal(void) {
 // Returns 1 if the 0xEE partition in the protective/hybrid MBR is marked as
 // active/bootable.
 int BasicMBRData::IsEEActive(void) {
-   int i, IsActive = FALSE;
+   int i, IsActive = 0;
 
    for (i = 0; i < MAX_MBR_PARTS; i++) {
       if ((partitions[i].GetStatus() & 0x80) && (partitions[i].GetType() == 0xEE))
-         IsActive = TRUE;
+         IsActive = 1;
    }
    return IsActive;
 } // BasicMBRData::IsEEActive()

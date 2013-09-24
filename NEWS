@@ -1,6 +1,12 @@
 0.8.8 (?/??/2013):
 ------------------
 
+- The number of partition type codes has grown large enough that it fills
+  an 80x24 display. I've therefore added a pause (with a prompt to hit
+  <Enter>) to display more items after showing 21 lines in gdisk or after
+  the screen has nearly filled with entries in cgdisk. There's no such
+  pause/prompt in sgdisk, though.
+
 - Fine-tuned verification ('v') check for 0xEE partition that doesn't begin
   on sector 1: Previously, a disk with multiple 0xEE partitions would
   always trigger this warning. Now, the warning occurs only if NONE of the
@@ -9,11 +15,6 @@
 - Fixed hybrid MBR creation on disks larger than 2TiB: Previously, if one
   opted to create an extra partition to cover unused space following
   hybridized partitions, gdisk would hang.
-
-- Added support for new partition type code,
-  47CB5633-7E3E-408B-B7B8-2D915B7B21B1 (0x8302), which parted (git versions
-  leading up to 3.2) uses for HFS+ partitions that hold Linux boot files on
-  Macs. This type code corresponds to the "hfs_esp" flag in parted.
 
 - Added check for an active/bootable 0xEE protective partition to the
   verify ('v') function. If found, this is not counted as an error, but

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  <Roderick W. Smith>
+    Copyright (C) 2010-2013  <Roderick W. Smith>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

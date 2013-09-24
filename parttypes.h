@@ -1,4 +1,4 @@
-/* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2013 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #include <stdint.h>
@@ -60,7 +60,7 @@ public:
    uint16_t GetHexType() const;
 
    // Information relating to all type data
-   void ShowAllTypes(void) const;
+   void ShowAllTypes(int maxLines = 21) const;
    int Valid(uint16_t code) const;
 };
 
