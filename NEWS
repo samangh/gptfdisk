@@ -1,6 +1,15 @@
 0.8.8 (?/??/2013):
 ------------------
 
+- Added new type code: 933AC7E1-2EB4-4F13-B844-0E14E2AEF915, or gdisk code
+  8302, for Linux /home partitions. This type code is used by recent
+  versions of systemd to permit /home to be auto-mounted; see
+  http://www.freedesktop.org/software/systemd/man/systemd-gpt-auto-generator.html
+  for details.
+
+- Added new type code: 9E1A2D38-C612-4316-AA26-8B49521E5A8B, or gdisk code
+  4100, for PowerPC PReP (PowerPC reference platform) boot.
+
 - The number of partition type codes has grown large enough that it fills
   an 80x24 display. I've therefore added a pause (with a prompt to hit
   <Enter>) to display more items after showing 21 lines in gdisk or after
