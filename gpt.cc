@@ -573,7 +573,7 @@ int GPTData::FindHybridMismatches(void) {
          mbrFirst = (uint64_t) protectiveMBR.GetFirstSector(i);
          mbrLast = mbrFirst + (uint64_t) protectiveMBR.GetLength(i) - UINT64_C(1);
          do {
-            if ((partitions[j].GetFirstLBA() == mbrFirst) &&
+            if ((j < numParts) && (partitions[j].GetFirstLBA() == mbrFirst) &&
                 (partitions[j].GetLastLBA() == mbrLast) && (partitions[j].IsUsed()))
                found = 1;
             j++;
@@ -1411,10 +1411,10 @@ void GPTData::DisplayGPTData(void) {
 
 // Show detailed information on the specified partition
 void GPTData::ShowPartDetails(uint32_t partNum) {
-   if (!IsFreePartNum(partNum)) {
+   if ((partNum < numParts) && !IsFreePartNum(partNum)) {
       partitions[partNum].ShowDetails(blockSize);
    } else {
-      cout << "Partition #" << partNum + 1 << " does not exist.";
+      cout << "Partition #" << partNum + 1 << " does not exist.\n";
    } // if
 } // GPTData::ShowPartDetails()
 
@@ -2332,32 +2332,38 @@ int GPTData::ManageAttributes(int partNum, const string & command, const string 
    int retval = 0;
    Attributes theAttr;
 
-   if (command == "show") {
-      ShowAttributes(partNum);
-   } else if (command == "get") {
-      GetAttribute(partNum, bits);
+   if (partNum >= (int) numParts) {
+      cerr << "Invalid partition number (" << partNum + 1 << ")\n";
+      retval = -1;
    } else {
-      theAttr = partitions[partNum].GetAttributes();
-      if (theAttr.OperateOnAttributes(partNum, command, bits)) {
-         partitions[partNum].SetAttributes(theAttr.GetAttributes());
-         retval = 1;
+      if (command == "show") {
+         ShowAttributes(partNum);
+      } else if (command == "get") {
+         GetAttribute(partNum, bits);
       } else {
-         retval = -1;
-      } // if/else
-   } // if/elseif/else
+         theAttr = partitions[partNum].GetAttributes();
+         if (theAttr.OperateOnAttributes(partNum, command, bits)) {
+            partitions[partNum].SetAttributes(theAttr.GetAttributes());
+            retval = 1;
+         } else {
+            retval = -1;
+         } // if/else
+      } // if/elseif/else
+   } // if/else invalid partition #
 
    return retval;
 } // GPTData::ManageAttributes()
 
 // Show all attributes for a specified partition....
 void GPTData::ShowAttributes(const uint32_t partNum) {
-   if (partitions[partNum].IsUsed())
+   if ((partNum < numParts) && partitions[partNum].IsUsed())
       partitions[partNum].ShowAttributes(partNum);
 } // GPTData::ShowAttributes
 
 // Show whether a single attribute bit is set (terse output)...
 void GPTData::GetAttribute(const uint32_t partNum, const string& attributeBits) {
-   partitions[partNum].GetAttributes().OperateOnAttributes(partNum, "get", attributeBits);
+   if (partNum < numParts)
+      partitions[partNum].GetAttributes().OperateOnAttributes(partNum, "get", attributeBits);
 } // GPTData::GetAttribute
 
 
