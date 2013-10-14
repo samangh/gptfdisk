@@ -1,5 +1,5 @@
-0.8.8 (?/??/2013):
-------------------
+0.8.8 (10/14/2013):
+------------_------
 
 - Fixed bug that could cause segfault when passing an invalid partition
   number to sgdisk's -i/--info command.
