@@ -91,6 +91,11 @@ void PartType::AddAllTypes(void) {
    AddType(0x1e00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // Hidden FAT-16 LBA
    AddType(0x2700, "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC", "Windows RE");
 
+   // Open Network Install Environment (ONIE) specific types.
+   // See http://www.onie.org/
+   AddType(0x3000, "7412F7D5-A156-4B13-81DC-867174929325", "ONIE boot");
+   AddType(0x3001, "D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149", "ONIE config");
+
    // PowerPC reference platform boot partition
    AddType(0x4100, "9E1A2D38-C612-4316-AA26-8B49521E5A8B", "PowerPC PReP boot");
 
@@ -190,8 +195,9 @@ void PartType::AddAllTypes(void) {
    // Type code for Haiku; uses BeOS MBR code as hex code base
    AddType(0xeb00, "42465331-3BA3-10F1-802A-4861696B7521", "Haiku BFS");
 
-   // Sony uses this GUID on some of its computers.
+   // Manufacturer-specific ESP-like partitions (in order in which they were added)
    AddType(0xed00, "F4019732-066E-4E12-8273-346C5641494F", "Sony system partition");
+   AddType(0xed01, "BFBFAFE7-A34F-448A-9A5B-6213EB736C22", "Lenovo system partition");
 
    // EFI system and related partitions
    AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted identifies these as having the "boot flag" set

@@ -1,5 +1,11 @@
+0.8.9 (??/??/2014):
+-------------------
+
+- Added new type ccde (ED01, BFBFAFE7-A34F-448A-9A5B-6213EB736C22), for
+  Lenovo's ESP-like partition.
+
 0.8.8 (10/14/2013):
-------------_------
+-------------------
 
 - Fixed bug that could cause segfault when passing an invalid partition
   number to sgdisk's -i/--info command.
