@@ -291,6 +291,12 @@ int GPTData::Verify(void) {
    // Verify that partitions don't run into GPT data areas....
    problems += CheckGPTSize();
 
+   if (!protectiveMBR.DoTheyFit()) {
+      cout << "\nPartition(s) in the protective MBR are too big for the disk! Creating a\n"
+           << "fresh protective or hybrid MBR is recommended.\n";
+      problems++;
+   }
+
    // Check that partitions are aligned on proper boundaries (for WD Advanced
    // Format and similar disks)....
    for (i = 0; i < numParts; i++) {
@@ -681,6 +687,15 @@ void GPTData::PartitionScan(void) {
    // Load the GPT data, whether or not it's valid
    ForceLoadGPTData();
 
+   // Some tools create a 0xEE partition that's too big. If this is detected,
+   // normalize it....
+   if ((state == gpt_valid) && !protectiveMBR.DoTheyFit() && (protectiveMBR.GetValidity() == gpt)) {
+      if (!beQuiet) {
+         cerr << "\aThe protective MBR's 0xEE partition is oversized! Auto-repairing.\n\n";
+      } // if
+      protectiveMBR.MakeProtectiveMBR();
+   } // if
+
    if (!beQuiet) {
       cout << "Partition table scan:\n";
       protectiveMBR.ShowState();
@@ -1055,6 +1070,12 @@ int GPTData::SaveGPTData(int quiet) {
       allOK = 0;
       cerr << "Aborting write operation!\n";
    } // if
+
+   // Check that protective MBR fits, and warn if it doesn't....
+   if (!protectiveMBR.DoTheyFit()) {
+      cerr << "\nPartition(s) in the protective MBR are too big for the disk! Creating a\n"
+           << "fresh protective or hybrid MBR is recommended.\n";
+   }
 
    // Check for mismatched MBR and GPT data, but let it pass if found
    // (function displays warning message)

@@ -1,6 +1,21 @@
 0.8.9 (??/??/2014):
 -------------------
 
+- Added check for an oversized 0xEE protective partition. The program now
+  auto-repairs this condition on loading if the GPT data seem otherwise
+  valid. This is done because I've been receiving reports of some disks
+  (possibly from some OEM Windows 8 loads) that violate the GPT spec in
+  this way, and gdisk was reporting write errors when saving data.
+
+- If the GPT data seem to be damaged in some way or if the disk seems to
+  be a hybrid MBR and if the MBR partition(s) don't fit on the disk, the
+  verify (v) function now warns of this condition, and writing the disk if
+  it exists also displays a more specific error message about the problem.
+
+- Added new type codes (3000, 7412F7D5-A156-4B13-81DC-867174929325 and
+  3001, D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149) for Open Network Install
+  Environment (ONIE) boot and config partitions, respectively.
+
 - Added new type ccde (ED01, BFBFAFE7-A34F-448A-9A5B-6213EB736C22), for
   Lenovo's ESP-like partition.
 
