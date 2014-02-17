@@ -92,7 +92,8 @@ void PartType::AddAllTypes(void) {
    AddType(0x2700, "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC", "Windows RE");
 
    // Open Network Install Environment (ONIE) specific types.
-   // See http://www.onie.org/
+   // See http://www.onie.org/ and
+   // https://github.com/onie/onie/blob/master/rootconf/x86_64/sysroot-lib-onie/onie-blkdev-common
    AddType(0x3000, "7412F7D5-A156-4B13-81DC-867174929325", "ONIE boot");
    AddType(0x3001, "D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149", "ONIE config");
 

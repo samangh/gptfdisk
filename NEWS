@@ -1,6 +1,13 @@
 0.8.9 (??/??/2014):
 -------------------
 
+- Added check for valid location of backup GPT data to GPT-destruction
+  options ('z' in gdisk, -z and -Z options to sgdisk). If the backup
+  GPT data structures aren't at the end of the disk, they aren't erased.
+  This is done to avoid wiping out data mid-disk that might not be backup
+  GPT data structures, which could otherwise occur if a RAID array was
+  resized in certain ways.
+
 - Added check for an oversized 0xEE protective partition. The program now
   auto-repairs this condition on loading if the GPT data seem otherwise
   valid. This is done because I've been receiving reports of some disks
