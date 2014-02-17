@@ -1,6 +1,9 @@
 0.8.9 (??/??/2014):
 -------------------
 
+- Fixed spurious "0xEE partition doesn't start on sector 1" warning in
+  FixParts (and perhaps in other programs under some circumstances).
+
 - Added check for valid location of backup GPT data to GPT-destruction
   options ('z' in gdisk, -z and -Z options to sgdisk). If the backup
   GPT data structures aren't at the end of the disk, they aren't erased.

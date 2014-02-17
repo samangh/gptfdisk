@@ -726,7 +726,7 @@ int BasicMBRData::FindOverlaps(void) {
    if (numEE > 1)
       cout << "\nCaution: More than one 0xEE MBR partition found. This can cause problems\n"
            << "in some OSes.\n";
-   if (!ProtectiveOnOne)
+   if (!ProtectiveOnOne && (numEE > 0))
       cout << "\nWarning: 0xEE partition doesn't start on sector 1. This can cause "
            << "problems\nin some OSes.\n";
 
