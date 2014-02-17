@@ -39,6 +39,7 @@ GPTDataCurses::GPTDataCurses(void) {
    if (numInstances > 0) {
       refresh();
    } else {
+      setlocale( LC_ALL , "" );
       initscr();
       cbreak();
       noecho();
@@ -318,7 +319,7 @@ void GPTDataCurses::DeletePartition(int partNum) {
 void GPTDataCurses::ShowInfo(int partNum) {
    uint64_t size;
 #ifdef USE_UTF16
-   char temp[NAME_SIZE / 2 + 1];
+   char temp[NAME_SIZE + 1];
 #endif
 
    clear();
@@ -335,7 +336,7 @@ void GPTDataCurses::ShowInfo(int partNum) {
    printw("Partition size: %lld sectors (%s)\n", size, BytesToIeee(size, blockSize).c_str());
    printw("Attribute flags: %016x\n", partitions[partNum].GetAttributes().GetAttributes());
    #ifdef USE_UTF16
-   partitions[partNum].GetDescription().extract(0, NAME_SIZE / 2, temp, NAME_SIZE / 2);
+   partitions[partNum].GetDescription().extract(0, NAME_SIZE , temp, NAME_SIZE );
    printw("Partition name: '%s'\n", temp);
    #else
    printw("Partition name: '%s'\n", partitions[partNum].GetDescription().c_str());
@@ -345,21 +346,21 @@ void GPTDataCurses::ShowInfo(int partNum) {
 
 // Prompt for and change a partition's name....
 void GPTDataCurses::ChangeName(int partNum) {
-   char temp[NAME_SIZE / 2 + 1];
+   char temp[NAME_SIZE + 1];
 
    if (ValidPartNum(partNum)) {
       move(LINES - 4, 0);
       clrtobot();
       move(LINES - 4, 0);
       #ifdef USE_UTF16
-      partitions[partNum].GetDescription().extract(0, NAME_SIZE / 2, temp, NAME_SIZE / 2);
+      partitions[partNum].GetDescription().extract(0, NAME_SIZE , temp, NAME_SIZE );
       printw("Current partition name is '%s'\n", temp);
       #else
       printw("Current partition name is '%s'\n", partitions[partNum].GetDescription().c_str());
       #endif
       printw("Enter new partition name, or <Enter> to use the current name:\n");
       echo();
-      getnstr(temp, NAME_SIZE / 2);
+      getnstr(temp, NAME_SIZE );
       partitions[partNum].SetName((string) temp);
       noecho();
    } // if

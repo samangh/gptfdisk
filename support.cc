@@ -77,8 +77,11 @@ int GetNumber(int low, int high, int def, const string & prompt) {
 char GetYN(void) {
    char response;
    string line;
+   bool again = 0 ;
 
    do {
+      if ( again ) { cout << "Your option? " ; }
+      again = 1 ;
       cout << "(Y/N): ";
       line = ReadString();
       response = toupper(line[0]);

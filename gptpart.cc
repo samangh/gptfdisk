@@ -35,7 +35,7 @@ GPTPart::GPTPart(void) {
    firstLBA = 0;
    lastLBA = 0;
    attributes = 0;
-   memset(name, 0, NAME_SIZE);
+   memset(name, 0, NAME_SIZE * sizeof(name[0]) );
 } // Default constructor
 
 GPTPart::~GPTPart(void) {
@@ -52,11 +52,13 @@ string GPTPart::GetTypeName(void) {
    return partitionType.TypeName();
 } // GPTPart::GetNameType()
 
+#ifdef USE_UTF16
 // Return a Unicode description of the partition type (e.g., "Linux/Windows
 // data" or "Linux swap").
 UnicodeString GPTPart::GetUTypeName(void) {
    return partitionType.UTypeName();
 } // GPTPart::GetNameType()
+#endif
 
 // Compute and return the partition's length (or 0 if the end is incorrectly
 // set before the beginning).
@@ -74,18 +76,61 @@ UnicodeString GPTPart::GetDescription(void) {
    return (UChar*) name;
 } // GPTPart::GetDescription()
 #else
-// Return partition's name field, converted to a C++ ASCII string
+// Return partition's name field, converted to a C++ UTF-8 string
 string GPTPart::GetDescription(void) {
-   string theName;
-   int i = 0;
-
-   theName = "";
-   while ((i < NAME_SIZE) && (name[i] != '\0')) {
-      theName += name[i];
-      i+=2;
-   } // while
-   return theName;
-} // GPTPart::GetDescription() (Windows version)
+   // convert name to utf32 then to utf8
+   string utf8 ;
+   size_t pos = 0 ;
+   while ( ( pos < NAME_SIZE ) && ( name[ pos ] != 0 ) ) {
+      uint16_t cp = name[ pos ++ ] ;
+      if ( ! IsLittleEndian() ) ReverseBytes( & cp , 2 ) ;
+      // first to utf32
+      uint32_t uni ;
+      if ( cp < 0xd800 || cp > 0xdfff ) {
+         uni = cp ;
+      } // if
+      else if ( cp < 0xdc00 ) {
+         // lead surrogate
+         uni = ( (uint32_t)( cp & 0x3ff ) ) << 10 ;
+         if ( pos >= NAME_SIZE ) {
+            // missing trail surrogate, name[] is invalid
+            break ;
+         } // if
+         cp = name[ pos ++ ] ;
+         if ( cp < 0xdc00 || cp > 0xdfff ) {
+            // invalid trail surrogate, name[] is invalid
+            break ;
+         } // if
+         // trail surrogate
+         uni |= cp & 0x3ff ;
+         uni += 0x10000 ;
+      } // if
+      else {
+         // unexpected trail surrogate, name[] is invalid
+         break ;
+      } // if
+      // then to utf8
+      if ( uni < 0x80 ) {
+         utf8 += (char) uni ;
+      } // if
+      else if ( uni < 0x800 ) {
+         utf8 += (char) ( 0xc0 | ( uni >> 6 ) ) ;
+         utf8 += (char) ( 0x80 | ( uni & 0x3f ) ) ;
+      } // if
+      else if ( uni < 0x10000 ) {
+         utf8 += (char) ( 0xe0 | ( uni >> 12 ) ) ;
+         utf8 += (char) ( 0x80 | ( ( uni >> 6 ) & 0x3f ) ) ;
+         utf8 += (char) ( 0x80 | ( uni & 0x3f ) ) ;
+      } // if
+      else {
+         utf8 += (char) ( 0xf0 | ( uni >> 18 ) ) ;
+         utf8 += (char) ( 0xe0 | ( ( uni >> 12 ) & 0x3f ) ) ;
+         utf8 += (char) ( 0x80 | ( ( uni >> 6 ) & 0x3f ) ) ;
+         utf8 += (char) ( 0x80 | ( uni & 0x3f ) ) ;
+      } // if
+   }
+   return utf8 ;
+} // GPTPart::GetDescription(), UTF-8 version
 #endif
 
 // Return 1 if the partition is in use
@@ -97,7 +142,11 @@ int GPTPart::IsUsed(void) {
 // name *IF* the current name is the generic one for the current partition
 // type.
 void GPTPart::SetType(PartType t) {
+#ifdef USE_UTF16
    if (GetDescription() == partitionType.UTypeName()) {
+#else
+   if (GetDescription() == partitionType.TypeName()) {
+#endif
       SetName(t.TypeName());
    } // if
    partitionType = t;
@@ -116,8 +165,8 @@ void GPTPart::SetName(const UnicodeString & theName) {
    if (theName.isBogus()) {
       cerr << "Bogus UTF-16 name found in GPTPart::SetName()! Name not changed!\n";
    } else {
-      memset(name, 0, NAME_SIZE);
-      theName.extractBetween(0, NAME_SIZE / 2 - 1, (UChar*) name);
+      memset(name, 0, NAME_SIZE * sizeof(name[0]) );
+      theName.extractBetween(0, NAME_SIZE, (UChar*) name);
    } // if/else
 } // GPTPart::SetName()
 
@@ -128,16 +177,73 @@ void GPTPart::SetName(const UnicodeString & theName) {
 // requires a UTF-16LE string. This function creates a simple-minded copy
 // for this.
 void GPTPart::SetName(const string & theName) {
-   int i, length;
-
-   if (theName.length() < (NAME_SIZE / 2))
-      length = theName.length();
-   else
-      length = NAME_SIZE / 2;
-   memset(name, 0, NAME_SIZE);
-   for (i = 0; i < length; i++)
-      name[i * 2] = theName[i];
-} // GPTPart::SetName(), ASCII version
+   // convert utf8 to utf32 then to utf16le
+   size_t len = theName.length() ;
+   size_t pos = 0 ;
+   for ( size_t i = 0 ; pos < NAME_SIZE && i < len ; ) {
+      uint32_t uni ;
+      uint8_t cp = theName[ i ++ ] ;
+      int todo ;
+      if ( cp < 0x80 ) {
+         uni = cp ;
+         todo = 0 ;
+      } // if
+      else if ( cp < 0xc0 || cp > 0xf7 ) {
+         // invalid byte, theName is broken
+         break ;
+      } // if
+      else if ( cp < 0xe0 ) {
+         uni = cp & 0x1f ;
+         todo = 1 ;
+      } // if
+      else if ( cp < 0xf0 ) {
+         uni = cp & 0x0f ;
+         todo = 2 ;
+      } // if
+      else {
+         uni = cp & 0x7 ;
+         todo = 3 ;
+      } // if
+      while ( todo > 0 ) {
+         if ( i >= len ) {
+            // missing continuation byte, theName is broken
+            goto break_converter ;
+         } // if
+         cp = theName[ i ++ ] ;
+         if ( cp > 0xbf || cp < 0x80 ) {
+            // invalid continuation byte, theName is broken
+            goto break_converter ;
+         } // if
+         uni <<= 6 ;
+         uni |= cp & 0x3f ;
+         todo -- ;
+      } // while
+      // then to utf16le
+      if ( uni < 0x10000 ) {
+         name[ pos ] = (uint16_t) uni ;
+         if ( ! IsLittleEndian() ) ReverseBytes( name + pos , 2 ) ;
+         pos ++ ;
+      } // if
+      else {
+         if ( pos > NAME_SIZE - 2 ) {
+             // not enough room for two surrogates, truncate
+             break ;
+         } // if
+         uni -= 0x10000 ;
+         name[ pos ] = (uint16_t)( uni >> 10 ) | 0xd800 ;
+         if ( ! IsLittleEndian() ) ReverseBytes( name + pos , 2 ) ;
+         pos ++ ;
+         name[ pos ] = (uint16_t)( uni & 0x3ff ) | 0xdc00 ;
+         if ( ! IsLittleEndian() ) ReverseBytes( name + pos , 2 ) ;
+         pos ++ ;
+      }
+   } // for
+   break_converter : ;
+   // finally fill with zeroes
+   while ( pos < NAME_SIZE ) {
+      name[ pos ++ ] = 0 ;
+   } // while
+} // GPTPart::SetName(), UTF-8 version
 #endif
 
 // Set the name for the partition based on the current GUID partition type
@@ -152,7 +258,7 @@ GPTPart & GPTPart::operator=(const GPTPart & orig) {
    firstLBA = orig.firstLBA;
    lastLBA = orig.lastLBA;
    attributes = orig.attributes;
-   memcpy(name, orig.name, NAME_SIZE);
+   memcpy(name, orig.name, NAME_SIZE * sizeof( name[ 0 ] ) );
    return *this;
 } // assignment operator
 
@@ -196,7 +302,44 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       GetDescription().extractBetween(0, 23, description);
       cout << description << "\n";
 #else
-      cout << GetDescription().substr(0, 23) << "\n";
+      string desc = GetDescription() ;
+      size_t n = 0 ;
+      size_t i = 0 ;
+      size_t len = desc.length() ;
+      while ( n < 22 && i < len ) {
+         i ++ ;
+         if ( i >= len ) {
+            // short description
+            break ;
+         } // if
+         // skip continuation bytes
+         while ( i < len && ( ( desc[ i ] & 0xC0 ) == 0x80 ) ) {
+             // utf8 continuation byte
+             i ++ ;
+         } // while
+         n ++ ;
+      } // while
+      if ( i < len ) {
+         n = 0 ;
+         i = 0 ;
+         // description is long we will truncate it
+         while ( n < 19 && i < len ) {
+            i ++ ;
+            if ( i >= len ) {
+               // should not happen
+               break ;
+            } // if
+            // skip continuation bytes
+            while ( i < len && ( ( desc[ i ] & 0xC0 ) == 0x80 ) ) {
+                // utf8 continuation byte
+                i ++ ;
+            } // while
+            n ++ ;
+         } // while
+      } // for
+      cout << GetDescription().substr( 0 , i ) ;
+      if ( i < len ) cout << "..." ;
+      cout << "\n";
 #endif
       cout.fill(' ');
    } // if
@@ -237,7 +380,7 @@ void GPTPart::BlankPartition(void) {
    firstLBA = 0;
    lastLBA = 0;
    attributes = 0;
-   memset(name, 0, NAME_SIZE);
+   memset(name, 0, NAME_SIZE * sizeof( name[0]) );
 } // GPTPart::BlankPartition
 
 // Returns 1 if the two partitions overlap, 0 if they don't
@@ -256,7 +399,7 @@ void GPTPart::ReversePartBytes(void) {
    ReverseBytes(&firstLBA, 8);
    ReverseBytes(&lastLBA, 8);
    ReverseBytes(&attributes, 8);
-   for (i = 0; i < NAME_SIZE; i += 2)
+   for (i = 0; i < NAME_SIZE; i ++ )
       ReverseBytes(name + i, 2);
 } // GPTPart::ReverseBytes()
 
@@ -271,7 +414,11 @@ void GPTPart::ChangeType(void) {
    int changeName;
    PartType tempType = (GUIDData) "00000000-0000-0000-0000-000000000000";
 
+#ifdef USE_UTF16
    changeName = (GetDescription() == GetUTypeName());
+#else
+   changeName = (GetDescription() == GetTypeName());
+#endif
 
    cout << "Current type is '" << GetTypeName() << "'\n";
    do {

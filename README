@@ -174,17 +174,17 @@ be used instead. In addition, note these requirements:
   FreeBSD, the e2fsprogs-libuuid port must be installed.
 
 * The ICU library (http://site.icu-project.org), which provides support for
-  Unicode partition names, is recommended on all
-  platforms except Windows. This library is normally installed in Linux and
-  OS X, but you may need to install the development headers (libicu-dev or
-  something similar in Linux; or the libicu36-dev Fink package in OS X). To
-  compile without ICU support, you must modify the Makefile: Remove the
-  "-D USE_UTF16" part from the CXXFLAGS line and remove references to
-  -licuio, -licuuc, -licudata, and -licucore (details vary between
-  platforms) from the compilation options. Suitable lines are present, but
-  commented out, in the Makefile, Makefile.solaris, Makefile.freebsd files.
-  Because of problems with ICU under OS X, the Makefile.mac file doesn't
-  build against ICU by default.
+  Unicode partition names, is optional on all platforms except Windows, on
+  which it's not supported. Using this library was required to get proper
+  UTF-16 partition name support in GPT fdisk versions prior to 0.8.9, but
+  as of that version it should not longer be required. Nonetheless, you can
+  use it if you're having problems with the new UTF-16 support. This
+  library is normally installed in Linux and OS X, but you may need to
+  install the development headers (libicu-dev or something similar in
+  Linux; or the libicu36-dev Fink package in OS X). To compile with ICU
+  support, you must modify the Makefile: Look for commented-out lines that
+  refer to USE_UTF16, -licuuc, -licudata, or -licucore. Uncomment them and
+  comment out the equivalents that lack these lines.
 
 * The cgdisk program requires the ncurses library and its development files
   (headers). Most Linux distributions install ncurses by default, but you

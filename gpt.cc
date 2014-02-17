@@ -1314,6 +1314,7 @@ int GPTData::DestroyGPT(void) {
    uint8_t* emptyTable;
 
    memset(blankSector, 0, sizeof(blankSector));
+   ClearGPTData();
 
    if (myDisk.OpenForWrite()) {
       if (!myDisk.Seek(mainHeader.currentLBA))
@@ -1327,8 +1328,8 @@ int GPTData::DestroyGPT(void) {
       tableSize = numParts * mainHeader.sizeOfPartitionEntries;
       emptyTable = new uint8_t[tableSize];
       if (emptyTable == NULL) {
-         cerr << "Could not allocate memory in GPTData::DestroyGPT()! Aborting operation!\n";
-         return(0);
+         cerr << "Could not allocate memory in GPTData::DestroyGPT()! Terminating!\n";
+         exit(1);
       } // if
       memset(emptyTable, 0, tableSize);
       if (allOK) {
@@ -1337,31 +1338,25 @@ int GPTData::DestroyGPT(void) {
             cerr << "Warning! GPT main partition table not overwritten! Error is " << errno << "\n";
             allOK = 0;
          } // if write failed
+      } // if 
+      if (!myDisk.Seek(secondHeader.partitionEntriesLBA))
+         allOK = 0;
+      if (allOK) {
+         sum = myDisk.Write(emptyTable, tableSize);
+         if (sum != tableSize) {
+            cerr << "Warning! GPT backup partition table not overwritten! Error is "
+                 << errno << "\n";
+            allOK = 0;
+         } // if wrong size written
       } // if
-
-      if (secondHeader.currentLBA == (diskSize - UINT64_C(1))) {
-         if (!myDisk.Seek(secondHeader.partitionEntriesLBA))
+      if (!myDisk.Seek(secondHeader.currentLBA))
+         allOK = 0;
+      if (allOK) {
+         if (myDisk.Write(blankSector, 512) != 512) { // blank it out
+            cerr << "Warning! GPT backup header not overwritten! Error is " << errno << "\n";
             allOK = 0;
-         if (allOK) {
-            sum = myDisk.Write(emptyTable, tableSize);
-            if (sum != tableSize) {
-               cerr << "Warning! GPT backup partition table not overwritten! Error is "
-                    << errno << "\n";
-               allOK = 0;
-            } // if wrong size written
          } // if
-         if (!myDisk.Seek(secondHeader.currentLBA))
-            allOK = 0;
-         if (allOK) {
-            if (myDisk.Write(blankSector, 512) != 512) { // blank it out
-               cerr << "Warning! GPT backup header not overwritten! Error is " << errno << "\n";
-               allOK = 0;
-            } // if
-         } // if
-      } else {
-         cout << "Note: The GPT second header is not at the end of the disk end; therefore,\n"
-              << "it's not being erased.\n";
-      }
+      } // if
       myDisk.DiskSync();
       myDisk.Close();
       cout << "GPT data structures destroyed! You may now partition the disk using fdisk or\n"
@@ -2444,7 +2439,7 @@ int SizesOK(void) {
       allOK = 0;
    } // if
    if (sizeof(PartType) != 16) {
-      cerr << "PartType is " << sizeof(GUIDData) << " bytes, should be 16 bytes; aborting!\n";
+      cerr << "PartType is " << sizeof(PartType) << " bytes, should be 16 bytes; aborting!\n";
       allOK = 0;
    } // if
    return (allOK);

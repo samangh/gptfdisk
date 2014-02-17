@@ -75,4 +75,5 @@ int main(int argc, char *argv[]) {
    } else {
       Report("Could not load partitions from '" + device + "'! Aborting!");
    } // if/else
+   return 0;
 } // main

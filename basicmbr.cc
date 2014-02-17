@@ -671,7 +671,7 @@ int BasicMBRData::LBAtoCHS(uint64_t lba, uint8_t * chs) {
          done = 1;
       } // if
       // If LBA value is too large for CHS, max out CHS values....
-      if ((!done) && (lba >= (numHeads * numSecspTrack * MAX_CYLINDERS))) {
+      if ((!done) && (lba >= ((uint64_t) numHeads * numSecspTrack * MAX_CYLINDERS))) {
          chs[0] = 254;
          chs[1] = chs[2] = 255;
          done = 1;
@@ -1223,7 +1223,7 @@ void BasicMBRData::MaximizePrimaries() {
 // Remove primary partitions in excess of 4, starting with the later ones,
 // in terms of the array location....
 void BasicMBRData::TrimPrimaries(void) {
-   int numToDelete, i = MAX_MBR_PARTS;
+   int numToDelete, i = MAX_MBR_PARTS - 1;
 
    numToDelete = NumPrimaries() - 4;
    while ((numToDelete > 0) && (i >= 0)) {

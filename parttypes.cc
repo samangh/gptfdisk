@@ -315,6 +315,7 @@ string PartType::TypeName(void) const {
    return typeName;
 } // PartType::TypeName()
 
+#ifdef USE_UTF16
 // Return the Unicode description of the partition type (e.g., "Linux filesystem")
 UnicodeString PartType::UTypeName(void) const {
    AType* theItem = allTypes;
@@ -334,6 +335,7 @@ UnicodeString PartType::UTypeName(void) const {
    } // if (!found)
    return typeName;
 } // PartType::TypeName()
+#endif
 
 // Return the custom GPT fdisk 2-byte (16-bit) hex code for this GUID partition type
 // Note that this function ignores entries for which the display variable

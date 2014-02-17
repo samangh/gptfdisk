@@ -309,7 +309,11 @@ int GPTDataTextUI::SetName(uint32_t partNum) {
 
    if (IsUsedPartNum(partNum)) {
       cout << "Enter name: ";
+#ifdef USE_UTF16
       theName = ReadUString();
+#else
+      theName = ReadString();
+#endif
       partitions[partNum].SetName(theName);
    } else {
       cerr << "Invalid partition number (" << partNum << ")\n";
@@ -412,7 +416,7 @@ void GPTDataTextUI::MakeHybrid(void) {
    cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
         << "added to the hybrid MBR, in sequence: ";
    line = ReadString();
-   numPartsToCvt = sscanf(line.c_str(), "%d %d %d", &partNums[0], &partNums[1], &partNums[2]);
+   numPartsToCvt = sscanf(line.c_str(), "%ud %ud %ud", &partNums[0], &partNums[1], &partNums[2]);
 
    if (numPartsToCvt > 0) {
       cout << "Place EFI GPT (0xEE) partition first in MBR (good for GRUB)? ";
@@ -854,7 +858,7 @@ void GPTDataTextUI::ShowExpertCommands(void) {
    cout << "r\trecovery and transformation options (experts only)\n";
    cout << "s\tresize partition table\n";
    cout << "t\ttranspose two partition table entries\n";
-   cout << "u\tReplicate partition table on new device\n";
+   cout << "u\treplicate partition table on new device\n";
    cout << "v\tverify disk\n";
    cout << "w\twrite table to disk and exit\n";
    cout << "z\tzap (destroy) GPT data structures and exit\n";
@@ -894,6 +898,7 @@ int GetMBRTypeCode(int defType) {
    return typeCode;
 } // GetMBRTypeCode
 
+#ifdef USE_UTF16
 // Note: ReadUString() is here rather than in support.cc so that the ICU
 // libraries need not be linked to fixparts.
 
@@ -904,4 +909,5 @@ int GetMBRTypeCode(int defType) {
 UnicodeString ReadUString(void) {
    return ReadString().c_str();
 } // ReadUString()
+#endif
    

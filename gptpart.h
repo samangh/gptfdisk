@@ -45,7 +45,7 @@ class GPTPart {
       uint64_t firstLBA;
       uint64_t lastLBA;
       Attributes attributes;
-      unsigned char name[NAME_SIZE];
+      uint16_t name[NAME_SIZE];
    public:
       GPTPart(void);
       ~GPTPart(void);

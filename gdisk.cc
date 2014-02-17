@@ -58,4 +58,5 @@ int main(int argc, char* argv[]) {
          cerr << "Usage: " << argv[0] << " [-l] device_file\n";
          break;
    } // switch
+   return 1 ;
 } // main
