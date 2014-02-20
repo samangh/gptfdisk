@@ -1,12 +1,20 @@
 0.8.10 (?/??/2014):
 -------------------
 
+- Fixed bug that caused incorrect partition number to be displayed by
+  sgdisk in error messages when the user specified a non-existent partition
+  for inclusion in a hybrid MBR or conversion to a conventional MBR.
+
 - Fixed new (in 0.8.9) bug that caused a failure to create more than one
   hybridized partition when creating a hybrid MBR.
 
-- Fixed bug that caused gdisk to create hybridized partitions that ended
-  above the 2^32 sector point with incorrect end values. The program now
-  refuses to create such hybridized partitions at all.
+- Fixed bug that caused gdisk and sgdisk to create hybridized partitions
+  that ended above the 2^32 sector point with incorrect end values. The
+  program now refuses to create such hybridized partitions at all. (A case
+  could be made for allowing creation of such partitions so long as the
+  start sector is below 2^32 and the size is under 2^32, but as a practical
+  matter, many OSes flake out with such partitions, so I'm erring on the
+  side of caution on this one.)
 
 0.8.9 (2/17/2014):
 ------------------

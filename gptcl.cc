@@ -1,7 +1,7 @@
 /*
     Implementation of GPTData class derivative with popt-based command
     line processing
-    Copyright (C) 2010-2013 Roderick W. Smith
+    Copyright (C) 2010-2014 Roderick W. Smith
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -467,14 +467,14 @@ int GPTDataCL::BuildMBR(char* argument, int isHybrid) {
    int numParts, allOK = 1, i, origPartNum;
    MBRPart newPart;
    BasicMBRData newMBR;
-   
+
    if (argument != NULL) {
       numParts = CountColons(argument) + 1;
       if (numParts <= (4 - isHybrid)) {
          newMBR.SetDisk(GetDisk());
          for (i = 0; i < numParts; i++) {
             origPartNum = GetInt(argument, i + 1) - 1;
-            if (IsUsedPartNum(origPartNum)) {
+            if (IsUsedPartNum(origPartNum) && partitions[origPartNum].IsSizedForMBR()) {
                newPart.SetInclusion(PRIMARY);
                newPart.SetLocation(operator[](origPartNum).GetFirstLBA(),
                                    operator[](origPartNum).GetLengthLBA());
@@ -482,7 +482,7 @@ int GPTDataCL::BuildMBR(char* argument, int isHybrid) {
                newPart.SetType((uint8_t)(operator[](origPartNum).GetHexType() / 0x0100));
                newMBR.AddPart(i + isHybrid, newPart);
             } else {
-               cerr << "Partition " << origPartNum << " does not exist! Aborting operation!\n";
+               cerr << "Original partition " << origPartNum + 1 << " does not exist or is too big! Aborting operation!\n";
                allOK = 0;
             } // if/else
          } // for
