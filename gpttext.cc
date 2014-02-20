@@ -396,7 +396,7 @@ void GPTDataTextUI::ShowDetails(void) {
 void GPTDataTextUI::MakeHybrid(void) {
    uint32_t partNums[3];
    string line;
-   int numPartsToCvt, i, j, mbrNum = 0;
+   int numPartsToCvt = 0, i, j, mbrNum = 0;
    unsigned int hexCode = 0;
    MBRPart hybridPart;
    MBRData hybridMBR;
@@ -416,7 +416,10 @@ void GPTDataTextUI::MakeHybrid(void) {
    cout << "Type from one to three GPT partition numbers, separated by spaces, to be\n"
         << "added to the hybrid MBR, in sequence: ";
    line = ReadString();
-   numPartsToCvt = sscanf(line.c_str(), "%ud %ud %ud", &partNums[0], &partNums[1], &partNums[2]);
+   istringstream inLine(line);
+   do {
+      inLine >> partNums[numPartsToCvt++];
+   } while (!inLine.eof() && (numPartsToCvt < 3));
 
    if (numPartsToCvt > 0) {
       cout << "Place EFI GPT (0xEE) partition first in MBR (good for GRUB)? ";
@@ -425,7 +428,7 @@ void GPTDataTextUI::MakeHybrid(void) {
 
    for (i = 0; i < numPartsToCvt; i++) {
       j = partNums[i] - 1;
-      if (partitions[j].IsUsed()) {
+      if (partitions[j].IsUsed() && partitions[j].IsSizedForMBR()) {
          mbrNum = i + (eeFirst == 'Y');
          cout << "\nCreating entry for GPT partition #" << j + 1
               << " (MBR partition #" << mbrNum + 1 << ")\n";
@@ -439,7 +442,7 @@ void GPTDataTextUI::MakeHybrid(void) {
             hybridPart.SetStatus(0x00);
          hybridPart.SetInclusion(PRIMARY);
       } else {
-         cerr << "\nGPT partition #" << j + 1 << " does not exist; skipping.\n";
+         cerr << "\nGPT partition #" << j + 1 << " does not exist or is too big; skipping.\n";
       } // if/else
       hybridMBR.AddPart(mbrNum, hybridPart);
    } // for

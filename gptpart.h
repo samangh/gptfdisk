@@ -63,6 +63,7 @@ class GPTPart {
       void ShowAttributes(uint32_t partNum) {attributes.ShowAttributes(partNum);}
       UnicodeString GetDescription(void);
       int IsUsed(void);
+      int IsSizedForMBR(void);
 
       // Simple data assignment:
       void SetType(PartType t);

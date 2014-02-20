@@ -1,3 +1,13 @@
+0.8.10 (?/??/2014):
+-------------------
+
+- Fixed new (in 0.8.9) bug that caused a failure to create more than one
+  hybridized partition when creating a hybrid MBR.
+
+- Fixed bug that caused gdisk to create hybridized partitions that ended
+  above the 2^32 sector point with incorrect end values. The program now
+  refuses to create such hybridized partitions at all.
+
 0.8.9 (2/17/2014):
 ------------------
 

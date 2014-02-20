@@ -138,6 +138,11 @@ int GPTPart::IsUsed(void) {
    return (partitionType != GUIDData("0x00"));
 } // GPTPart::IsUsed()
 
+// Returns 1 if the partition's end point is under (2^32 - 1) sectors, 0 if it's over that value.
+int GPTPart::IsSizedForMBR(void) {
+   return (lastLBA < UINT32_MAX);
+} // GPTPart::IsSizedForMBR()
+
 // Set the type code to the specified one. Also changes the partition
 // name *IF* the current name is the generic one for the current partition
 // type.
