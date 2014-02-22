@@ -9,12 +9,16 @@
   hybridized partition when creating a hybrid MBR.
 
 - Fixed bug that caused gdisk and sgdisk to create hybridized partitions
-  that ended above the 2^32 sector point with incorrect end values. The
-  program now refuses to create such hybridized partitions at all. (A case
-  could be made for allowing creation of such partitions so long as the
-  start sector is below 2^32 and the size is under 2^32, but as a practical
-  matter, many OSes flake out with such partitions, so I'm erring on the
-  side of caution on this one.)
+  that ended at or above the 2^32 sector point with incorrect end values.
+  The behavior now varies between gdisk and sgdisk: gdisk now creates
+  hybrid partitions that begin below 2^32 sectors and that are smaller than
+  2^32 sectors, since this is technically legal; but gdisk displays a
+  warning, because some OSes (such as DOS, Windows XP, OS/2, and BeOS)
+  misbehave with such partitions. AFAIK, only Linux, FreeBSD, and Windows 7
+  work properly with such partitions. Because of this fact and because
+  sgdisk is a more automated tool, it's stricter in how it handles things:
+  It refuses to create a hybrid partition if the original ends at or above
+  the 2^32 sector mark.
 
 0.8.9 (2/17/2014):
 ------------------

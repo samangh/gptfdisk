@@ -138,9 +138,17 @@ int GPTPart::IsUsed(void) {
    return (partitionType != GUIDData("0x00"));
 } // GPTPart::IsUsed()
 
-// Returns 1 if the partition's end point is under (2^32 - 1) sectors, 0 if it's over that value.
+// Returns MBR_SIZED_GOOD, MBR_SIZED_IFFY, or MBR_SIZED_BAD; see comments
+// in header file for details.
 int GPTPart::IsSizedForMBR(void) {
-   return (lastLBA < UINT32_MAX);
+   int retval = MBR_SIZED_GOOD;
+
+   if ((firstLBA > UINT32_MAX) || ((lastLBA - firstLBA) > UINT32_MAX) || (firstLBA > lastLBA))
+      retval = MBR_SIZED_BAD;
+   else if (lastLBA > UINT32_MAX)
+      retval = MBR_SIZED_IFFY;
+
+   return (retval);
 } // GPTPart::IsSizedForMBR()
 
 // Set the type code to the specified one. Also changes the partition

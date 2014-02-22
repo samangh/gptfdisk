@@ -54,6 +54,9 @@ class GPTDataTextUI : public GPTData {
       void MakeHybrid(void);
       int XFormToMBR(void); // convert GPT to MBR, wiping GPT afterwards. Returns 1 if successful
 
+      // An informational function....
+      void WarnAboutIffyMBRPart(int partNum);
+
       // Main menu functions
       void MainMenu(string filename);
       void ShowCommands(void);

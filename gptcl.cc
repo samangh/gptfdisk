@@ -474,7 +474,7 @@ int GPTDataCL::BuildMBR(char* argument, int isHybrid) {
          newMBR.SetDisk(GetDisk());
          for (i = 0; i < numParts; i++) {
             origPartNum = GetInt(argument, i + 1) - 1;
-            if (IsUsedPartNum(origPartNum) && partitions[origPartNum].IsSizedForMBR()) {
+            if (IsUsedPartNum(origPartNum) && (partitions[origPartNum].IsSizedForMBR() == MBR_SIZED_GOOD)) {
                newPart.SetInclusion(PRIMARY);
                newPart.SetLocation(operator[](origPartNum).GetFirstLBA(),
                                    operator[](origPartNum).GetLengthLBA());
@@ -493,7 +493,8 @@ int GPTDataCL::BuildMBR(char* argument, int isHybrid) {
             newPart.SetType(0xEE);
             newMBR.AddPart(0, newPart);
          } // if
-         SetProtectiveMBR(newMBR);
+         if (allOK)
+            SetProtectiveMBR(newMBR);
       } else allOK = 0;
    } else allOK = 0;
    if (!allOK)
