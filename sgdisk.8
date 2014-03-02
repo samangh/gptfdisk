@@ -1,6 +1,6 @@
 .\" Copyright 2011-2013 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.8.9" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "0.8.10" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -185,9 +185,8 @@ will reflect GPT fdisk's first\-pass interpretation of the GPT.
 Change the GPT name of a partition. This name is encoded as a UTF\-16
 string, but proper entry and display of anything beyond basic ASCII values
 requires suitable locale and font support. For the most part, Linux ignores
-the partition name, but it may be important in some OSes. GPT fdisk sets
-a default name based on the partition type code. If you want to set a name
-that includes a space, enclose it in quotation marks, as in
+the partition name, but it may be important in some OSes. If you want to
+set a name that includes a space, enclose it in quotation marks, as in
 \fIsgdisk \-c 1:"Sample Name" /dev/sdb\fR. Note that the GPT name of a
 partition is distinct from the filesystem name, which is encoded in the
 filesystem's data structures.
@@ -329,7 +328,9 @@ or \fI\fB\-200M\fR\fR to specify a point 200MiB before the last available
 sector. A start or end value of 0 specifies the default value, which is the
 start of the largest available block for the start sector and the end of
 the same block for the end sector. A partnum value of 0 causes the program
-to use the first available partition number.
+to use the first available partition number. Subsequent uses of the
+\fI\-A\fR, \fI\-c\fR, \fI\-t\fR, and \fI\-u\fR options may also use
+\fI0\fR to refer to the same partition.
 
 .TP
 .B \-N, \-\-largest\-new=num
@@ -490,7 +491,7 @@ sgdisk, but may with gdisk)
 Disk replication operation (-R) failed
 
 .SH "BUGS"
-As of February 2014 (version 0.8.9), \fBsgdisk\fR
+As of March 2014 (version 0.8.10), \fBsgdisk\fR
 should be considered beta software. Known bugs and limitations include:
 
 .TP 
