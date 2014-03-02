@@ -1,6 +1,14 @@
 0.8.10 (?/??/2014):
 -------------------
 
+- Added feature to sgdisk's -A/--attributes, -c/--change-name,
+  -t/--typecode, and -u/--partition-guid commands: If a -n/--new option
+  with "0" as the partition number precedes these options on the command
+  line, passin "0" as the partition number to the following options causes
+  them to use the newly-created partition. For instance, "sgdisk -n
+  0:0:+550M -t 0:EF00 /dev/sda" creates a new partition with a type code of
+  EF00. (Previous versions would ignore the "-t 0:EF00" option.)
+
 - Fixed bug that caused incorrect partition number to be displayed by
   sgdisk in error messages when the user specified a non-existent partition
   for inclusion in a hybrid MBR or conversion to a conventional MBR.

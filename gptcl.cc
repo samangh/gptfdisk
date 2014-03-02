@@ -63,7 +63,7 @@ void GPTDataCL::LoadBackupFile(string backupFile, int &saveData, int &neverSaveD
 int GPTDataCL::DoOptions(int argc, char* argv[]) {
    GPTData secondDevice;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
-   int partNum = 0, saveNonGPT = 1, retval = 0, pretend = 0;
+   int partNum = 0, newPartNum = -1, saveNonGPT = 1, retval = 0, pretend = 0;
    uint64_t low, high, startSector, endSector, sSize;
    uint64_t temp; // temporary variable; free to use in any case
    char *device;
@@ -122,7 +122,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
 
    // Do one loop through the options to find the device filename and deal
    // with options that don't require a device filename, to flag destructive
-   // (o, z, or Z) options, and to flag presence of an
+   // (o, z, or Z) options, and to flag presence of a --pretend/-P option
    while ((opt = poptGetNextOpt(poptCon)) > 0) {
       switch (opt) {
          case 'A':
@@ -161,6 +161,8 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                case 'A': {
                   if (cmd != "list") {
                      partNum = (int) GetInt(attributeOperation, 1) - 1;
+                     if (partNum < 0)
+                        partNum = newPartNum;
                      if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
                         switch (ManageAttributes(partNum, GetString(attributeOperation, 2),
                            GetString(attributeOperation, 3))) {
@@ -191,9 +193,14 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   free(backupFile);
                   break;
                case 'c':
+                  cout << "Setting name!\n";
                   JustLooking(0);
                   partNum = (int) GetInt(partName, 1) - 1;
+                  if (partNum < 0)
+                     partNum = newPartNum;
+                  cout << "partNum is " << partNum << "\n";
                   if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
+                     cout << "REALLY setting name!\n";
                      name = GetString(partName, 2);
                      if (SetName(partNum, (UnicodeString) name.c_str())) {
                         saveData = 1;
@@ -276,19 +283,19 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   break;
                case 'n':
                   JustLooking(0);
-                  partNum = (int) GetInt(newPartInfo, 1) - 1;
-                  if (partNum < 0)
-                     partNum = FindFirstFreePart();
+                  newPartNum = (int) GetInt(newPartInfo, 1) - 1;
+                  if (newPartNum < 0)
+                     newPartNum = FindFirstFreePart();
                   low = FindFirstInLargest();
                   Align(&low);
                   high = FindLastInFree(low);
                   startSector = IeeeToInt(GetString(newPartInfo, 2), sSize, low, high, low);
                   endSector = IeeeToInt(GetString(newPartInfo, 3), sSize, startSector, high, high);
-                  if (CreatePartition(partNum, startSector, endSector)) {
+                  if (CreatePartition(newPartNum, startSector, endSector)) {
                      saveData = 1;
                   } else {
-                     cerr << "Could not create partition " << partNum + 1 << " from "
-                     << startSector << " to " << endSector << "\n";
+                     cerr << "Could not create partition " << newPartNum + 1 << " from "
+                          << startSector << " to " << endSector << "\n";
                      neverSaveData = 1;
                   } // if/else
                   free(newPartInfo);
@@ -351,6 +358,8 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                case 't':
                   JustLooking(0);
                   partNum = (int) GetInt(typeCode, 1) - 1;
+                  if (partNum < 0)
+                     partNum = newPartNum;
                   if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
                      typeHelper = GetString(typeCode, 2);
                      if ((typeHelper != (GUIDData) "00000000-0000-0000-0000-000000000000") &&
@@ -373,6 +382,8 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   JustLooking(0);
                   saveData = 1;
                   partNum = (int) GetInt(partGUID, 1) - 1;
+                  if (partNum < 0)
+                     partNum = newPartNum;
                   if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
                      SetPartitionGUID(partNum, GetString(partGUID, 2).c_str());
                   }
