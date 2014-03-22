@@ -122,7 +122,12 @@ void PartType::AddAllTypes(void) {
    AddType(0x8300, "0FC63DAF-8483-4772-8E79-3D69D8477DE4", "Linux filesystem"); // Linux native
    AddType(0x8301, "8DA63339-0007-60C0-C436-083AC8230908", "Linux reserved");
    // See http://www.freedesktop.org/software/systemd/man/systemd-gpt-auto-generator.html
+   // and http://www.freedesktop.org/wiki/Specifications/DiscoverablePartitionsSpec/
    AddType(0x8302, "933AC7E1-2EB4-4F13-B844-0E14E2AEF915", "Linux /home"); // Linux /home (auto-mounted by systemd)
+   AddType(0x8303, "44479540-F297-41B2-9AF7-D131D5F0458A", "Linux x86 root (/)"); // Linux / on x86 (auto-mounted by systemd)
+   AddType(0x8304, "4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709", "Linux x86-64 root (/)"); // Linux / on x86-64 (auto-mounted by systemd)
+   AddType(0x8305, "B921B045-1DF0-41C3-AF44-4C6F280D3FAE", "Linux ARM64 root (/)"); // Linux / on 64-bit ARM (auto-mounted by systemd)
+   AddType(0x8306, "3B8F8425-20E0-4F3B-907F-1A25A76F98E8", "Linux /srv"); // Linux /srv (auto-mounted by systemd)
 
    // Used by Intel Rapid Start technology
    AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");
@@ -204,6 +209,14 @@ void PartType::AddAllTypes(void) {
    AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted identifies these as having the "boot flag" set
    AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
    AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Used by GRUB
+
+   // Ceph type codes; see https://github.com/ceph/ceph/blob/9bcc42a3e6b08521694b5c0228b2c6ed7b3d312e/src/ceph-disk#L76-L81
+   AddType(0xf800, "4FBD7E29-9D25-41B8-AFD0-062C0CEFF05D", "Ceph OSD"); // Ceph Object Storage Daemon
+   AddType(0xf801, "4FBD7E29-9D25-41B8-AFD0-5EC00CEFF05D", "Ceph dm-crypt OSD"); // Ceph Object Storage Daemon (encrypted)
+   AddType(0xf802, "BFBFAFE7-A34F-448A-9A5B-6213EB736C22", "Ceph journal");
+   AddType(0xf803, "45B0969E-9B03-4F30-B4C6-5EC00CEFF106", "Ceph dm-crypt journal");
+   AddType(0xf804, "89C57F98-2FE5-4DC0-89C1-F3AD0CEFF2BE", "Ceph disk in creation");
+   AddType(0xf805, "89C57F98-2FE5-4DC0-89C1-5EC00CEFF2BE", "Ceph dm-crypt disk in creation");
 
    // VMWare ESX partition types codes
    AddType(0xfb00, "AA31E02A-400F-11DB-9590-000C2911D1B8", "VMWare VMFS");
