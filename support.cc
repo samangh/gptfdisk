@@ -328,11 +328,11 @@ void ReverseBytes(void* theValue, int numBytes) {
 void WinWarning(void) {
    #ifdef _WIN32
    cout << "\a************************************************************************\n"
-   << "Most versions of Windows cannot boot from a GPT disk, and most varieties\n"
-   << "prior to Vista cannot read GPT disks. Therefore, you should exit now\n"
-   << "unless you understand the implications of converting MBR to GPT or creating\n"
-   << "a new GPT disk layout!\n"
-   << "************************************************************************\n\n";
+        << "Most versions of Windows cannot boot from a GPT disk except on a UEFI-based\n"
+        << "computer, and most varieties prior to Vista cannot read GPT disks. Therefore,\n"
+        << "you should exit now unless you understand the implications of converting MBR\n"
+        << "to GPT or creating a new GPT disk layout!\n"
+        << "************************************************************************\n\n";
    cout << "Are you SURE you want to continue? ";
    if (GetYN() != 'Y')
       exit(0);

@@ -15,6 +15,7 @@ int main(int argc, char* argv[]) {
    GPTDataTextUI theGPT;
    string device = "";
    UnicodeString uString;
+   int isError = 0;
 
 #ifndef EFI
    cout << "GPT fdisk (gdisk) version " << GPTFDISK_VERSION << "\n\n";
@@ -49,16 +50,20 @@ int main(int argc, char* argv[]) {
             device = (string) argv[1];
          } else { // 3 arguments, but none is "-l"
             cerr << "Usage: " << argv[0] << " [-l] device_file\n";
+            isError = 1;
          } // if/elseif/else
          if (device != "") {
             theGPT.JustLooking();
             if (theGPT.LoadPartitions(device))
                theGPT.DisplayGPTData();
+            else
+               isError = 1;
          } // if
          break;
       default:
          cerr << "Usage: " << argv[0] << " [-l] device_file\n";
+         isError = 1;
          break;
    } // switch
-   return 1 ;
+   return (isError);
 } // main
