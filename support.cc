@@ -138,7 +138,7 @@ uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, 
 
    if (sSize == 0) {
       sSize = SECTOR_SIZE;
-      cerr << "Bug: Sector size invalid in SIToInt()!\n";
+      cerr << "Bug: Sector size invalid in IeeeToInt()!\n";
    } // if
 
    // Remove leading spaces, if present

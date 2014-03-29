@@ -302,7 +302,7 @@ void GPTPart::ShowSummary(int partNum, uint32_t blockSize) {
       cout << firstLBA << "  ";
       cout.width(14);
       cout << lastLBA  << "   ";
-      cout << BytesToIeee(lastLBA - firstLBA + 1, blockSize) << "  ";
+      cout << sizeInIeee << "  ";
       if (sizeInIeee.length() < 10)
          for (i = 0; i < 10 - sizeInIeee.length(); i++)
             cout << " ";

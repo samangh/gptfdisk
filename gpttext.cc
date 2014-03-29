@@ -198,9 +198,9 @@ void GPTDataTextUI::CreatePartition(void) {
       Align(&firstInLargest);
 
       // Get partition number....
+      prompt1 << "Partition number (" << firstFreePart + 1 << "-" << numParts
+              << ", default " << firstFreePart + 1 << "): ";
       do {
-         prompt1 << "Partition number (" << firstFreePart + 1 << "-" << numParts
-                 << ", default " << firstFreePart + 1 << "): ";
          partNum = GetNumber(firstFreePart + 1, numParts,
                              firstFreePart + 1, prompt1.str()) - 1;
          if (partitions[partNum].GetFirstLBA() != 0)
