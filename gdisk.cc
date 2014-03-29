@@ -16,7 +16,9 @@ int main(int argc, char* argv[]) {
    string device = "";
    UnicodeString uString;
 
+#ifndef EFI
    cout << "GPT fdisk (gdisk) version " << GPTFDISK_VERSION << "\n\n";
+#endif /*EFI*/
 
    if (!SizesOK())
       exit(1);
