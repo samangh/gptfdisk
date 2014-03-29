@@ -217,30 +217,39 @@ uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, 
 // Takes a size and converts this to a size in IEEE-1541-2002 units (KiB, MiB,
 // GiB, TiB, PiB, or EiB), returned in C++ string form. The size is either in
 // units of the sector size or, if that parameter is omitted, in bytes.
-// (sectorSize defaults to 1).
+// (sectorSize defaults to 1). Note that this function uses peculiar
+// manual computation of decimal value rather than simply setting
+// theValue.precision() because this isn't possible using the available
+// EFI library.
 string BytesToIeee(uint64_t size, uint32_t sectorSize) {
-   float sizeInIeee;
-   unsigned int index = 0;
+   uint64_t sizeInIeee;
+   uint64_t previousIeee;
+   float decimalIeee;
+   uint index = 0;
    string units, prefixes = " KMGTPEZ";
    ostringstream theValue;
 
-   sizeInIeee = size * (float) sectorSize;
-   while ((sizeInIeee > 1024.0) && (index < (prefixes.length() - 1))) {
+   sizeInIeee = previousIeee = size * (uint64_t) sectorSize;
+   while ((sizeInIeee > 1024) && (index < (prefixes.length() - 1))) {
       index++;
-      sizeInIeee /= 1024.0;
+      previousIeee = sizeInIeee;
+      sizeInIeee /= 1024;
    } // while
-   theValue.setf(ios::fixed);
    if (prefixes[index] == ' ') {
-      units = " bytes";
-      theValue.precision(0);
+      theValue << sizeInIeee << " bytes";
    } else {
       units = "  iB";
       units[1] = prefixes[index];
-      theValue.precision(1);
+      decimalIeee = ((float) previousIeee -
+                     ((float) sizeInIeee * 1024.0) + 51.2) / 102.4;
+      if (decimalIeee >= 10.0) {
+         decimalIeee = 0.0;
+         sizeInIeee++;
+      }
+      theValue << sizeInIeee << "." << (uint32_t) decimalIeee << units;
    } // if/else
-   theValue << sizeInIeee << units;
    return theValue.str();
-} // BlocksToIeee()
+} // BytesToIeee()
 
 // Converts two consecutive characters in the input string into a
 // number, interpreting the string as a hexadecimal number, starting

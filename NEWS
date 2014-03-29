@@ -1,6 +1,10 @@
 0.8.11 (?/?/2014):
 ------------------
 
+- Small code changes to support compilation as EFI application with the
+  UEFI GPT fdisk library
+  (http://sourceforge.net/projects/uefigptfdisk/?source=directory)
+
 - Added new partition type codes for Ceph
   (https://github.com/ceph/ceph/blob/9bcc42a3e6b08521694b5c0228b2c6ed7b3d312e/src/ceph-disk#L76-L81):
   4FBD7E29-9D25-41B8-AFD0-062C0CEFF05D/0xf800 (Ceph OSD),

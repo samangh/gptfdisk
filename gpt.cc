@@ -38,6 +38,23 @@ using namespace std;
 #define log2(x) (log((double) x) / log(2.0))
 #endif // Microsoft Visual C++
 
+#ifdef EFI
+// in UEFI mode MMX registers are not yet available so using the
+// x86_64 ABI to move "double" values around is not an option.
+#ifdef log2
+#undef log2
+#endif
+#define log2(x) log2_32( x )
+static inline uint32_t log2_32(uint32_t v) {
+   int r = -1;
+   while (v >= 1) {
+      r++;
+      v >>= 1;
+   }
+   return r;
+}
+#endif
+
 /****************************************
  *                                      *
  * GPTData class and related structures *
