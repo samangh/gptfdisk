@@ -74,7 +74,8 @@ int DiskIO::OpenForRead(void) {
          if (fstat64(fd, &st) == 0) {
             if (S_ISDIR(st.st_mode))
                cerr << "The specified path is a directory!\n";
-#if !defined(__FreeBSD__) && !defined(__APPLE__)
+#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) \
+			&& !defined(__APPLE__)
             else if (S_ISCHR(st.st_mode))
                cerr << "The specified path is a character device!\n";
 #endif
