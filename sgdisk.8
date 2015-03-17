@@ -1,6 +1,6 @@
 .\" Copyright 2011-2013 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "SGDISK" "8" "0.8.10" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "SGDISK" "8" "1.0.0" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 sgdisk \- Command\-line GUID partition table (GPT) manipulator for Linux and Unix
 .SH "SYNOPSIS"
@@ -353,11 +353,19 @@ disk's original partition table is bad; however, most other options on the
 same command line will be ignored.
 
 .TP 
+.B \-O, \-\-print\-mbr
+Display basic \fIMBR\fR partition summary data. This includes partition
+numbers, starting and ending sector numbers, partition sizes, MBR partition
+types codes, and partition names. This option is useful mainly for
+diagnosing partition table problems, particularly on disks with hybrid
+MBRs.
+
+.TP 
 .B \-p, \-\-print
-Display basic partition summary data. This includes partition
-numbers, starting and ending sector numbers, partition sizes,
-\fBsgdisk\fR's partition types codes, and partition names. For
-additional information, use the \fI\-i\fR (\fI\-\-info\fR) option.
+Display basic GPT partition summary data. This includes partition numbers,
+starting and ending sector numbers, partition sizes, \fBsgdisk\fR's
+partition types codes, and partition names. For additional information, use
+the \fI\-i\fR (\fI\-\-info\fR) option.
 
 .TP 
 .B \-P, \-\-pretend
@@ -491,8 +499,7 @@ sgdisk, but may with gdisk)
 Disk replication operation (-R) failed
 
 .SH "BUGS"
-As of March 2014 (version 0.8.10), \fBsgdisk\fR
-should be considered beta software. Known bugs and limitations include:
+Known bugs and limitations include:
 
 .TP 
 .B *
@@ -578,7 +585,7 @@ Contributors:
 
 * Justin Maggard (justin.maggard@netgear.com)
 
-* Dwight Schauer (dschauer@ti.com)
+* Dwight Schauer (dschauer@gmail.com)
 
 * Florian Zumbiehl (florz@florz.de)
 

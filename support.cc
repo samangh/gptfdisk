@@ -34,6 +34,17 @@ using namespace std;
 // Reads a string from stdin, returning it as a C++-style string.
 // Note that the returned string will NOT include the carriage return
 // entered by the user.
+#ifdef EFI
+extern int __sscanf( const char * str , const char * format , ... ) ;
+string ReadString(void) {
+   string inString;
+   char efiString[256];
+
+   fgets(efiString, 255, stdin);
+   inString = efiString;
+   return inString;
+} // ReadString()
+#else
 string ReadString(void) {
    string inString;
 
@@ -42,6 +53,7 @@ string ReadString(void) {
       exit(5);
    return inString;
 } // ReadString()
+#endif
 
 // Get a numeric value from the user, between low and high (inclusive).
 // Keeps looping until the user enters a value within that range.
@@ -225,7 +237,7 @@ string BytesToIeee(uint64_t size, uint32_t sectorSize) {
    uint64_t sizeInIeee;
    uint64_t previousIeee;
    float decimalIeee;
-   uint index = 0;
+   uint64_t index = 0;
    string units, prefixes = " KMGTPEZ";
    ostringstream theValue;
 

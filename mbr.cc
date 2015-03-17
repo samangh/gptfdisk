@@ -28,6 +28,9 @@ using namespace std;
  *                                      *
  ****************************************/
 
+MBRData::~MBRData(void) {
+} // MBRData destructor
+
 /* // Assignment operator -- copy entire set of MBR data.
 MBRData & MBRData::operator=(const MBRData & orig) {
    BasicMBRData::operator=(orig);

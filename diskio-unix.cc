@@ -253,7 +253,8 @@ int DiskIO::DiskSync(void) {
       i = ioctl(fd, BLKRRPART);
       if (i) {
          cout << "Warning: The kernel is still using the old partition table.\n"
-              << "The new table will be used at the next reboot.\n";
+              << "The new table will be used at the next reboot or after you\n"
+              << "run partprobe(8) or kpartx(8)\n";
       } else {
          retval = 1;
       } // if/else

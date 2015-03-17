@@ -93,6 +93,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
       {"new", 'n', POPT_ARG_STRING, &newPartInfo, 'n', "create new partition", "partnum:start:end"},
       {"largest-new", 'N', POPT_ARG_INT, &largestPartNum, 'N', "create largest possible new partition", "partnum"},
       {"clear", 'o', POPT_ARG_NONE, NULL, 'o', "clear partition table", ""},
+      {"print-mbr", 'O', POPT_ARG_NONE, NULL, 'O', "print MBR partition table", ""},
       {"print", 'p', POPT_ARG_NONE, NULL, 'p', "print partition table", ""},
       {"pretend", 'P', POPT_ARG_NONE, NULL, 'P', "make changes in memory, but don't write them", ""},
       {"transpose", 'r', POPT_ARG_STRING, &twoParts, 'r', "transpose two partitions", "partnum:partnum"},
@@ -320,6 +321,9 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   ClearGPTData();
                   saveData = 1;
                   break;
+               case 'O':
+                   DisplayMBRData();
+                   break;
                case 'p':
                   DisplayGPTData();
                   break;

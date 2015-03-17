@@ -1,5 +1,28 @@
-0.8.11 (?/?/2014):
+1.0.0 (3/16/2015):
 ------------------
+
+- I'm now building a binary package of gdisk_x64.efi, using the UEFI GPT
+  fdisk package.
+
+- Added partition type for OpenBSD data
+  (824CC7A0-36A8-11E3-890A-952519AD3F61/0xa601). Also mapped 0xa600 to the
+  FreeBSD disklabel type code (516E7CB4-6ECF-11D6-8FF8-00022D09712B). I'm
+  not sure that's 100% correct, but since I can't find references to an
+  OpenBSD disklabel GPT type code, it seems the best choice at the moment.
+
+- Added partition type for Windows Storage Spaces
+  (E75CAF8F-F680-4CEE-AFA3-B001E56EFC2D/0x4202)
+
+- Added -O/--print-mbr option to sgdisk, enabling easier display of MBR
+  data structures without invoking gdisk.
+
+- Updated warning message: "EBR describes a logical partition" now reads
+  "EBR points to an EBR," which is more technically correct.
+
+- Altered warning displayed when run from Windows on non-GPT disk, because
+  Windows on UEFI-based systems is becoming more common.
+
+- Fixed spurious "1" return value in gdisk.
 
 - Small code changes to support compilation as EFI application with the
   UEFI GPT fdisk library
@@ -9,7 +32,7 @@
   (https://github.com/ceph/ceph/blob/9bcc42a3e6b08521694b5c0228b2c6ed7b3d312e/src/ceph-disk#L76-L81):
   4FBD7E29-9D25-41B8-AFD0-062C0CEFF05D/0xf800 (Ceph OSD),
   4FBD7E29-9D25-41B8-AFD0-5EC00CEFF05D/0xf801 (Ceph dm-crypt OSD),
-  BFBFAFE7-A34F-448A-9A5B-6213EB736C22/0xf802 (Ceph journal),
+  45B0969E-9B03-4F30-B4C6-B4B80CEFF106/0xf802 (Ceph journal),
   45B0969E-9B03-4F30-B4C6-5EC00CEFF106/0xf803 (Ceph dm-crypt journal),
   89C57F98-2FE5-4DC0-89C1-F3AD0CEFF2BE/0xf804 (Ceph disk in creation), and
   89C57F98-2FE5-4DC0-89C1-5EC00CEFF2BE/0xf805 (Ceph dm-crypt disk in

@@ -296,7 +296,7 @@ int BasicMBRData::ReadLogicalParts(uint64_t extendedStart, int partNum) {
          // the logical partition when this is the case....
          ebrType = ebr.partitions[0].partitionType;
          if ((ebrType == 0x05) || (ebrType == 0x0f) || (ebrType == 0x85)) {
-            cout << "EBR describes a logical partition!\n";
+            cout << "EBR points to an EBR!\n";
             offset = extendedStart + ebr.partitions[0].firstLBA;
          } else {
             // Copy over the basic data....

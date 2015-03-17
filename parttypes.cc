@@ -103,6 +103,7 @@ void PartType::AddAllTypes(void) {
    // Windows LDM ("dynamic disk") types
    AddType(0x4200, "AF9B60A0-1431-4F62-BC68-3311714A69AD", "Windows LDM data"); // Logical disk manager
    AddType(0x4201, "5808C8AA-7E8F-42E0-85D2-E1E90434CFB3", "Windows LDM metadata"); // Logical disk manager
+   AddType(0x4202, "E75CAF8F-F680-4CEE-AFA3-B001E56EFC2D", "Windows Storage Spaces"); // A newer LDM-type setup
 
    // An oddball IBM filesystem....
    AddType(0x7501, "37AFFC90-EF7D-4E96-91C3-2D7AE055B174", "IBM GPFS"); // General Parallel File System (GPFS)
@@ -152,6 +153,13 @@ void PartType::AddAllTypes(void) {
    AddType(0xa583, "0394Ef8B-237E-11E1-B4B3-E89A8F7FC3A7", "Midnight BSD UFS");
    AddType(0xa584, "85D5E45D-237C-11E1-B4B3-E89A8F7FC3A7", "Midnight BSD ZFS");
    AddType(0xa585, "85D5E45C-237C-11E1-B4B3-E89A8F7FC3A7", "Midnight BSD Vinum");
+
+   // OpenBSD partition type....
+   // Note: MBR type 0xa6 is normally subdivided with a BSD disklabel. It's unclear
+   // if that has a GPT equivalent, so I've mapped it to the same GUID as the
+   // FreeBSD diskalbel.
+   AddType(0xa600, "516E7CB4-6ECF-11D6-8FF8-00022D09712B", "OpenBSD disklabel", 0);
+   AddType(0xa601, "824CC7A0-36A8-11E3-890A-952519AD3F61", "OpenBSD data");
 
    // A MacOS partition type, separated from others by NetBSD partition types...
    AddType(0xa800, "55465300-0000-11AA-AA11-00306543ECAC", "Apple UFS"); // Mac OS X
@@ -213,7 +221,7 @@ void PartType::AddAllTypes(void) {
    // Ceph type codes; see https://github.com/ceph/ceph/blob/9bcc42a3e6b08521694b5c0228b2c6ed7b3d312e/src/ceph-disk#L76-L81
    AddType(0xf800, "4FBD7E29-9D25-41B8-AFD0-062C0CEFF05D", "Ceph OSD"); // Ceph Object Storage Daemon
    AddType(0xf801, "4FBD7E29-9D25-41B8-AFD0-5EC00CEFF05D", "Ceph dm-crypt OSD"); // Ceph Object Storage Daemon (encrypted)
-   AddType(0xf802, "BFBFAFE7-A34F-448A-9A5B-6213EB736C22", "Ceph journal");
+   AddType(0xf802, "45B0969E-9B03-4F30-B4C6-B4B80CEFF106", "Ceph journal");
    AddType(0xf803, "45B0969E-9B03-4F30-B4C6-5EC00CEFF106", "Ceph dm-crypt journal");
    AddType(0xf804, "89C57F98-2FE5-4DC0-89C1-F3AD0CEFF2BE", "Ceph disk in creation");
    AddType(0xf805, "89C57F98-2FE5-4DC0-89C1-5EC00CEFF2BE", "Ceph dm-crypt disk in creation");
