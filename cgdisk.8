@@ -181,12 +181,13 @@ Change the sector alignment value. Disks with more logical sectors than
 physical sectors (such as modern Advanced Format drives), some RAID
 configurations, and many SSD devices, can suffer performance problems if
 partitions are not aligned properly for their internal data structures. On
-new disks, GPT fdisk attempts to align partitions on 2048\-sector (1MiB)
-boundaries by default, which optimizes performance for all of these disk
-types. On pre\-partitioned disks, GPT fdisk attempts to identify the
-alignment value used on that disk, but will set 8-sector alignment on disks
-larger than 300 GB even if lesser alignment values are detected. In either
-case, it can be changed by using this option.
+new disks, GPT fdisk attempts to align partitions on 1MiB boundaries
+(2048\-sectors on disks with 512-byte sectors) by default, which optimizes
+performance for all of these disk types. On pre\-partitioned disks, GPT
+fdisk attempts to identify the alignment value used on that disk, but will
+set 8-sector alignment on disks larger than 300 GB even if lesser alignment
+values are detected. In either case, it can be changed by using this
+option.
 
 .TP 
 .B Backup

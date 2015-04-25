@@ -148,11 +148,11 @@ sibling. Options available in \fBsgdisk\fR are:
 .TP 
 .B \-a, \-\-set\-alignment=value
 Set the sector alignment multiple. GPT fdisk aligns the start of partitions
-to sectors that are multiples of this value, which defaults to 2048 on
-freshly formatted disks. This alignment value is necessary to obtain optimum
-performance with Western Digital Advanced Format and similar drives with larger
-physical than logical sector sizes, with some types of RAID arrays, and
-with SSD devices.
+to sectors that are multiples of this value, which defaults to 1MiB (2048
+on disks with 512-byte sectors) on freshly formatted disks. This alignment
+value is necessary to obtain optimum performance with Western Digital
+Advanced Format and similar drives with larger physical than logical sector
+sizes, with some types of RAID arrays, and with SSD devices.
 
 .TP
 .B \-A, \-\-attributes=list|[partnum:show|or|nand|xor|=|set|clear|toggle|get[:bitnum|hexbitmask]]
@@ -337,7 +337,7 @@ to use the first available partition number. Subsequent uses of the
 Create a new partition that fills the largest available block of space on
 the disk. Note that if used on a completely blank disk, this is likely to
 result in a sector-moved warning, since the first available sector
-(normally 34) doesn't fall on a 2048-sector boundary (the default for
+(normally 34) doesn't fall on a 1MiB boundary (the default for
 alignment). You can use the \fI\-a\fR (\fI\-\-set\-alignment\fR) option to
 adjust the alignment, if desired. A num value of 0 causes the program to
 use the first available partition number.
@@ -483,7 +483,8 @@ An error occurred while reading the partition table
 
 .TP 
 .B 3
-Non\-GPT disk detected and no \fI\-g\fR option
+Non\-GPT disk detected and no \fI\-g\fR option, but operation requires a
+write action
 
 .TP 
 .B 4

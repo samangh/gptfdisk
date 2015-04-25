@@ -1,3 +1,18 @@
+1.0.1 (?/??/2015):
+------------------
+
+- Edited man pages to clarify that default alignment is to 1MiB boundaries;
+  this translates to 2048 sectors on disks with 512-byte sectors, but it
+  will be something else on disks with other sector sizes.
+
+- Changed behavior of -z/--zap and -Z/--zap-all options to sgdisk so that
+  if a subsequent command causes changes, they'll be written to disk.
+  Previously, doing something like "sgdisk --zap-all --clear /dev/sdd"
+  would wipe the disk but not create a partition table; to create a blank
+  table you'd need to do "sgdisk --zap-all --clear --mbrtogpt /dev/sdd",
+  which is a bit odd and counter-intuitive, to the point of arguably being
+  a bug.
+
 1.0.0 (3/16/2015):
 ------------------
 

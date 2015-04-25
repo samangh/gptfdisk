@@ -72,7 +72,8 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
 
    struct poptOption theOptions[] =
    {
-      {"attributes", 'A', POPT_ARG_STRING, &attributeOperation, 'A', "operate on partition attributes", "list|[partnum:show|or|nand|xor|=|set|clear|toggle|get[:bitnum|hexbitmask]]"},
+      {"attributes", 'A', POPT_ARG_STRING, &attributeOperation, 'A', "operate on partition attributes",
+          "list|[partnum:show|or|nand|xor|=|set|clear|toggle|get[:bitnum|hexbitmask]]"},
       {"set-alignment", 'a', POPT_ARG_INT, &alignment, 'a', "set sector alignment", "value"},
       {"backup", 'b', POPT_ARG_STRING, &backupFile, 'b', "backup GPT to file", "file"},
       {"change-name", 'c', POPT_ARG_STRING, &partName, 'c', "change partition's name", "partnum:name"},
@@ -404,7 +405,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   if (!pretend) {
                      DestroyGPT();
                   } // if
-                  saveNonGPT = 0;
+                  saveNonGPT = 1;
                   saveData = 0;
                   break;
                case 'Z':
@@ -412,7 +413,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                      DestroyGPT();
                      DestroyMBR();
                   } // if
-                  saveNonGPT = 0;
+                  saveNonGPT = 1;
                   saveData = 0;
                   break;
                default:
@@ -446,7 +447,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   if (!pretend) {
                      DestroyGPT();
                   } // if
-                  saveNonGPT = 0;
+                  saveNonGPT = 1;
                   saveData = 0;
                   break;
                case 'Z':
@@ -454,7 +455,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                      DestroyGPT();
                      DestroyMBR();
                   } // if
-                  saveNonGPT = 0;
+                  saveNonGPT = 1;
                   saveData = 0;
                   break;
             } // switch
