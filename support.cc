@@ -144,7 +144,7 @@ uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize,
 uint64_t IeeeToInt(string inValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def) {
    uint64_t response = def, bytesPerUnit = 1, mult = 1, divide = 1;
    size_t foundAt = 0;
-   char suffix, plusFlag = ' ';
+   char suffix = ' ', plusFlag = ' ';
    string suffixes = "KMGTPE";
    int badInput = 0; // flag bad input; once this goes to 1, other values are irrelevant
 
