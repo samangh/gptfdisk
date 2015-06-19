@@ -129,6 +129,7 @@ void PartType::AddAllTypes(void) {
    AddType(0x8304, "4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709", "Linux x86-64 root (/)"); // Linux / on x86-64 (auto-mounted by systemd)
    AddType(0x8305, "B921B045-1DF0-41C3-AF44-4C6F280D3FAE", "Linux ARM64 root (/)"); // Linux / on 64-bit ARM (auto-mounted by systemd)
    AddType(0x8306, "3B8F8425-20E0-4F3B-907F-1A25A76F98E8", "Linux /srv"); // Linux /srv (auto-mounted by systemd)
+   AddType(0x8307, "69DAD710-2CE4-4E3C-B16C-21A1D49ABED3", "Linux ARM32 root (/)"); // Linux / on 32-bit ARM (auto-mounted by systemd)
 
    // Used by Intel Rapid Start technology
    AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");

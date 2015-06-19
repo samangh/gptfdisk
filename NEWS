@@ -1,6 +1,10 @@
 1.0.1 (?/??/2015):
 ------------------
 
+- Added GUID 69DAD710-2CE4-4E3C-B16C-21A1D49ABED3 for 32-bit ARM Linux root
+  (/) partition, as per the Freedesktop.org Discoverable Partition Spec
+  (http://www.freedesktop.org/wiki/Specifications/DiscoverablePartitionsSpec/).
+
 - Edited man pages to clarify that default alignment is to 1MiB boundaries;
   this translates to 2048 sectors on disks with 512-byte sectors, but it
   will be something else on disks with other sector sizes.
