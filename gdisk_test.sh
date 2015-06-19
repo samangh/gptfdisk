@@ -147,7 +147,7 @@ EOF
 		;;
 
 		sgdisk)
-			$SGDISK_BIN $TEMP_DISK -${OPT_NEW} 1 -${OPT_CHANGE_NAME} 1:"${TEST_PART_DEFAULT_NAME}"
+			$SGDISK_BIN $TEMP_DISK -${OPT_NEW} 1 -${OPT_CHANGE_NAME} 1:"${TEST_PART_DEFAULT_NAME}" -${OPT_CHANGE_TYPE} 1:$TEST_PART_TYPE
 		;;
 	esac
 
@@ -311,6 +311,7 @@ EOF
 		pretty_print "SUCCESS" "GUID of disk has been sucessfully changed"
 	else
 		pretty_print "FAILED" "GUID of disk is the same as the previous one"
+		exit 1
 	fi
 }
 
