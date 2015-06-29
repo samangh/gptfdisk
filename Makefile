@@ -28,6 +28,9 @@ sgdisk: $(LIB_OBJS) sgdisk.o gptcl.o
 fixparts: $(MBR_LIB_OBJS) fixparts.o
 	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -o fixparts
 
+test:
+	./gdisk_test.sh
+
 lint:	#no pre-reqs
 	lint $(SRCS)
 
