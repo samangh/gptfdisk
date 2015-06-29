@@ -354,7 +354,7 @@ EOF
 ###################################
 
 # create a file to simulate a real device
-dd if=/dev/zero of=$TEMP_DISK bs=1024 count=$TEMP_DISK_SIZE
+dd if=/dev/zero of=$TEMP_DISK bs=1024 count=$TEMP_DISK_SIZE > /dev/null 2>&1
 
 if [ -s $TEMP_DISK ]
 then
