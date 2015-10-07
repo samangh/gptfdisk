@@ -22,7 +22,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include <ncursesw/ncurses.h>
+#include <ncurses.h>
 #include "gptcurses.h"
 #include "support.h"
 

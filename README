@@ -200,11 +200,12 @@ be used instead. In addition, note these requirements:
   (headers). Most Linux distributions install popt by default, but you may
   need to install a package called popt-dev, popt-devel, or something
   similar to obtain the header files. Mac OS users can find a version of
-  popt for Mac OS from Darwin Ports (http://popt.darwinports.com) or Fink
-  (http://www.finkproject.org); however, you'll first need to install
-  DarwinPorts or Fink (instructions exist on the relevant projects' pages).
-  Alternatively, you can compile gdisk and/or cgdisk alone, without sgdisk;
-  gdisk doesn't require popt.
+  popt for Mac OS from Darwin Ports (http://popt.darwinports.com), MacPorts
+  (https://trac.macports.org/browser/trunk/dports/devel/popt/Portfile), or
+  Fink (http://www.finkproject.org);  however, you'll first need to install
+  DarwinPorts, MacPorts, or Fink (instructions exist on the relevant
+  projects' pages). Alternatively, you can compile gdisk and/or cgdisk
+  alone, without sgdisk; gdisk doesn't require popt.
 
 When all the necessary development tools and libraries are installed, you
 can uncompress the package and type "make" at the command prompt in the

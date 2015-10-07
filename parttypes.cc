@@ -2,7 +2,7 @@
 // Class to manage partition type codes -- a slight variant on MBR type
 // codes, GUID type codes, and associated names.
 
-/* This program is copyright (c) 2009-2014 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2015 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -97,6 +97,9 @@ void PartType::AddAllTypes(void) {
    AddType(0x3000, "7412F7D5-A156-4B13-81DC-867174929325", "ONIE boot");
    AddType(0x3001, "D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149", "ONIE config");
 
+   // Plan 9; see http://man.cat-v.org/9front/8/prep
+   AddType(0x3900, "C91818F9-8025-47AF-89D2-F030D7000C2C", "Plan 9");
+
    // PowerPC reference platform boot partition
    AddType(0x4100, "9E1A2D38-C612-4316-AA26-8B49521E5A8B", "PowerPC PReP boot");
 
@@ -156,11 +159,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xa585, "85D5E45C-237C-11E1-B4B3-E89A8F7FC3A7", "Midnight BSD Vinum");
 
    // OpenBSD partition type....
-   // Note: MBR type 0xa6 is normally subdivided with a BSD disklabel. It's unclear
-   // if that has a GPT equivalent, so I've mapped it to the same GUID as the
-   // FreeBSD diskalbel.
-   AddType(0xa600, "516E7CB4-6ECF-11D6-8FF8-00022D09712B", "OpenBSD disklabel", 0);
-   AddType(0xa601, "824CC7A0-36A8-11E3-890A-952519AD3F61", "OpenBSD data");
+   AddType(0xa600, "824CC7A0-36A8-11E3-890A-952519AD3F61", "OpenBSD disklabel");
 
    // A MacOS partition type, separated from others by NetBSD partition types...
    AddType(0xa800, "55465300-0000-11AA-AA11-00306543ECAC", "Apple UFS"); // Mac OS X
@@ -183,6 +182,9 @@ void PartType::AddAllTypes(void) {
    AddType(0xaf03, "4C616265-6C00-11AA-AA11-00306543ECAC", "Apple label");
    AddType(0xaf04, "5265636F-7665-11AA-AA11-00306543ECAC", "AppleTV recovery");
    AddType(0xaf05, "53746F72-6167-11AA-AA11-00306543ECAC", "Apple Core Storage");
+
+   // Acronis Secure Zone
+   AddType(0xbc00, "0311FC50-01CA-4725-AD77-9ADBB20ACE98", "Acronis Secure Zone");
 
    // Solaris partition types (one of which is shared with MacOS)
    AddType(0xbe00, "6A82CB45-1DD2-11B2-99A6-080020736631", "Solaris boot");

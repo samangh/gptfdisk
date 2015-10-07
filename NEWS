@@ -1,8 +1,26 @@
 1.0.1 (?/??/2015):
 ------------------
 
-- Added GUID 69DAD710-2CE4-4E3C-B16C-21A1D49ABED3 for 32-bit ARM Linux root
-  (/) partition, as per the Freedesktop.org Discoverable Partition Spec
+- Changed the OpenBSD type codes (0xa600 and 0xa601): 0xa600 is now
+  824CC7A0-36A8-11E3-890A-952519AD3F61 (OpenBSD disklabel) and 0xa601 is
+  now gone. Previously, 0xa600 was 516E7CB4-6ECF-11D6-8FF8-00022D09712B, a
+  duplicate of the FreeBSD disklabel, and 0xa601 was
+  824CC7A0-36A8-11E3-890A-952519AD3F61. OpenBSD is now officially
+  supporting 824CC7A0-36A8-11E3-890A-952519AD3F61 as a disklabel type,
+  though. It's unclear what, if anything, OpenBSD will use for
+  non-disklabel type codes at the moment.
+
+- Added GUID 0311FC50-01CA-4725-AD77-9ADBB20ACE98 (0xbc00) for
+  Acronis Secure Zone backup partitions.
+
+- Fixed bug that caused random crashes on ppc64el systems (and perhaps
+  others).
+
+- Added GUID C91818F9-8025-47AF-89D2-F030D7000C2C (0x3900) for Plan 9.
+
+- Added GUID 69DAD710-2CE4-4E3C-B16C-21A1D49ABED3 (0x8307) for 32-bit ARM
+  Linux root (/) partition, as per the Freedesktop.org Discoverable
+  Partition Spec
   (http://www.freedesktop.org/wiki/Specifications/DiscoverablePartitionsSpec/).
 
 - Edited man pages to clarify that default alignment is to 1MiB boundaries;
