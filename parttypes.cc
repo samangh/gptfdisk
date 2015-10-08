@@ -175,7 +175,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xa906, "49F48DAA-B10E-11DC-B99B-0019D1879648", "NetBSD RAID");
 
    // Mac OS partition types (See also 0xa800, above)....
-   AddType(0xab00, "426F6F74-0000-11AA-AA11-00306543ECAC", "Apple boot");
+   AddType(0xab00, "426F6F74-0000-11AA-AA11-00306543ECAC", "Recovery HD");
    AddType(0xaf00, "48465300-0000-11AA-AA11-00306543ECAC", "Apple HFS/HFS+");
    AddType(0xaf01, "52414944-0000-11AA-AA11-00306543ECAC", "Apple RAID");
    AddType(0xaf02, "52414944-5F4F-11AA-AA11-00306543ECAC", "Apple RAID offline");

@@ -1,6 +1,28 @@
 1.0.1 (?/??/2015):
 ------------------
 
+- OS X 10.11 includes new security features that prevent GPT fdisk from
+  working unless these features are disabled. To do so, you must boot to a
+  Recovery HD system, open a Terminal, type "csrutil disable", and reboot
+  into the normal system. You can re-enable the security features by
+  repeating the process, but specify "enable" rather than "disable". If you
+  know of a way around this (including code changes to gdisk), please
+  contact me.
+
+- I've updated my OS X environment to OS X 10.11 and LLVM 7.0.0. This has
+  also meant installing fresh versions of popt and ncurses from MacPorts,
+  which may require upgrading popt to get sgdisk working on some systems.
+  (gdisk, cgdisk, and fixparts should continue to work normally on all
+  systems.) The OS X binaries are now "fat" (32- and 64-bit) versions,
+  which should have no noticeable effect unless you have a Mac with broken
+  32-bit support, in which case the binaries will now work.
+
+- Changed the default name of 0xab00 partitions from "Apple boot" to
+  "Recovery HD", since the latter is the name that Apple gives these
+  partitions. Also, I discovered through painful experience that OS X
+  flakes out and won't boot if the name is something other than "Recovery
+  HD", so it really has to have the right name!
+
 - Changed the OpenBSD type codes (0xa600 and 0xa601): 0xa600 is now
   824CC7A0-36A8-11E3-890A-952519AD3F61 (OpenBSD disklabel) and 0xa601 is
   now gone. Previously, 0xa600 was 516E7CB4-6ECF-11D6-8FF8-00022D09712B, a
