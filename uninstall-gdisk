@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Script to uninstall GPT fdisk from OS X
+
+OSName=`uname -s`
+if [[ $OSName != 'Darwin' ]] ; then
+    echo "This script is useful only under OS X! Exiting!"
+    exit 1
+fi
+
+# Remove from pre-1.0.1 locations
+rm -f /usr/sbin/gdisk
+rm -f /usr/sbin/sgdisk
+rm -f /usr/sbin/cgdisk
+rm -rf /usr/share/doc/gdisk/
+rm -f /usr/share/man/man8/gdisk.8
+rm -f /usr/share/man/man8/sgdisk.8
+rm -f /usr/share/man/man8/cgdisk.8
+
+# Remove from 1.0.1 (and later) locations
+rm -f /usr/local/bin/gdisk
+rm -f /usr/local/bin/sgdisk
+rm -f /usr/local/bin/cgdisk
+rm -rf /usr/local/doc/gdisk
+rm -f /usr/local/man/man8/gdisk.8
+rm -f /usr/local/man/man8/sgdisk.8
+rm -f /usr/local/man/man8/cgdisk.8
+
+echo "All GPT fdisk program files successfully removed!"
+
+# And finally, erase this script itself....
+rm -f /usr/local/bin/uninstall-gdisk
