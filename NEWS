@@ -1,6 +1,9 @@
 1.0.1 (?/??/2015):
 ------------------
 
+- Fixed bug that caused sgdisk to not return an appropriate error code
+  when it encountered a write error when saving changes.
+
 - Fixed bug that caused cgdisk's "Info" display to under-report the
   partition's size by one sector.
 
