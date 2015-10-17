@@ -332,7 +332,7 @@ void GPTDataCurses::ShowInfo(int partNum) {
           BytesToIeee(partitions[partNum].GetFirstLBA(), blockSize).c_str());
    printw("Last sector: %lld (at %s)\n", partitions[partNum].GetLastLBA(),
           BytesToIeee(partitions[partNum].GetLastLBA(), blockSize).c_str());
-   size = partitions[partNum].GetLastLBA() - partitions[partNum].GetFirstLBA();
+   size = partitions[partNum].GetLastLBA() - partitions[partNum].GetFirstLBA() + 1;
    printw("Partition size: %lld sectors (%s)\n", size, BytesToIeee(size, blockSize).c_str());
    printw("Attribute flags: %016x\n", partitions[partNum].GetAttributes().GetAttributes());
    #ifdef USE_UTF16

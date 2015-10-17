@@ -1,6 +1,9 @@
 1.0.1 (?/??/2015):
 ------------------
 
+- Fixed bug that caused cgdisk's "Info" display to under-report the
+  partition's size by one sector.
+
 - OS X 10.11 includes new security features that prevent GPT fdisk from
   working unless these features are disabled. To do so, you must boot to a
   Recovery HD system, open a Terminal, type "csrutil disable", and reboot
@@ -8,6 +11,12 @@
   repeating the process, but specify "enable" rather than "disable". If you
   know of a way around this (including code changes to gdisk), please
   contact me.
+
+- I've updated the OS X installation location from the Unix-standard
+  /usr/sbin (and related locations for documentation) to /usr/local/bin
+  (and related locations for documentation). This is Just Plain Crazy from
+  a Unix point of view, but Apple has to be Apple and do things just a
+  little bit differently.
 
 - I've updated my OS X environment to OS X 10.11 and LLVM 7.0.0. This has
   also meant installing fresh versions of popt and ncurses from MacPorts,
