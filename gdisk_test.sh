@@ -115,9 +115,23 @@ Y
 w
 Y
 EOF
+
+			ret=$?
+			if [ $ret -ne 0 ]
+			then
+				pretty_print "FAILED" "gdisk return $ret when creating partition table"
+				exit 1
+			fi
 		;;
 		sgdisk)
 			$SGDISK_BIN $TEMP_DISK -${OPT_CLEAR}
+
+			ret=$?
+			if [ $ret -ne 0 ]
+			then
+				pretty_print "FAILED" "sgdisk return $ret when creating partition table"
+				exit 1
+			fi
 		;;
 	esac
 
@@ -354,7 +368,7 @@ EOF
 ###################################
 
 # create a file to simulate a real device
-dd if=/dev/zero of=$TEMP_DISK bs=1024 count=$TEMP_DISK_SIZE
+dd if=/dev/zero of=$TEMP_DISK bs=1024 count=$TEMP_DISK_SIZE > /dev/null 2>&1
 
 if [ -s $TEMP_DISK ]
 then
