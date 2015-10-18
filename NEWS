@@ -1,6 +1,9 @@
 1.0.1 (?/??/2015):
 ------------------
 
+- Fixed bug that caused -N/--largest-new option to sgdisk to fail when
+  fed a "0" option.
+
 - Fixed bug that caused input glitches in EFI version of gdisk.
 
 - Fixed bug that caused sgdisk to not return an appropriate error code

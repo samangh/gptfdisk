@@ -335,10 +335,7 @@ to use the first available partition number. Subsequent uses of the
 .TP
 .B \-N, \-\-largest\-new=num
 Create a new partition that fills the largest available block of space on
-the disk. Note that if used on a completely blank disk, this is likely to
-result in a sector-moved warning, since the first available sector
-(normally 34) doesn't fall on a 1MiB boundary (the default for
-alignment). You can use the \fI\-a\fR (\fI\-\-set\-alignment\fR) option to
+the disk. You can use the \fI\-a\fR (\fI\-\-set\-alignment\fR) option to
 adjust the alignment, if desired. A num value of 0 causes the program to
 use the first available partition number.
 
