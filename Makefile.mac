@@ -37,7 +37,7 @@ lint:	#no pre-reqs
 	lint $(SRCS)
 
 clean:	#no pre-reqs
-	rm -f core *.o *~ gdisk sgdisk
+	rm -f core *.o *~ gdisk sgdisk cgdisk fixparts
 
 # what are the source dependencies
 depend: $(SRCS)

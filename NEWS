@@ -1,5 +1,9 @@
-1.0.1 (?/??/2015):
-------------------
+1.0.1 (10/18/2015):
+-------------------
+
+- Created uninstall-fixparts and uninstall-gdisk scripts for OS X. As the
+  names imply, these scripts remove the files installed by the fixparts and
+  gdisk packages, respectively.
 
 - Fixed bug that caused -N/--largest-new option to sgdisk to fail when
   fed a "0" option.
@@ -16,9 +20,11 @@
   working unless these features are disabled. To do so, you must boot to a
   Recovery HD system, open a Terminal, type "csrutil disable", and reboot
   into the normal system. You can re-enable the security features by
-  repeating the process, but specify "enable" rather than "disable". If you
-  know of a way around this (including code changes to gdisk), please
-  contact me.
+  repeating the process, but specify "enable" rather than "disable". I've
+  added a message pointing users to a Web page explaining how to disable
+  this feature when gdisk detects that it can't write to the disk under OS
+  X. If you know of a way around this (including code changes to gdisk),
+  please contact me.
 
 - I've updated the OS X installation location from the Unix-standard
   /usr/sbin (and related locations for documentation) to /usr/local/bin

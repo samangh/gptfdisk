@@ -748,7 +748,12 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
               << "'sysctl kern.geom.debugflags=16' at a shell prompt, and re-running this\n"
               << "program.\n";
 #endif
-         cout << "\n";
+#if defined (__APPLE__)
+         cout << "You may need to deactivate System Integrity Protection to use this program. See\n"
+              << "https://www.quora.com/How-do-I-turn-off-the-rootless-in-OS-X-El-Capitan-10-11\n"
+              << "for more information.\n";
+#endif
+              cout << "\n";
       } // if
       myDisk.Close(); // Close and re-open read-only in case of bugs
    } else allOK = 0; // if
