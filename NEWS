@@ -1,6 +1,8 @@
 1.0.1 (?/??/2015):
 ------------------
 
+- Fixed bug that caused input glitches in EFI version of gdisk.
+
 - Fixed bug that caused sgdisk to not return an appropriate error code
   when it encountered a write error when saving changes.
 

@@ -39,9 +39,16 @@ extern int __sscanf( const char * str , const char * format , ... ) ;
 string ReadString(void) {
    string inString;
    char efiString[256];
+   int stringLength;
 
-   fgets(efiString, 255, stdin);
-   inString = efiString;
+   if (fgets(efiString, 255, stdin) != NULL) {
+      stringLength = strlen(efiString);
+      if ((stringLength > 0) && (efiString[stringLength - 1] == '\n'))
+          efiString[stringLength - 1] = '\0';
+      inString = efiString;
+   } else {
+      inString = "";
+   }
    return inString;
 } // ReadString()
 #else
