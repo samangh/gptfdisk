@@ -1,3 +1,9 @@
+1.0.2 (?/??/2016):
+------------------
+
+- Removed stray debug message ("REALLY setting name!") from sgdisk,
+  when setting new name via -c option.
+
 1.0.1 (10/18/2015):
 -------------------
 

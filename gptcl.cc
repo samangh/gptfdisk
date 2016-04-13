@@ -202,7 +202,6 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                      partNum = newPartNum;
                   cout << "partNum is " << partNum << "\n";
                   if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
-                     cout << "REALLY setting name!\n";
                      name = GetString(partName, 2);
                      if (SetName(partNum, (UnicodeString) name.c_str())) {
                         saveData = 1;
