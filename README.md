@@ -7,3 +7,7 @@ It can be installed using Homebrw:
 brew tap https://github.com/samangh/homebrew-tap
 brew install gptfdisk
 ```
+##Further documentaion
+See:
+- Upstream read-me [here](README).
+- [GPT fdisk Tutorial](http://www.rodsbooks.com/gdisk/)
