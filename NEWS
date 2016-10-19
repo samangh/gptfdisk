@@ -1,6 +1,16 @@
 1.0.2 (?/??/2016):
 ------------------
 
+- Added two type codes for the Open Network Install Environment (ONIE):
+  0xe100 (7412F7D5-A156-4B13-81DC-867174929325) and 0xe101
+  (D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149).
+
+- Added thirteen type codes for Android partitions (0xa000 through
+  0xa00c).
+
+- Added type code for QNX6 (aka QNX Power-Safe) filesystem: 0xb300, for
+  CEF5A9AD-73BC-4601-89F3-CDEEEEE321A1.
+
 - Removed stray debug message ("REALLY setting name!") from sgdisk,
   when setting new name via -c option.
 

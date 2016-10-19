@@ -140,6 +140,21 @@ void PartType::AddAllTypes(void) {
    // Another Linux type code....
    AddType(0x8e00, "E6D6D379-F507-44C2-A23C-238F2A3DF928", "Linux LVM");
 
+   // Android type codes....
+   AddType(0xa000, "2568845D-2332-4675-BC39-8FA5A4748D15", "Android bootloader");
+   AddType(0xa001, "114EAFFE-1552-4022-B26E-9B053604CF84", "Android bootloader 2");
+   AddType(0xa002, "49A4D17F-93A3-45C1-A0DE-F50B2EBE2599", "Android boot");
+   AddType(0xa003, "4177C722-9E92-4AAB-8644-43502BFD5506", "Android recovery");
+   AddType(0xa004, "EF32A33B-A409-486C-9141-9FFB711F6266", "Android misc");
+   AddType(0xa005, "20AC26BE-20B7-11E3-84C5-6CFDB94711E9", "Android metadata");
+   AddType(0xa006, "38F428E6-D326-425D-9140-6E0EA133647C", "Android system");
+   AddType(0xa007, "A893EF21-E428-470A-9E55-0668FD91A2D9", "Android cache");
+   AddType(0xa008, "DC76DDA9-5AC1-491C-AF42-A82591580C0D", "Android data");
+   AddType(0xa009, "EBC597D0-2053-4B15-8B64-E0AAC75F4DB1", "Android persistent");
+   AddType(0xa00a, "8F68CC74-C5E5-48DA-BE91-A0C8C15E9C80", "Android factory");
+   AddType(0xa00b, "767941D0-2085-11E3-AD3B-6CFDB94711E9", "Android fastboot/tertiary");
+   AddType(0xa00c, "AC6D7924-EB71-4DF8-B48D-E267B27148FF", "Android OEM");
+
    // FreeBSD partition types....
    // Note: Rather than extract FreeBSD disklabel data, convert FreeBSD
    // partitions in-place, and let FreeBSD sort out the details....
@@ -183,6 +198,9 @@ void PartType::AddAllTypes(void) {
    AddType(0xaf04, "5265636F-7665-11AA-AA11-00306543ECAC", "AppleTV recovery");
    AddType(0xaf05, "53746F72-6167-11AA-AA11-00306543ECAC", "Apple Core Storage");
 
+   // QNX Power-Safe (QNX6)
+   AddType(0xb300, "CEF5A9AD-73BC-4601-89F3-CDEEEEE321A1", "QNX6 Power-Safe");
+
    // Acronis Secure Zone
    AddType(0xbc00, "0311FC50-01CA-4725-AD77-9ADBB20ACE98", "Acronis Secure Zone");
 
@@ -205,6 +223,10 @@ void PartType::AddAllTypes(void) {
    // Wikipedia page for GPT, so here we go....
    AddType(0xc001, "75894C1E-3AEB-11D3-B7C1-7B03A0000000", "HP-UX data");
    AddType(0xc002, "E2A1E728-32E3-11D6-A682-7B03A0000000", "HP-UX service");
+
+   // Open Network Install Environment (ONIE) partitions....
+   AddType(0xe100, "7412F7D5-A156-4B13-81DC-867174929325", "ONIE boot");
+   AddType(0xe101, "D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149", "ONIE config");
 
    // See http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec
    AddType(0xea00, "BC13C2FF-59E6-4262-A352-B275FD6F7172", "Freedesktop $BOOT");
