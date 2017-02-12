@@ -91,11 +91,12 @@ and in whatever sizes are desired.
 
 .TP 
 .B *
-Boot disks for EFI\-based systems require an \fIEFI System
-Partition\fR (\fBgdisk\fR internal code 0xEF00) formatted as FAT\-32.
-The recommended size of this partition is between 100 and 300 MiB.
-Boot\-related files are stored here. (Note that GNU Parted identifies
-such partitions as having the "boot flag" set.)
+Boot disks for EFI\-based systems require an \fIEFI System Partition\fR
+(\fBgdisk\fR internal code 0xEF00) formatted as FAT\-32. I recommended
+making this partition 550 MiB. (Smaller ESPs are common, but some EFIs have
+flaky FAT drivers that necessitate a larger partition for reliable
+operation.) Boot\-related files are stored here. (Note that GNU Parted
+identifies such partitions as having the "boot flag" set.)
 
 .TP 
 .B *
@@ -103,8 +104,8 @@ Some boot loaders for BIOS\-based systems make use of a \fIBIOS Boot
 Partition\fR (\fBgdisk\fR internal code 0xEF02), in which the secondary
 boot loader is stored, possibly without the benefit of a filesystem. (GRUB2
 may optionally use such a partition.) This partition can typically be quite
-small (roughly 32 to 200 KiB), but you should consult your boot loader
-documentation for details.
+small (roughly 32 to 200 KiB, although 1 MiB is more common in practice),
+but you should consult your boot loader documentation for details.
 
 .TP 
 .B *
@@ -193,7 +194,7 @@ are unique to \fBgdisk\fR.
 
 .TP 
 .B n
-Create a new partition. This command is modelled after the equivalent
+Create a new partition. This command is modeled after the equivalent
 \fBfdisk\fR option, although some differences exist. You enter a partition
 number, starting sector, and an ending sector. Both start and end sectors
 can be specified in absolute terms as sector numbers or as positions
