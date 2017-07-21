@@ -235,9 +235,9 @@ virtual QEMU and VirtualBox disks. I've received user reports of success with
 RAID arrays over 2TiB in size, though.
 
 My main development platform is a system running the 64-bit version of
-Gentoo Linux. I've also tested on several other 32- and 64-bit Linux
-distributions, Intel-based Mac OS X 10.5 and 10.6, 64-bit FreeBSD 7.1, and
-Windows 7.
+Ubuntu Linux. I've also tested on several other 32- and 64-bit Linux
+distributions, Intel-based Mac OS X 10.6 and several later versions, 64-bit
+FreeBSD 7.1, and Windows 7 and 10.
 
 Redistribution
 --------------
