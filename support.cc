@@ -67,8 +67,8 @@ string ReadString(void) {
 // If user provides no input, def (default value) is returned.
 // (If def is outside of the low-high range, an explicit response
 // is required.)
-int GetNumber(int low, int high, int def, const string & prompt) {
-   int response, num;
+uint64_t GetNumber(uint64_t low, uint64_t high, uint64_t def, const string & prompt) {
+   uint64_t response, num;
    char line[255];
 
    if (low != high) { // bother only if low and high differ...
@@ -77,7 +77,7 @@ int GetNumber(int low, int high, int def, const string & prompt) {
          cin.getline(line, 255);
          if (!cin.good())
             exit(5);
-         num = sscanf(line, "%d", &response);
+         num = sscanf(line, "%ld", &response);
          if (num == 1) { // user provided a response
             if ((response < low) || (response > high))
                cout << "Value out of range\n";

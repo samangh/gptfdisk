@@ -276,6 +276,23 @@ int GPTData::Verify(void) {
            << "The 'e' option on the experts' menu may fix this problem.\n";
    } // if
 
+   // Check the main and backup partition tables for overlap with things
+   if (mainHeader.partitionEntriesLBA + GetTableSizeInSectors() > mainHeader.firstUsableLBA) {
+       problems++;
+       cout << "\nProblem: Main partition table extends past the first usable LBA.\n"
+            << "Using 'j' on the experts' menu may enable fixing this problem.\n";
+   } // if
+   if (mainHeader.partitionEntriesLBA < 2) {
+       problems++;
+       cout << "\nProblem: Main partition table appears impossibly early on the disk.\n"
+            << "Using 'j' on the experts' menu may enable fixing this problem.\n";
+   } // if
+   if (secondHeader.partitionEntriesLBA + GetTableSizeInSectors() > secondHeader.currentLBA) {
+       problems++;
+       cout << "\nProblem: The backup partition table overlaps the backup header.\n"
+            << "Using 'e' on the experts' menu may fix this problem.\n";
+   } // if
+
    if ((mainHeader.lastUsableLBA >= diskSize) || (mainHeader.lastUsableLBA > mainHeader.backupLBA)) {
       problems++;
       cout << "\nProblem: GPT claims the disk is larger than it is! (Claimed last usable\n"
@@ -552,8 +569,8 @@ void GPTData::RebuildMainHeader(void) {
    mainHeader.firstUsableLBA = secondHeader.firstUsableLBA;
    mainHeader.lastUsableLBA = secondHeader.lastUsableLBA;
    mainHeader.diskGUID = secondHeader.diskGUID;
-   mainHeader.partitionEntriesLBA = UINT64_C(2);
    mainHeader.numParts = secondHeader.numParts;
+   mainHeader.partitionEntriesLBA = secondHeader.firstUsableLBA - GetTableSizeInSectors();
    mainHeader.sizeOfPartitionEntries = secondHeader.sizeOfPartitionEntries;
    mainHeader.partitionEntriesCRC = secondHeader.partitionEntriesCRC;
    memcpy(mainHeader.reserved2, secondHeader.reserved2, sizeof(mainHeader.reserved2));
@@ -658,7 +675,7 @@ int GPTData::FindInsanePartitions(void) {
          } // if
          if (partitions[i].GetLastLBA() >= diskSize) {
             problems++;
-         cout << "\nProblem: partition " << i + 1 << " is too big for the disk.\n";
+            cout << "\nProblem: partition " << i + 1 << " is too big for the disk.\n";
          } // if
       } // if
    } // for
@@ -1441,6 +1458,8 @@ void GPTData::DisplayGPTData(void) {
    cout << "Logical sector size: " << blockSize << " bytes\n";
    cout << "Disk identifier (GUID): " << mainHeader.diskGUID << "\n";
    cout << "Partition table holds up to " << numParts << " entries\n";
+   cout << "Main partition table begins at sector " << mainHeader.partitionEntriesLBA
+        << " and ends at sector " << mainHeader.partitionEntriesLBA + GetTableSizeInSectors() - 1 << "\n";
    cout << "First usable sector is " << mainHeader.firstUsableLBA
         << ", last usable sector is " << mainHeader.lastUsableLBA << "\n";
    totalFree = FindFreeBlocks(&i, &temp);
@@ -1732,7 +1751,7 @@ int GPTData::SetGPTSize(uint32_t numEntries, int fillGPTSectors) {
             partitions = newParts;
          } // if/else existing partitions
          numParts = numEntries;
-         mainHeader.firstUsableLBA = ((numEntries * GPT_SIZE) / blockSize) + (((numEntries * GPT_SIZE) % blockSize) != 0) + 2 ;
+         mainHeader.firstUsableLBA = GetTableSizeInSectors() + mainHeader.partitionEntriesLBA;
          secondHeader.firstUsableLBA = mainHeader.firstUsableLBA;
          MoveSecondHeaderToEnd();
          if (diskSize > 0)
@@ -1746,6 +1765,23 @@ int GPTData::SetGPTSize(uint32_t numEntries, int fillGPTSectors) {
    secondHeader.numParts = numParts;
    return (allOK);
 } // GPTData::SetGPTSize()
+
+// Change the start sector for the main partition table.
+// Returns 1 on success, 0 on failure
+int GPTData::MoveMainTable(uint64_t pteSector) {
+    uint64_t pteSize = GetTableSizeInSectors();
+    int retval = 1;
+
+    if ((pteSector >= 2) && ((pteSector + pteSize) <= FindFirstUsedLBA())) {
+       mainHeader.partitionEntriesLBA = pteSector;
+       mainHeader.firstUsableLBA = pteSector + pteSize;
+       RebuildSecondHeader();
+    } else {
+       cerr << "Unable to set the main partition table's location to " << pteSector << "!\n";
+       retval = 0;
+    } // if/else
+    return retval;
+} // GPTData::MoveMainTable()
 
 // Blank the partition array
 void GPTData::BlankPartitions(void) {
@@ -2120,6 +2156,20 @@ uint64_t GPTData::FindFirstAvailable(uint64_t start) {
       first = 0;
    return (first);
 } // GPTData::FindFirstAvailable()
+
+// Returns the LBA of the start of the first partition on the disk (by
+// sector number), or 0 if there are no partitions defined.
+uint64_t GPTData::FindFirstUsedLBA(void) {
+    uint32_t i;
+    uint64_t firstFound = UINT64_MAX;
+
+    for (i = 0; i < numParts; i++) {
+        if ((partitions[i].IsUsed()) && (partitions[i].GetFirstLBA() < firstFound)) {
+            firstFound = partitions[i].GetFirstLBA();
+        } // if
+    } // for
+    return firstFound;
+} // GPTData::FindFirstUsedLBA()
 
 // Finds the first available sector in the largest block of unallocated
 // space on the disk. Returns 0 if there are no available blocks left

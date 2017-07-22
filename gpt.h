@@ -140,6 +140,7 @@ public:
 
    // Adjust GPT structures WITHOUT user interaction...
    int SetGPTSize(uint32_t numEntries, int fillGPTSectors = 1);
+   int MoveMainTable(uint64_t pteSector);
    void BlankPartitions(void);
    int DeletePartition(uint32_t partNum);
    uint32_t CreatePartition(uint32_t partNum, uint64_t startSector, uint64_t endSector);
@@ -162,6 +163,8 @@ public:
    int GetPartRange(uint32_t* low, uint32_t* high);
    int FindFirstFreePart(void);
    uint32_t GetNumParts(void) {return mainHeader.numParts;}
+   uint64_t GetTableSizeInSectors(void) {return (((numParts * GPT_SIZE) / blockSize) +
+                                                 (((numParts * GPT_SIZE) % blockSize) != 0)); }
    uint64_t GetMainHeaderLBA(void) {return mainHeader.currentLBA;}
    uint64_t GetSecondHeaderLBA(void) {return secondHeader.currentLBA;}
    uint64_t GetMainPartsLBA(void) {return mainHeader.partitionEntriesLBA;}
@@ -176,6 +179,7 @@ public:
 
    // Find information about free space
    uint64_t FindFirstAvailable(uint64_t start = 0);
+   uint64_t FindFirstUsedLBA(void);
    uint64_t FindFirstInLargest(void);
    uint64_t FindLastAvailable();
    uint64_t FindLastInFree(uint64_t start);

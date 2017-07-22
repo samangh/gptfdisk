@@ -1,5 +1,15 @@
-1.0.2 (?/??/2016):
+1.0.2 (?/??/2017):
 ------------------
+
+- Added new option: 'j' on the experts' menu in gdisk;
+  '-j/--move-main-table={sector}' in sgdisk. This option enables relocating
+  the main partition table from sector 2 (the default location) to somewhere
+  else on the disk. The main reason I know of to do this is if the disk is
+  to be used with a system-on-chip (SoC) computer, some of which require the
+  boot loader to be located at sector 2. If you pass this option the default
+  value of 2, it has the effect of reducing the padding placed between the
+  main partition table and the first usable sector value created by the
+  Linux fdisk tool.
 
 - Updated man pages with new recommendations for ESP and BIOS Boot Partition
   sizes.

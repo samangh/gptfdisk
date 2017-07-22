@@ -42,6 +42,7 @@ class GPTDataTextUI : public GPTData {
       // Request information from the user (& possibly do something with it)
       uint32_t GetPartNum(void);
       void ResizePartitionTable(void);
+      void MoveMainTable(void);
       void CreatePartition(void);
       void DeletePartition(void);
       void ChangePartType(void);

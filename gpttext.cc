@@ -132,7 +132,7 @@ int GPTDataTextUI::XFormDisklabel(void) {
       numDone = GPTData::XFormDisklabel(partNum);
 
    return numDone;
-} // GPTData::XFormDisklabel(void)
+} // GPTDataTextUI::XFormDisklabel(void)
 
 
 /*********************************************************************
@@ -178,6 +178,24 @@ void GPTDataTextUI::ResizePartitionTable(void) {
    } // if
    SetGPTSize(newSize);
 } // GPTDataTextUI::ResizePartitionTable()
+
+// Move the main partition table (to enable some SoC boot loaders to place
+// code at sector 2, for instance).
+void GPTDataTextUI::MoveMainTable(void) {
+    uint64_t newStart, pteSize = GetTableSizeInSectors();
+    uint64_t maxValue = FindFirstUsedLBA() - pteSize;
+    ostringstream prompt;
+
+    cout << "Currently, main partition table begins at sector " << mainHeader.partitionEntriesLBA
+         << " and ends at sector " << mainHeader.partitionEntriesLBA + pteSize - 1 << "\n";
+    prompt << "Enter new starting location (2 to " << maxValue << "; default is 2; 1 to abort): ";
+    newStart = GetNumber(1, maxValue, 2, prompt.str());
+    if (newStart != 1) {
+        GPTData::MoveMainTable(newStart);
+    } else {
+        cout << "Aborting change!\n";
+    } // if
+} // GPTDataTextUI::MoveMainTable()
 
 // Interactively create a partition
 void GPTDataTextUI::CreatePartition(void) {
@@ -811,6 +829,9 @@ void GPTDataTextUI::ExpertsMenu(string filename) {
          case 'i': case 'I':
             ShowDetails();
             break;
+         case 'j': case 'J':
+             MoveMainTable();
+             break;
          case 'l': case 'L':
             prompt.seekp(0);
             prompt << "Enter the sector alignment value (1-" << MAX_ALIGNMENT << ", default = "
@@ -878,9 +899,11 @@ void GPTDataTextUI::ShowExpertCommands(void) {
    cout << "c\tchange partition GUID\n";
    cout << "d\tdisplay the sector alignment value\n";
    cout << "e\trelocate backup data structures to the end of the disk\n";
+   cout << "f\trandomize disk and partition unique GUIDs\n";
    cout << "g\tchange disk GUID\n";
    cout << "h\trecompute CHS values in protective/hybrid MBR\n";
    cout << "i\tshow detailed information on a partition\n";
+   cout << "j\tmove the main partition table\n";
    cout << "l\tset the sector alignment value\n";
    cout << "m\treturn to main menu\n";
    cout << "n\tcreate a new protective MBR\n";

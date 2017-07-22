@@ -72,7 +72,7 @@
 using namespace std;
 
 string ReadString(void);
-int GetNumber(int low, int high, int def, const string & prompt);
+uint64_t GetNumber(uint64_t low, uint64_t high, uint64_t def, const string & prompt);
 char GetYN(void);
 uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const std::string& prompt);
 uint64_t IeeeToInt(string IeeeValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def = 0);
