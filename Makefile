@@ -44,6 +44,7 @@ depend: $(SRCS)
 $(OBJS):
 	$(CRITICAL_CXX_FLAGS) 
 
+# makedepend dependencies below -- type "makedepend *.cc" to regenerate....
 # DO NOT DELETE
 
 attributes.o: /usr/include/stdint.h /usr/include/features.h

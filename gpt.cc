@@ -276,7 +276,7 @@ int GPTData::Verify(void) {
            << "The 'e' option on the experts' menu may fix this problem.\n";
    } // if
 
-   // Check the main and backup partition tables for overlap with things
+   // Check the main and backup partition tables for overlap with things and unusual gaps
    if (mainHeader.partitionEntriesLBA + GetTableSizeInSectors() > mainHeader.firstUsableLBA) {
        problems++;
        cout << "\nProblem: Main partition table extends past the first usable LBA.\n"
@@ -291,6 +291,28 @@ int GPTData::Verify(void) {
        problems++;
        cout << "\nProblem: The backup partition table overlaps the backup header.\n"
             << "Using 'e' on the experts' menu may fix this problem.\n";
+   } // if
+   if (mainHeader.partitionEntriesLBA != 2) {
+       cout << "\nWarning: There is a gap between the main metadata (sector 1) and the main\n"
+            << "partition table (sector " << mainHeader.partitionEntriesLBA
+            << "). This is helpful in some exotic configurations,\n"
+            << "but is generally ill-advised. Using 'j' on the experts' menu can adjust this\n"
+            << "gap.\n";
+   } // if
+   if (mainHeader.partitionEntriesLBA + GetTableSizeInSectors() != mainHeader.firstUsableLBA) {
+       cout << "\nWarning: There is a gap between the main partition table (ending sector "
+            << mainHeader.partitionEntriesLBA + GetTableSizeInSectors() - 1 << ")\n"
+            << "and the first usable sector (" << mainHeader.firstUsableLBA << "). This is helpful in some exotic configurations,\n"
+            << "but is unusual. The util-linux fdisk program often creates disks like this.\n"
+            << "Using 'j' on the experts' menu can adjust this gap.\n";
+   } // if
+
+   if (mainHeader.sizeOfPartitionEntries * mainHeader.numParts < 16384) {
+      cout << "\nWarning: The size of the partition table (" << mainHeader.sizeOfPartitionEntries * mainHeader.numParts
+           << " bytes) is less than the minimum\n"
+           << "required by the GPT specification. Most OSes and tools seem to work fine on\n"
+           << "such disks, but this is a violation of the GPT specification and so may cause\n"
+           << "problems.\n";
    } // if
 
    if ((mainHeader.lastUsableLBA >= diskSize) || (mainHeader.lastUsableLBA > mainHeader.backupLBA)) {

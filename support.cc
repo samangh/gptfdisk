@@ -77,7 +77,7 @@ uint64_t GetNumber(uint64_t low, uint64_t high, uint64_t def, const string & pro
          cin.getline(line, 255);
          if (!cin.good())
             exit(5);
-         num = sscanf(line, "%ld", &response);
+         num = sscanf(line, "%lld", &response);
          if (num == 1) { // user provided a response
             if ((response < low) || (response > high))
                cout << "Value out of range\n";

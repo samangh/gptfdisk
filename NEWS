@@ -1,6 +1,9 @@
 1.0.2 (?/??/2017):
 ------------------
 
+- Addition of new verification checks, mostly (but not exclusively) related
+  to the new j/-j/--move-main-table option.
+
 - Added new option: 'j' on the experts' menu in gdisk;
   '-j/--move-main-table={sector}' in sgdisk. This option enables relocating
   the main partition table from sector 2 (the default location) to somewhere
