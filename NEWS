@@ -17,6 +17,9 @@
 - Updated man pages with new recommendations for ESP and BIOS Boot Partition
   sizes.
 
+- Added four type codes (AF06 through AF09) for Apple SoftRAID (Status,
+  Scratch, Volume, and Cache).
+
 - Added two type codes for the Open Network Install Environment (ONIE):
   0xe100 (7412F7D5-A156-4B13-81DC-867174929325) and 0xe101
   (D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149).

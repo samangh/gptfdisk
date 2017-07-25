@@ -93,7 +93,7 @@ void PartType::AddAllTypes(void) {
 
    // Open Network Install Environment (ONIE) specific types.
    // See http://www.onie.org/ and
-   // https://github.com/onie/onie/blob/master/rootconf/x86_64/sysroot-lib-onie/onie-blkdev-common
+   // https://github.com/opencomputeproject/onie/blob/master/patches/gptfdisk/add-onie-partition-types.patch
    AddType(0x3000, "7412F7D5-A156-4B13-81DC-867174929325", "ONIE boot");
    AddType(0x3001, "D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149", "ONIE config");
 
@@ -197,6 +197,10 @@ void PartType::AddAllTypes(void) {
    AddType(0xaf03, "4C616265-6C00-11AA-AA11-00306543ECAC", "Apple label");
    AddType(0xaf04, "5265636F-7665-11AA-AA11-00306543ECAC", "AppleTV recovery");
    AddType(0xaf05, "53746F72-6167-11AA-AA11-00306543ECAC", "Apple Core Storage");
+   AddType(0xaf06, "B6FA30DA-92D2-4A9A-96F1-871EC6486200", "Apple SoftRAID Status");
+   AddType(0xaf07, "2E313465-19B9-463F-8126-8A7993773801", "Apple SoftRAID Scratch");
+   AddType(0xaf08, "FA709C7E-65B1-4593-BFD5-E71D61DE9B02", "Apple SoftRAID Volume");
+   AddType(0xaf09, "BBBA6DF5-F46F-4A89-8F59-8765B2727503", "Apple SoftRAID Cache");
 
    // QNX Power-Safe (QNX6)
    AddType(0xb300, "CEF5A9AD-73BC-4601-89F3-CDEEEEE321A1", "QNX6 Power-Safe");
