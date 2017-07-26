@@ -68,8 +68,9 @@ protected:
    MBRData protectiveMBR;
    string device; // device filename
    DiskIO myDisk;
-   uint32_t blockSize; // device block size
-   uint64_t diskSize; // size of device, in blocks
+   uint32_t blockSize; // device logical block size
+   uint32_t physBlockSize; // device physical block size (or 0 if it can't be determined)
+   uint64_t diskSize; // size of device, in logical blocks
    GPTValidity state; // is GPT valid?
    int justLooking; // Set to 1 if program launched with "-l" or if read-only
    int mainCrcOk;

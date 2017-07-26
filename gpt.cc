@@ -64,6 +64,7 @@ static inline uint32_t log2_32(uint32_t v) {
 // Default constructor
 GPTData::GPTData(void) {
    blockSize = SECTOR_SIZE; // set a default
+   physBlockSize = 0; // 0 = can't be determined
    diskSize = 0;
    partitions = NULL;
    state = gpt_valid;
@@ -125,6 +126,7 @@ GPTData & GPTData::operator=(const GPTData & orig) {
    protectiveMBR = orig.protectiveMBR;
    device = orig.device;
    blockSize = orig.blockSize;
+   physBlockSize = orig.physBlockSize;
    diskSize = orig.diskSize;
    state = orig.state;
    justLooking = orig.justLooking;
@@ -166,7 +168,7 @@ GPTData & GPTData::operator=(const GPTData & orig) {
 // problems identified.
 int GPTData::Verify(void) {
    int problems = 0, alignProbs = 0;
-   uint32_t i, numSegments;
+   uint32_t i, numSegments, testAlignment = sectorAlignment;
    uint64_t totalFree, largestSegment;
 
    // First, check for CRC errors in the GPT data....
@@ -355,10 +357,15 @@ int GPTData::Verify(void) {
 
    // Check that partitions are aligned on proper boundaries (for WD Advanced
    // Format and similar disks)....
+   if ((physBlockSize != 0) && (blockSize != 0))
+      testAlignment = physBlockSize / blockSize;
+   testAlignment = max(testAlignment, sectorAlignment);
+   if (testAlignment == 0) // Should not happen; just being paranoid.
+      testAlignment = sectorAlignment;
    for (i = 0; i < numParts; i++) {
-      if ((partitions[i].IsUsed()) && (partitions[i].GetFirstLBA() % sectorAlignment) != 0) {
+      if ((partitions[i].IsUsed()) && (partitions[i].GetFirstLBA() % testAlignment) != 0) {
          cout << "\nCaution: Partition " << i + 1 << " doesn't begin on a "
-              << sectorAlignment << "-sector boundary. This may\nresult "
+              << testAlignment << "-sector boundary. This may\nresult "
               << "in degraded performance on some modern (2009 and later) hard disks.\n";
          alignProbs++;
       } // if
@@ -722,6 +729,7 @@ int GPTData::SetDisk(const string & deviceFilename) {
       // store disk information....
       diskSize = myDisk.DiskSize(&err);
       blockSize = (uint32_t) myDisk.GetBlockSize();
+      physBlockSize = (uint32_t) myDisk.GetPhysBlockSize();
    } // if
    protectiveMBR.SetDisk(&myDisk);
    protectiveMBR.SetDiskSize(diskSize);
@@ -801,6 +809,7 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
       // store disk information....
       diskSize = myDisk.DiskSize(&err);
       blockSize = (uint32_t) myDisk.GetBlockSize();
+      physBlockSize = (uint32_t) myDisk.GetPhysBlockSize();
       device = deviceFilename;
       PartitionScan(); // Check for partition types, load GPT, & print summary
 
@@ -1478,6 +1487,8 @@ void GPTData::DisplayGPTData(void) {
    cout << "Disk " << device << ": " << diskSize << " sectors, "
         << BytesToIeee(diskSize, blockSize) << "\n";
    cout << "Logical sector size: " << blockSize << " bytes\n";
+   if (physBlockSize > 0)
+      cout << "Physical sector size: " << physBlockSize << " bytes\n";
    cout << "Disk identifier (GUID): " << mainHeader.diskGUID << "\n";
    cout << "Partition table holds up to " << numParts << " entries\n";
    cout << "Main partition table begins at sector " << mainHeader.partitionEntriesLBA
@@ -2334,10 +2345,18 @@ int GPTData::IsUsedPartNum(uint32_t partNum) {
 // Set partition alignment value; partitions will begin on multiples of
 // the specified value
 void GPTData::SetAlignment(uint32_t n) {
-   if (n > 0)
+   if (n > 0) {
       sectorAlignment = n;
-   else
+      if ((physBlockSize > 0) && (n % (physBlockSize / blockSize) != 0)) {
+         cout << "Warning: Setting alignment to a value that does not match the disk's\n"
+              << "physical block size! Performance degradation may result!\n"
+              << "Physical block size = " << physBlockSize << "\n"
+              << "Logical block size = " << blockSize << "\n"
+              << "Optimal alignment = " << physBlockSize / blockSize << " or multiples thereof.\n";
+      } // if
+   } else {
       cerr << "Attempt to set partition alignment to 0!\n";
+   } // if/else
 } // GPTData::SetAlignment()
 
 // Compute sector alignment based on the current partitions (if any). Each

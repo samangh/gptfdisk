@@ -177,6 +177,27 @@ int DiskIO::GetBlockSize(void) {
    return (blockSize);
 } // DiskIO::GetBlockSize()
 
+// Returns the physical block size of the device, if possible. If this is
+// not supported, or if an error occurs, this function returns 0.
+// TODO: Get this working in more OSes than Linux.
+int DiskIO::GetPhysBlockSize(void) {
+   int err = -1, physBlockSize = 0;
+
+   // If disk isn't open, try to open it....
+   if (!isOpen) {
+      OpenForRead();
+   } // if
+
+   if (isOpen) {
+#if defined __linux__ && !defined(EFI)
+      err = ioctl(fd, BLKPBSZGET, &physBlockSize);
+#endif
+   } // if (isOpen)
+   if (err == -1)
+      physBlockSize = 0;
+   return (physBlockSize);
+} // DiskIO::GetPhysBlockSize(void)
+
 // Returns the number of heads, according to the kernel, or 255 if the
 // correct value can't be determined.
 uint32_t DiskIO::GetNumHeads(void) {

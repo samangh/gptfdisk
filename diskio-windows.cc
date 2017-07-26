@@ -144,6 +144,13 @@ int DiskIO::GetBlockSize(void) {
    return (blockSize);
 } // DiskIO::GetBlockSize()
 
+// In theory, returns the physical block size. In practice, this is only
+// supported in Linux, as of yet.
+// TODO: Get this working in Windows.
+int DiskIO:GetPhysBlockSize(void) {
+   return 0;
+} // DiskIO::GetPhysBlockSize()
+
 // Returns the number of heads, according to the kernel, or 255 if the
 // correct value can't be determined.
 uint32_t DiskIO::GetNumHeads(void) {

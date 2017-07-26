@@ -1,6 +1,12 @@
 1.0.2 (?/??/2017):
 ------------------
 
+- GPT fdisk can now report both the physical and logical sector sizes of
+  disks, but only on 2.6.32 and later Linux kernels. The verify feature now
+  uses the larger of the set alignment and physical/logical block sizes for
+  testing alignment, and setting alignment to something other than an exact
+  multiple of the physical/logical block size results in a warning.
+
 - Addition of new verification checks, mostly (but not exclusively) related
   to the new j/-j/--move-main-table option.
 
