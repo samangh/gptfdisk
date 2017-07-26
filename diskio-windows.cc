@@ -147,7 +147,7 @@ int DiskIO::GetBlockSize(void) {
 // In theory, returns the physical block size. In practice, this is only
 // supported in Linux, as of yet.
 // TODO: Get this working in Windows.
-int DiskIO:GetPhysBlockSize(void) {
+int DiskIO::GetPhysBlockSize(void) {
    return 0;
 } // DiskIO::GetPhysBlockSize()
 

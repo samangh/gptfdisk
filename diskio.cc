@@ -41,6 +41,7 @@ using namespace std;
 DiskIO::DiskIO(void) {
    userFilename = "";
    realFilename = "";
+   modelName = "";
    isOpen = 0;
    openForWrite = 0;
 } // constructor

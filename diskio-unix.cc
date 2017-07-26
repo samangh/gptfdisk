@@ -30,6 +30,8 @@
 #endif
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include "diskio.h"
 
@@ -66,6 +68,7 @@ int DiskIO::OpenForRead(void) {
             cerr << "The specified file does not exist!\n";
          realFilename = "";
          userFilename = "";
+         modelName = "";
          isOpen = 0;
          openForWrite = 0;
       } else {
@@ -86,6 +89,16 @@ int DiskIO::OpenForRead(void) {
             else
                isOpen = 1;
          } // if (fstat64()...)
+#if defined(__linux__) && !defined(EFI)
+         if (isOpen && realFilename.substr(0,4) == "/dev") {
+            ostringstream modelNameFilename;
+            modelNameFilename << "/sys/block" << realFilename.substr(4,512) << "/device/model";
+            ifstream modelNameFile(modelNameFilename.str().c_str());
+            if (modelNameFile.is_open()) {
+               getline(modelNameFile, modelName);
+            } // if
+         } // if
+#endif
       } // if/else
    } // if
 

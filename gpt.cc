@@ -1486,9 +1486,12 @@ void GPTData::DisplayGPTData(void) {
 
    cout << "Disk " << device << ": " << diskSize << " sectors, "
         << BytesToIeee(diskSize, blockSize) << "\n";
-   cout << "Logical sector size: " << blockSize << " bytes\n";
+   if (myDisk.GetModel() != "")
+      cout << "Model: " << myDisk.GetModel() << "\n";
    if (physBlockSize > 0)
-      cout << "Physical sector size: " << physBlockSize << " bytes\n";
+      cout << "Sector size (logical/physical): " << blockSize << "/" << physBlockSize << " bytes\n";
+   else
+      cout << "Sector size (logical): " << blockSize << " bytes\n";
    cout << "Disk identifier (GUID): " << mainHeader.diskGUID << "\n";
    cout << "Partition table holds up to " << numParts << " entries\n";
    cout << "Main partition table begins at sector " << mainHeader.partitionEntriesLBA

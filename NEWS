@@ -1,11 +1,18 @@
-1.0.2 (?/??/2017):
+1.0.2 (7/26/2017):
 ------------------
+
+- On Linux, the p/-p/--print command now shows the disk's model name, as
+  reported in /sys/block/sda/device/model (or equivalent filenames for other
+  disks). This feature does not yet work on other platforms, on which the
+  model name line is omitted from the output. This line is also not shown
+  when accessing disk image files, even on Linux.
 
 - GPT fdisk can now report both the physical and logical sector sizes of
   disks, but only on 2.6.32 and later Linux kernels. The verify feature now
   uses the larger of the set alignment and physical/logical block sizes for
   testing alignment, and setting alignment to something other than an exact
-  multiple of the physical/logical block size results in a warning.
+  multiple of the ratio of the physical to logical block size results in a
+  warning.
 
 - Addition of new verification checks, mostly (but not exclusively) related
   to the new j/-j/--move-main-table option.
