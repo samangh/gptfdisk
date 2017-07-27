@@ -158,7 +158,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
       if (LoadPartitions((string) device)) {
          if ((WhichWasUsed() == use_mbr) || (WhichWasUsed() == use_bsd))
             saveNonGPT = 0; // flag so we don't overwrite unless directed to do so
-            sSize = GetBlockSize();
+         sSize = GetBlockSize();
          while ((opt = poptGetNextOpt(poptCon)) > 0) {
             switch (opt) {
                case 'A': {

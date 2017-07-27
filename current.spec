@@ -1,12 +1,12 @@
 Summary: GPT partitioning and MBR repair software
 Name: gptfdisk
-Version: 1.0.1
+Version: 1.0.2
 
 Release: 1%{?dist}
 License: GPLv2
 URL: http://www.rodsbooks.com/gdisk
 Group: Applications/System
-Source: http://www.rodsbooks.com/gdisk/gptfdisk-1.0.1.tar.gz
+Source: http://www.rodsbooks.com/gdisk/gptfdisk-1.0.2.tar.gz
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
@@ -81,5 +81,5 @@ provides a few additional partition manipulation features.
 
 
 %changelog
-* Sun Mar 2 2014 R Smith <rodsmith@rodsbooks.com> - 1.0.1
-- Created spec file for 1.0.1 release
+* Wed Jul 26 2017 R Smith <rodsmith@rodsbooks.com> - 1.0.2
+- Created spec file for 1.0.2 release

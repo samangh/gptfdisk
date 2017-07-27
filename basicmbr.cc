@@ -1497,11 +1497,11 @@ uint64_t BasicMBRData::GetFirstSector(int i) {
    uint64_t retval;
 
    thePart = GetPartition(i);
-   if (thePart != NULL) {
+   if (thePart != NULL)
       retval = thePart->GetStartLBA();
-   } else
+   else
       retval = UINT32_C(0);
-      return retval;
+   return retval;
 } // BasicMBRData::GetFirstSector()
 
 uint64_t BasicMBRData::GetLength(int i) {
@@ -1509,11 +1509,11 @@ uint64_t BasicMBRData::GetLength(int i) {
    uint64_t retval;
 
    thePart = GetPartition(i);
-   if (thePart != NULL) {
+   if (thePart != NULL)
       retval = thePart->GetLengthLBA();
-   } else
+   else
       retval = UINT64_C(0);
-      return retval;
+   return retval;
 } // BasicMBRData::GetLength()
 
 /***********************
