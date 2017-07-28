@@ -1,3 +1,10 @@
+1.0.3 (7/27/2017):
+------------------
+
+- Fixed a major bug that caused invalid partition tables to be generated
+  when creating a new partition table (that is, partitioning a blank disk or
+  converting from MBR).
+
 1.0.2 (7/26/2017):
 ------------------
 

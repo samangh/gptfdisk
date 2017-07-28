@@ -1924,6 +1924,7 @@ int GPTData::ClearGPTData(void) {
    mainHeader.currentLBA = UINT64_C(1);
    mainHeader.partitionEntriesLBA = (uint64_t) 2;
    mainHeader.sizeOfPartitionEntries = GPT_SIZE;
+   mainHeader.firstUsableLBA = GetTableSizeInSectors() + mainHeader.partitionEntriesLBA;
    for (i = 0; i < GPT_RESERVED; i++) {
       mainHeader.reserved2[i] = '\0';
    } // for
