@@ -201,6 +201,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xaf07, "2E313465-19B9-463F-8126-8A7993773801", "Apple SoftRAID Scratch");
    AddType(0xaf08, "FA709C7E-65B1-4593-BFD5-E71D61DE9B02", "Apple SoftRAID Volume");
    AddType(0xaf09, "BBBA6DF5-F46F-4A89-8F59-8765B2727503", "Apple SoftRAID Cache");
+   AddType(0xaf0a, "7C3457EF-0000-11AA-AA11-00306543ECAC", "Apple APFS");
 
    // QNX Power-Safe (QNX6)
    AddType(0xb300, "CEF5A9AD-73BC-4601-89F3-CDEEEEE321A1", "QNX6 Power-Safe");
