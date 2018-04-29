@@ -1,3 +1,13 @@
+1.0.4 (?/??/2018):
+------------------
+
+- Added type code for Apple APFS (7C3457EF-0000-11AA-AA11-00306543ECAC,
+  0xaf0a).
+
+- Changed "Creating new GPT entries" message to read "Creating new
+  GPT entries in memory" because the latter is clearer, particularly when
+  using sgdisk with a non-destructive option, like "-p".
+
 1.0.3 (7/27/2017):
 ------------------
 

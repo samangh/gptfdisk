@@ -1593,7 +1593,7 @@ WhichToUse GPTData::UseWhichPartitions(void) {
    } // if GPT corrupt
 
    if (which == use_new)
-      cout << "Creating new GPT entries.\n";
+      cout << "Creating new GPT entries in memory.\n";
 
    return which;
 } // UseWhichPartitions()
