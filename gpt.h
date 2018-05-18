@@ -57,6 +57,7 @@ struct GPTHeader {
    uint32_t partitionEntriesCRC;
    unsigned char reserved2[GPT_RESERVED];
 }; // struct GPTHeader
+#pragma pack ()
 
 // Data in GPT format
 class GPTData {

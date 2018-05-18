@@ -50,6 +50,7 @@ struct MBRRecord {
    uint32_t firstLBA; // see above
    uint32_t lengthLBA;
 }; // struct MBRRecord
+#pragma pack ()
 
 class MBRPart {
 protected:

@@ -89,5 +89,6 @@ class BSDData {
       int GetNumParts(void);
       GPTPart AsGPT(int i); // Return BSD part. as GPT part.
 }; // struct MBRData
+#pragma pack ()
 
 #endif

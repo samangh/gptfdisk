@@ -34,6 +34,7 @@ struct TempMBR {
    struct MBRRecord partitions[4];
    uint16_t MBRSignature;
 }; // struct TempMBR
+#pragma pack ()
 
 // Possible states of the MBR
 enum MBRValidity {invalid, gpt, hybrid, mbr};
