@@ -934,9 +934,27 @@ int GPTData::ForceLoadGPTData(void) {
       } // if */
 
       // Check for valid CRCs and warn if there are problems
-      if ((mainCrcOk == 0) || (secondCrcOk == 0) || (mainPartsCrcOk == 0) ||
+      if ((validHeaders != 3) || (mainPartsCrcOk == 0) ||
            (secondPartsCrcOk == 0)) {
-         cerr << "Warning! One or more CRCs don't match. You should repair the disk!\n\n";
+         cerr << "Warning! One or more CRCs don't match. You should repair the disk!\n";
+         // Show detail status of header and table
+         if (validHeaders & 0x1)
+            cerr << "Main header: OK\n";
+         else
+            cerr << "Main header: ERROR\n";
+         if (validHeaders & 0x2)
+            cerr << "Backup header: OK\n";
+         else
+            cerr << "Backup header: ERROR\n";
+         if (mainPartsCrcOk)
+            cerr << "Main partition table: OK\n";
+         else
+            cerr << "Main partition table: ERROR\n";
+         if (secondPartsCrcOk)
+            cerr << "Backup partition table: OK\n";
+         else
+            cerr << "Backup partition table: ERROR\n";
+         cerr << "\n";
          state = gpt_corrupt;
       } // if
    } else {
