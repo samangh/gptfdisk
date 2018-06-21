@@ -899,9 +899,8 @@ int GPTData::ForceLoadGPTData(void) {
       } // if/else/if
 
       // Figure out which partition table to load....
-      // Load the main partition table, since either its header's CRC is OK or the
-      // backup header's CRC is not OK....
-      if (mainCrcOk || !secondCrcOk) {
+      // Load the main partition table, if its header's CRC is OK
+      if (validHeaders != 2) {
          if (LoadMainTable() == 0)
             allOK = 0;
       } else { // bad main header CRC and backup header CRC is OK
