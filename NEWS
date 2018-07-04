@@ -1,6 +1,13 @@
 1.0.4 (?/??/2018):
 ------------------
 
+- Change to Makefile.mac to use standard libncurses rather than a 3rd-party
+  version; should help with cgdisk compatibility.
+
+- Minor bug fix in alignment of internal data structures.
+
+- Minor bug fix in handling of damaged disks.
+
 - Added type code for Apple APFS (7C3457EF-0000-11AA-AA11-00306543ECAC,
   0xaf0a).
 
