@@ -25,7 +25,9 @@
 
 - Minor bug fix in alignment of internal data structures.
 
-- Minor bug fix in handling of damaged disks.
+- Minor bug fix in handling of damaged disks. Also, GPT fdisk now reports
+  more information on what data structures are damaged when a damaged disk
+  is detected.
 
 - Added type code for Apple APFS (7C3457EF-0000-11AA-AA11-00306543ECAC,
   0xaf0a).
