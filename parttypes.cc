@@ -133,6 +133,8 @@ void PartType::AddAllTypes(void) {
    AddType(0x8305, "B921B045-1DF0-41C3-AF44-4C6F280D3FAE", "Linux ARM64 root (/)"); // Linux / on 64-bit ARM (auto-mounted by systemd)
    AddType(0x8306, "3B8F8425-20E0-4F3B-907F-1A25A76F98E8", "Linux /srv"); // Linux /srv (auto-mounted by systemd)
    AddType(0x8307, "69DAD710-2CE4-4E3C-B16C-21A1D49ABED3", "Linux ARM32 root (/)"); // Linux / on 32-bit ARM (auto-mounted by systemd)
+   AddType(0x8308, "7FFEC5C9-2D00-49B7-8941-3EA10A5586B7", "Linux dm-crypt");
+   AddType(0x8309, "CA7D7CCB-63ED-4C53-861C-1742536059CC", "Linux LUKS");
 
    // Used by Intel Rapid Start technology
    AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");
@@ -306,12 +308,31 @@ void PartType::AddAllTypes(void) {
    AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Used by GRUB
 
    // Ceph type codes; see https://github.com/ceph/ceph/blob/9bcc42a3e6b08521694b5c0228b2c6ed7b3d312e/src/ceph-disk#L76-L81
+   // and Wikipedia
    AddType(0xf800, "4FBD7E29-9D25-41B8-AFD0-062C0CEFF05D", "Ceph OSD"); // Ceph Object Storage Daemon
    AddType(0xf801, "4FBD7E29-9D25-41B8-AFD0-5EC00CEFF05D", "Ceph dm-crypt OSD"); // Ceph Object Storage Daemon (encrypted)
    AddType(0xf802, "45B0969E-9B03-4F30-B4C6-B4B80CEFF106", "Ceph journal");
    AddType(0xf803, "45B0969E-9B03-4F30-B4C6-5EC00CEFF106", "Ceph dm-crypt journal");
    AddType(0xf804, "89C57F98-2FE5-4DC0-89C1-F3AD0CEFF2BE", "Ceph disk in creation");
    AddType(0xf805, "89C57F98-2FE5-4DC0-89C1-5EC00CEFF2BE", "Ceph dm-crypt disk in creation");
+   AddType(0xf806, "CAFECAFE-9B03-4F30-B4C6-B4B80CEFF106", "Ceph block");
+   AddType(0xf807, "30CD0809-C2B2-499C-8879-2D6B78529876", "Ceph block DB");
+   AddType(0xf808, "5CE17FCE-4087-4169-B7FF-056CC58473F9", "Ceph block write-ahead log");
+   AddType(0xf809, "FB3AABF9-D25F-47CC-BF5E-721D1816496B", "Ceph lockbox for dm-crypt keys");
+   AddType(0xf80a, "4FBD7E29-8AE0-4982-BF9D-5A8D867AF560", "Ceph multipath OSD");
+   AddType(0xf80b, "45B0969E-8AE0-4982-BF9D-5A8D867AF560", "Ceph multipath journal");
+   AddType(0xf80c, "CAFECAFE-8AE0-4982-BF9D-5A8D867AF560", "Ceph multipath block 1");
+   AddType(0xf80d, "7F4A666A-16F3-47A2-8445-152EF4D03F6C", "Ceph multipath block 2");
+   AddType(0xf80e, "EC6D6385-E346-45DC-BE91-DA2A7C8B3261", "Ceph multipath block DB");
+   AddType(0xf80f, "01B41E1B-002A-453C-9F17-88793989FF8F", "Ceph multipath block write-ahead log");
+   AddType(0xf810, "CAFECAFE-9B03-4F30-B4C6-5EC00CEFF106", "Ceph dm-crypt block");
+   AddType(0xf811, "93B0052D-02D9-4D8A-A43B-33A3EE4DFBC3", "Ceph dm-crypt block DB");
+   AddType(0xf812, "306E8683-4FE2-4330-B7C0-00A917C16966", "Ceph dm-crypt block write-ahead log");
+   AddType(0xf813, "45B0969E-9B03-4F30-B4C6-35865CEFF106", "Ceph dm-crypt LUKS journal");
+   AddType(0xf814, "CAFECAFE-9B03-4F30-B4C6-35865CEFF106", "Ceph dm-crypt LUKS block");
+   AddType(0xf815, "166418DA-C469-4022-ADF4-B30AFD37F176", "Ceph dm-crypt LUKS block DB");
+   AddType(0xf816, "86A32090-3647-40B9-BBBD-38D8C573AA86", "Ceph dm-crypt LUKS block write-ahead log");
+   AddType(0xf817, "4FBD7E29-9D25-41B8-AFD0-35865CEFF05D", "Ceph dm-crypt LUKS OSD");
 
    // VMWare ESX partition types codes
    AddType(0xfb00, "AA31E02A-400F-11DB-9590-000C2911D1B8", "VMWare VMFS");

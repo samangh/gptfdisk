@@ -1,5 +1,5 @@
-1.0.4 (?/??/2018):
-------------------
+1.0.4 (7/5/2018):
+-----------------
 
 - Added search feature to partition type list functions ("L" on main menu of
   gdisk and "L" when entered in response to the "Hex code or GUID" prompt in
@@ -18,6 +18,15 @@
 
 - Added type code for Apple APFS (7C3457EF-0000-11AA-AA11-00306543ECAC,
   0xaf0a).
+
+- Added type code for Atari TOS basic data (0xa200,
+  734E5AFE-F61A-11E6-BC64-92361F002671).
+
+- Added type codes for Linux dm-crypt (0x8308,
+  7FFEC5C9-2D00-49B7-8941-3EA10A5586B7) and LUKS (0x8309,
+  CA7D7CCB-63ED-4C53-861C-1742536059CC) partitions.
+
+- Added 18 Ceph partition type codes.
 
 - Added 52 (yes, 52!) Android partition type codes.
 
