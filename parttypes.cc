@@ -141,19 +141,73 @@ void PartType::AddAllTypes(void) {
    AddType(0x8e00, "E6D6D379-F507-44C2-A23C-238F2A3DF928", "Linux LVM");
 
    // Android type codes....
+   // from Wikipedia, https://gist.github.com/culots/704afd126dec2f45c22d0c9d42cb7fab,
+   // and my own Android devices' partition tables
    AddType(0xa000, "2568845D-2332-4675-BC39-8FA5A4748D15", "Android bootloader");
    AddType(0xa001, "114EAFFE-1552-4022-B26E-9B053604CF84", "Android bootloader 2");
    AddType(0xa002, "49A4D17F-93A3-45C1-A0DE-F50B2EBE2599", "Android boot");
    AddType(0xa003, "4177C722-9E92-4AAB-8644-43502BFD5506", "Android recovery");
    AddType(0xa004, "EF32A33B-A409-486C-9141-9FFB711F6266", "Android misc");
    AddType(0xa005, "20AC26BE-20B7-11E3-84C5-6CFDB94711E9", "Android metadata");
-   AddType(0xa006, "38F428E6-D326-425D-9140-6E0EA133647C", "Android system");
+   AddType(0xa006, "38F428E6-D326-425D-9140-6E0EA133647C", "Android system 1");
    AddType(0xa007, "A893EF21-E428-470A-9E55-0668FD91A2D9", "Android cache");
    AddType(0xa008, "DC76DDA9-5AC1-491C-AF42-A82591580C0D", "Android data");
    AddType(0xa009, "EBC597D0-2053-4B15-8B64-E0AAC75F4DB1", "Android persistent");
    AddType(0xa00a, "8F68CC74-C5E5-48DA-BE91-A0C8C15E9C80", "Android factory");
    AddType(0xa00b, "767941D0-2085-11E3-AD3B-6CFDB94711E9", "Android fastboot/tertiary");
    AddType(0xa00c, "AC6D7924-EB71-4DF8-B48D-E267B27148FF", "Android OEM");
+   AddType(0xa00d, "C5A0AEEC-13EA-11E5-A1B1-001E67CA0C3C", "Android vendor");
+   AddType(0xa00e, "BD59408B-4514-490D-BF12-9878D963F378", "Android config");
+   AddType(0xa00f, "9FDAA6EF-4B3F-40D2-BA8D-BFF16BFB887B", "Android factory (alt)");
+   AddType(0xa010, "19A710A2-B3CA-11E4-B026-10604B889DCF", "Android meta");
+   AddType(0xa011, "193D1EA4-B3CA-11E4-B075-10604B889DCF", "Android EXT");
+   AddType(0xa012, "DEA0BA2C-CBDD-4805-B4F9-F428251C3E98", "Android SBL1");
+   AddType(0xa013, "8C6B52AD-8A9E-4398-AD09-AE916E53AE2D", "Android SBL2");
+   AddType(0xa014, "05E044DF-92F1-4325-B69E-374A82E97D6E", "Android SBL3");
+   AddType(0xa015, "400FFDCD-22E0-47E7-9A23-F16ED9382388", "Android APPSBL");
+   AddType(0xa016, "A053AA7F-40B8-4B1C-BA08-2F68AC71A4F4", "Android QSEE/tz");
+   AddType(0xa017, "E1A6A689-0C8D-4CC6-B4E8-55A4320FBD8A", "Android QHEE/hyp");
+   AddType(0xa018, "098DF793-D712-413D-9D4E-89D711772228", "Android RPM");
+   AddType(0xa019, "D4E0D938-B7FA-48C1-9D21-BC5ED5C4B203", "Android WDOG debug/sdi");
+   AddType(0xa01a, "20A0C19C-286A-42FA-9CE7-F64C3226A794", "Android DDR");
+   AddType(0xa01b, "A19F205F-CCD8-4B6D-8F1E-2D9BC24CFFB1", "Android CDT");
+   AddType(0xa01c, "66C9B323-F7FC-48B6-BF96-6F32E335A428", "Android RAM dump");
+   AddType(0xa01d, "303E6AC3-AF15-4C54-9E9B-D9A8FBECF401", "Android SEC");
+   AddType(0xa01e, "C00EEF24-7709-43D6-9799-DD2B411E7A3C", "Android PMIC");
+   AddType(0xa01f, "82ACC91F-357C-4A68-9C8F-689E1B1A23A1", "Android misc 1");
+   AddType(0xa020, "E2802D54-0545-E8A1-A1E8-C7A3E245ACD4", "Android misc 2");
+   AddType(0xa021, "65ADDCF4-0C5C-4D9A-AC2D-D90B5CBFCD03", "Android device info");
+   AddType(0xa022, "E6E98DA2-E22A-4D12-AB33-169E7DEAA507", "Android APDP");
+   AddType(0xa023, "ED9E8101-05FA-46B7-82AA-8D58770D200B", "Android MSADP");
+   AddType(0xa024, "11406F35-1173-4869-807B-27DF71802812", "Android DPO");
+   AddType(0xa025, "9D72D4E4-9958-42DA-AC26-BEA7A90B0434", "Android recovery");
+   AddType(0xa026, "6C95E238-E343-4BA8-B489-8681ED22AD0B", "Android persist");
+   AddType(0xa027, "EBBEADAF-22C9-E33B-8F5D-0E81686A68CB", "Android modem ST1");
+   AddType(0xa028, "0A288B1F-22C9-E33B-8F5D-0E81686A68CB", "Android modem ST2");
+   AddType(0xa029, "57B90A16-22C9-E33B-8F5D-0E81686A68CB", "Android FSC");
+   AddType(0xa02a, "638FF8E2-22C9-E33B-8F5D-0E81686A68CB", "Android FSG 1");
+   AddType(0xa02b, "2013373E-1AC4-4131-BFD8-B6A7AC638772", "Android FSG 2");
+   AddType(0xa02c, "2C86E742-745E-4FDD-BFD8-B6A7AC638772", "Android SSD");
+   AddType(0xa02d, "DE7D4029-0F5B-41C8-AE7E-F6C023A02B33", "Android keystore");
+   AddType(0xa02e, "323EF595-AF7A-4AFA-8060-97BE72841BB9", "Android encrypt");
+   AddType(0xa02f, "45864011-CF89-46E6-A445-85262E065604", "Android EKSST");
+   AddType(0xa030, "8ED8AE95-597F-4C8A-A5BD-A7FF8E4DFAA9", "Android RCT");
+   AddType(0xa031, "DF24E5ED-8C96-4B86-B00B-79667DC6DE11", "Android spare1");
+   AddType(0xa032, "7C29D3AD-78B9-452E-9DEB-D098D542F092", "Android spare2");
+   AddType(0xa033, "379D107E-229E-499D-AD4F-61F5BCF87BD4", "Android spare3");
+   AddType(0xa034, "0DEA65E5-A676-4CDF-823C-77568B577ED5", "Android spare4");
+   AddType(0xa035, "4627AE27-CFEF-48A1-88FE-99C3509ADE26", "Android raw resources");
+   AddType(0xa036, "20117F86-E985-4357-B9EE-374BC1D8487D", "Android boot");
+   AddType(0xa037, "86A7CB80-84E1-408C-99AB-694F1A410FC7", "Android FOTA");
+   AddType(0xa038, "97D7B011-54DA-4835-B3C4-917AD6E73D74", "Android system 2");
+   AddType(0xa039, "5594C694-C871-4B5F-90B1-690A6F68E0F7", "Android cache");
+   AddType(0xa03a, "1B81E7E6-F50D-419B-A739-2AEEF8DA3335", "Android user data");
+   AddType(0xa03b, "98523EC6-90FE-4C67-B50A-0FC59ED6F56D", "LG advanced flasher");
+   AddType(0xa03c, "2644BCC0-F36A-4792-9533-1738BED53EE3", "Android PG1FS");
+   AddType(0xa03d, "DD7C91E9-38C9-45C5-8A12-4A80F7E14057", "Android PG2FS");
+   AddType(0xa03e, "7696D5B6-43FD-4664-A228-C563C4A1E8CC", "Android board info");
+   AddType(0xa03f, "0D802D54-058D-4A20-AD2D-C7A362CEACD4", "Android MFG");
+   AddType(0xa040, "10A0C19C-516A-5444-5CE3-664C3226A794", "Android limits");
 
    // FreeBSD partition types....
    // Note: Rather than extract FreeBSD disklabel data, convert FreeBSD

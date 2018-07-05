@@ -11,6 +11,8 @@
 - Added type code for Apple APFS (7C3457EF-0000-11AA-AA11-00306543ECAC,
   0xaf0a).
 
+- Added 52 (yes, 52!) Android partition type codes.
+
 - Changed "Creating new GPT entries" message to read "Creating new
   GPT entries in memory" because the latter is clearer, particularly when
   using sgdisk with a non-destructive option, like "-p".
