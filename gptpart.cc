@@ -38,6 +38,15 @@ GPTPart::GPTPart(void) {
    memset(name, 0, NAME_SIZE * sizeof(name[0]) );
 } // Default constructor
 
+GPTPart::GPTPart(const GPTPart & orig) {
+   partitionType = orig.partitionType;
+   uniqueGUID = orig.uniqueGUID;
+   firstLBA = orig.firstLBA;
+   lastLBA = orig.lastLBA;
+   attributes = orig.attributes;
+   memcpy(name, orig.name, NAME_SIZE * sizeof( name[ 0 ] ) );
+} // Copy constructor
+
 GPTPart::~GPTPart(void) {
 } // destructor
 

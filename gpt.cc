@@ -86,6 +86,45 @@ GPTData::GPTData(void) {
    chksum_crc32gentab();
 } // GPTData default constructor
 
+GPTData::GPTData(const GPTData & orig) {
+   uint32_t i;
+
+   if (&orig != this) {
+      mainHeader = orig.mainHeader;
+      numParts = orig.numParts;
+      secondHeader = orig.secondHeader;
+      protectiveMBR = orig.protectiveMBR;
+      device = orig.device;
+      blockSize = orig.blockSize;
+      physBlockSize = orig.physBlockSize;
+      diskSize = orig.diskSize;
+      state = orig.state;
+      justLooking = orig.justLooking;
+      mainCrcOk = orig.mainCrcOk;
+      secondCrcOk = orig.secondCrcOk;
+      mainPartsCrcOk = orig.mainPartsCrcOk;
+      secondPartsCrcOk = orig.secondPartsCrcOk;
+      apmFound = orig.apmFound;
+      bsdFound = orig.bsdFound;
+      sectorAlignment = orig.sectorAlignment;
+      beQuiet = orig.beQuiet;
+      whichWasUsed = orig.whichWasUsed;
+
+      myDisk.OpenForRead(orig.myDisk.GetName());
+
+      delete[] partitions;
+      partitions = new GPTPart [numParts];
+      if (partitions == NULL) {
+         cerr << "Error! Could not allocate memory for partitions in GPTData::operator=()!\n"
+              << "Terminating!\n";
+         exit(1);
+      } // if
+      for (i = 0; i < numParts; i++) {
+         partitions[i] = orig.partitions[i];
+      } // for
+   } // if
+} // GPTData copy constructor
+
 // The following constructor loads GPT data from a device file
 GPTData::GPTData(string filename) {
    blockSize = SECTOR_SIZE; // set a default
@@ -120,38 +159,40 @@ GPTData::~GPTData(void) {
 GPTData & GPTData::operator=(const GPTData & orig) {
    uint32_t i;
 
-   mainHeader = orig.mainHeader;
-   numParts = orig.numParts;
-   secondHeader = orig.secondHeader;
-   protectiveMBR = orig.protectiveMBR;
-   device = orig.device;
-   blockSize = orig.blockSize;
-   physBlockSize = orig.physBlockSize;
-   diskSize = orig.diskSize;
-   state = orig.state;
-   justLooking = orig.justLooking;
-   mainCrcOk = orig.mainCrcOk;
-   secondCrcOk = orig.secondCrcOk;
-   mainPartsCrcOk = orig.mainPartsCrcOk;
-   secondPartsCrcOk = orig.secondPartsCrcOk;
-   apmFound = orig.apmFound;
-   bsdFound = orig.bsdFound;
-   sectorAlignment = orig.sectorAlignment;
-   beQuiet = orig.beQuiet;
-   whichWasUsed = orig.whichWasUsed;
+   if (&orig != this) {
+      mainHeader = orig.mainHeader;
+      numParts = orig.numParts;
+      secondHeader = orig.secondHeader;
+      protectiveMBR = orig.protectiveMBR;
+      device = orig.device;
+      blockSize = orig.blockSize;
+      physBlockSize = orig.physBlockSize;
+      diskSize = orig.diskSize;
+      state = orig.state;
+      justLooking = orig.justLooking;
+      mainCrcOk = orig.mainCrcOk;
+      secondCrcOk = orig.secondCrcOk;
+      mainPartsCrcOk = orig.mainPartsCrcOk;
+      secondPartsCrcOk = orig.secondPartsCrcOk;
+      apmFound = orig.apmFound;
+      bsdFound = orig.bsdFound;
+      sectorAlignment = orig.sectorAlignment;
+      beQuiet = orig.beQuiet;
+      whichWasUsed = orig.whichWasUsed;
 
-   myDisk.OpenForRead(orig.myDisk.GetName());
+      myDisk.OpenForRead(orig.myDisk.GetName());
 
-   delete[] partitions;
-   partitions = new GPTPart [numParts];
-   if (partitions == NULL) {
-      cerr << "Error! Could not allocate memory for partitions in GPTData::operator=()!\n"
-           << "Terminating!\n";
-      exit(1);
+      delete[] partitions;
+      partitions = new GPTPart [numParts];
+      if (partitions == NULL) {
+         cerr << "Error! Could not allocate memory for partitions in GPTData::operator=()!\n"
+              << "Terminating!\n";
+         exit(1);
+      } // if
+      for (i = 0; i < numParts; i++) {
+         partitions[i] = orig.partitions[i];
+      } // for
    } // if
-   for (i = 0; i < numParts; i++) {
-      partitions[i] = orig.partitions[i];
-   } // for
 
    return *this;
 } // GPTData::operator=()

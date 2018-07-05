@@ -53,6 +53,7 @@ class GPTPart {
       uint16_t name[NAME_SIZE];
    public:
       GPTPart(void);
+      GPTPart(const GPTPart &);
       ~GPTPart(void);
 
       // Simple data retrieval:

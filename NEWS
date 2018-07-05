@@ -1,6 +1,17 @@
 1.0.4 (7/5/2018):
 -----------------
 
+- Added some explicit copy constructors and made some other tweaks to avoid
+  compiler warnings.
+
+- The macOS binary for sgdisk is now a pure 64-bit build; I'm no longer
+  supporting 32-bit builds of sgdisk. The gdisk and cgdisk binaries remain
+  "fat" 32-/64-bit builds. The reason for dropping the 32-bit support from
+  sgdisk is that I've re-built my macOS development system, and I had
+  trouble building a "fat" binary with the fresh install of the popt
+  libraries upon which sgdisk relies. 32-bit support for the other binaries
+  is now officially deprecated, too.
+
 - Added search feature to partition type list functions ("L" on main menu of
   gdisk and "L" when entered in response to the "Hex code or GUID" prompt in
   gdisk and sgdisk). This feature filters the partition type list to those

@@ -43,6 +43,36 @@ BasicMBRData::BasicMBRData(void) {
    EmptyMBR();
 } // BasicMBRData default constructor
 
+BasicMBRData::BasicMBRData(const BasicMBRData & orig) {
+   int i;
+
+   if (&orig != this) {
+      memcpy(code, orig.code, 440);
+      diskSignature = orig.diskSignature;
+      nulls = orig.nulls;
+      MBRSignature = orig.MBRSignature;
+      blockSize = orig.blockSize;
+      diskSize = orig.diskSize;
+      numHeads = orig.numHeads;
+      numSecspTrack = orig.numSecspTrack;
+      canDeleteMyDisk = orig.canDeleteMyDisk;
+      device = orig.device;
+      state = orig.state;
+
+      myDisk = new DiskIO;
+      if (myDisk == NULL) {
+         cerr << "Unable to allocate memory in BasicMBRData copy constructor! Terminating!\n";
+         exit(1);
+      } // if
+      if (orig.myDisk != NULL)
+         myDisk->OpenForRead(orig.myDisk->GetName());
+
+      for (i = 0; i < MAX_MBR_PARTS; i++) {
+         partitions[i] = orig.partitions[i];
+      } // for
+   } // if
+} // BasicMBRData copy constructor
+
 BasicMBRData::BasicMBRData(string filename) {
    blockSize = SECTOR_SIZE;
    diskSize = 0;
@@ -73,29 +103,31 @@ BasicMBRData::~BasicMBRData(void) {
 BasicMBRData & BasicMBRData::operator=(const BasicMBRData & orig) {
    int i;
 
-   memcpy(code, orig.code, 440);
-   diskSignature = orig.diskSignature;
-   nulls = orig.nulls;
-   MBRSignature = orig.MBRSignature;
-   blockSize = orig.blockSize;
-   diskSize = orig.diskSize;
-   numHeads = orig.numHeads;
-   numSecspTrack = orig.numSecspTrack;
-   canDeleteMyDisk = orig.canDeleteMyDisk;
-   device = orig.device;
-   state = orig.state;
+   if (&orig != this) {
+      memcpy(code, orig.code, 440);
+      diskSignature = orig.diskSignature;
+      nulls = orig.nulls;
+      MBRSignature = orig.MBRSignature;
+      blockSize = orig.blockSize;
+      diskSize = orig.diskSize;
+      numHeads = orig.numHeads;
+      numSecspTrack = orig.numSecspTrack;
+      canDeleteMyDisk = orig.canDeleteMyDisk;
+      device = orig.device;
+      state = orig.state;
 
-   myDisk = new DiskIO;
-   if (myDisk == NULL) {
-      cerr << "Unable to allocate memory in BasicMBRData::operator=()! Terminating!\n";
-      exit(1);
+      myDisk = new DiskIO;
+      if (myDisk == NULL) {
+         cerr << "Unable to allocate memory in BasicMBRData::operator=()! Terminating!\n";
+         exit(1);
+      } // if
+      if (orig.myDisk != NULL)
+         myDisk->OpenForRead(orig.myDisk->GetName());
+
+      for (i = 0; i < MAX_MBR_PARTS; i++) {
+         partitions[i] = orig.partitions[i];
+      } // for
    } // if
-   if (orig.myDisk != NULL)
-      myDisk->OpenForRead(orig.myDisk->GetName());
-
-   for (i = 0; i < MAX_MBR_PARTS; i++) {
-      partitions[i] = orig.partitions[i];
-   } // for
    return *this;
 } // BasicMBRData::operator=()
 

@@ -92,6 +92,7 @@ protected:
 public:
    // Basic necessary functions....
    GPTData(void);
+   GPTData(const GPTData &);
    GPTData(string deviceFilename);
    virtual ~GPTData(void);
    GPTData & operator=(const GPTData & orig);

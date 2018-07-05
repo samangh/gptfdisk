@@ -394,6 +394,7 @@ void GPTDataCurses::ChangeType(int partNum) {
 // Sets the partition alignment value
 void GPTDataCurses::SetAlignment(void) {
    int alignment;
+   char conversion_specifier[] = "%d";
 
    move(LINES - 4, 0);
    clrtobot();
@@ -402,7 +403,7 @@ void GPTDataCurses::SetAlignment(void) {
       move(LINES - 3, 0);
       printw("Type new alignment value, in sectors: ");
       echo();
-      scanw("%d", &alignment);
+      scanw(conversion_specifier, &alignment);
       noecho();
    } while ((alignment == 0) || (alignment > MAX_ALIGNMENT));
    GPTData::SetAlignment(alignment);

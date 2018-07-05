@@ -63,6 +63,7 @@ protected:
 public:
    BasicMBRData(void);
    BasicMBRData(string deviceFilename);
+   BasicMBRData(const BasicMBRData &);
    ~BasicMBRData(void);
    BasicMBRData & operator=(const BasicMBRData & orig);
 
