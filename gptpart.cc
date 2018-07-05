@@ -4,7 +4,7 @@
 // Description: Class to implement a SINGLE GPT partition
 //
 //
-// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2009-2013
+// Author: Rod Smith <rodsmith@rodsbooks.com>, (C) 2009-2018
 //
 // Copyright: See COPYING file that comes with this distribution
 //

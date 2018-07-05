@@ -1,6 +1,14 @@
 1.0.4 (?/??/2018):
 ------------------
 
+- Added search feature to partition type list functions ("L" on main menu of
+  gdisk and "L" when entered in response to the "Hex code or GUID" prompt in
+  gdisk and sgdisk). This feature filters the partition type list to those
+  which include the search term in their GPT fdisk descriptions. For
+  instance, typing "Linux" shows only partitions with "Linux" in their
+  descriptions. Note that the search/filter is case-sensitive. If <Enter> is
+  pressed, no filter is applied.
+
 - Change to Makefile.mac to use standard libncurses rather than a 3rd-party
   version; should help with cgdisk compatibility.
 

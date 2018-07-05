@@ -2,7 +2,7 @@
 // Class to manage partition type codes -- a slight variant on MBR type
 // codes, GUID type codes, and associated names.
 
-/* This program is copyright (c) 2009-2015 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2018 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -145,8 +145,8 @@ void PartType::AddAllTypes(void) {
    // and my own Android devices' partition tables
    AddType(0xa000, "2568845D-2332-4675-BC39-8FA5A4748D15", "Android bootloader");
    AddType(0xa001, "114EAFFE-1552-4022-B26E-9B053604CF84", "Android bootloader 2");
-   AddType(0xa002, "49A4D17F-93A3-45C1-A0DE-F50B2EBE2599", "Android boot");
-   AddType(0xa003, "4177C722-9E92-4AAB-8644-43502BFD5506", "Android recovery");
+   AddType(0xa002, "49A4D17F-93A3-45C1-A0DE-F50B2EBE2599", "Android boot 1");
+   AddType(0xa003, "4177C722-9E92-4AAB-8644-43502BFD5506", "Android recovery 1");
    AddType(0xa004, "EF32A33B-A409-486C-9141-9FFB711F6266", "Android misc");
    AddType(0xa005, "20AC26BE-20B7-11E3-84C5-6CFDB94711E9", "Android metadata");
    AddType(0xa006, "38F428E6-D326-425D-9140-6E0EA133647C", "Android system 1");
@@ -180,7 +180,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xa022, "E6E98DA2-E22A-4D12-AB33-169E7DEAA507", "Android APDP");
    AddType(0xa023, "ED9E8101-05FA-46B7-82AA-8D58770D200B", "Android MSADP");
    AddType(0xa024, "11406F35-1173-4869-807B-27DF71802812", "Android DPO");
-   AddType(0xa025, "9D72D4E4-9958-42DA-AC26-BEA7A90B0434", "Android recovery");
+   AddType(0xa025, "9D72D4E4-9958-42DA-AC26-BEA7A90B0434", "Android recovery 2");
    AddType(0xa026, "6C95E238-E343-4BA8-B489-8681ED22AD0B", "Android persist");
    AddType(0xa027, "EBBEADAF-22C9-E33B-8F5D-0E81686A68CB", "Android modem ST1");
    AddType(0xa028, "0A288B1F-22C9-E33B-8F5D-0E81686A68CB", "Android modem ST2");
@@ -197,17 +197,20 @@ void PartType::AddAllTypes(void) {
    AddType(0xa033, "379D107E-229E-499D-AD4F-61F5BCF87BD4", "Android spare3");
    AddType(0xa034, "0DEA65E5-A676-4CDF-823C-77568B577ED5", "Android spare4");
    AddType(0xa035, "4627AE27-CFEF-48A1-88FE-99C3509ADE26", "Android raw resources");
-   AddType(0xa036, "20117F86-E985-4357-B9EE-374BC1D8487D", "Android boot");
+   AddType(0xa036, "20117F86-E985-4357-B9EE-374BC1D8487D", "Android boot 2");
    AddType(0xa037, "86A7CB80-84E1-408C-99AB-694F1A410FC7", "Android FOTA");
    AddType(0xa038, "97D7B011-54DA-4835-B3C4-917AD6E73D74", "Android system 2");
    AddType(0xa039, "5594C694-C871-4B5F-90B1-690A6F68E0F7", "Android cache");
    AddType(0xa03a, "1B81E7E6-F50D-419B-A739-2AEEF8DA3335", "Android user data");
-   AddType(0xa03b, "98523EC6-90FE-4C67-B50A-0FC59ED6F56D", "LG advanced flasher");
+   AddType(0xa03b, "98523EC6-90FE-4C67-B50A-0FC59ED6F56D", "LG (Android) advanced flasher");
    AddType(0xa03c, "2644BCC0-F36A-4792-9533-1738BED53EE3", "Android PG1FS");
    AddType(0xa03d, "DD7C91E9-38C9-45C5-8A12-4A80F7E14057", "Android PG2FS");
    AddType(0xa03e, "7696D5B6-43FD-4664-A228-C563C4A1E8CC", "Android board info");
    AddType(0xa03f, "0D802D54-058D-4A20-AD2D-C7A362CEACD4", "Android MFG");
    AddType(0xa040, "10A0C19C-516A-5444-5CE3-664C3226A794", "Android limits");
+
+   // Atari TOS partition type
+   AddType(0xa200, "734E5AFE-F61A-11E6-BC64-92361F002671", "Atari TOS basic data");
 
    // FreeBSD partition types....
    // Note: Rather than extract FreeBSD disklabel data, convert FreeBSD
@@ -471,16 +474,25 @@ uint16_t PartType::GetHexType() const {
 // it stops at under 80 columns; on narrower displays, lines will wrap
 // in an ugly way. The maxLines value is the maximum number of lines
 // to display before prompting to continue, or 0 (or a negative value)
-// for no limit.
+// for no limit. If (maxLines > 0), this function will prompt for a
+// substring to search for in the partition type description, so it's
+// imperative that maxLines be set to 0 in non-interactive contexts
+// (namely, sgdisk).
 void PartType::ShowAllTypes(int maxLines) const {
    int colCount = 1, lineCount = 1;
    size_t i;
    AType* thisType = allTypes;
-   string line;
+   string line, matchString = "";
+   size_t found;
 
    cout.unsetf(ios::uppercase);
+   if (maxLines > 0) {
+      cout << "Type search string, or <Enter> to show all codes: ";
+      matchString = ReadString();
+   } // if
    while (thisType != NULL) {
-      if (thisType->display == 1) { // show it
+      found = thisType->name.find(matchString);
+      if ((thisType->display == 1) && (found != string::npos)) { // show it
          cout.fill('0');
          cout.width(4);
          cout << hex << thisType->MBRType << " ";

@@ -1,6 +1,6 @@
-.\" Copyright 2011-2017 Roderick W. Smith (rodsmith@rodsbooks.com)
+.\" Copyright 2011-2018 Roderick W. Smith (rodsmith@rodsbooks.com)
 .\" May be distributed under the GNU General Public License
-.TH "CGDISK" "8" "1.0.3" "Roderick W. Smith" "GPT fdisk Manual"
+.TH "CGDISK" "8" "1.0.4" "Roderick W. Smith" "GPT fdisk Manual"
 .SH "NAME"
 cgdisk \- Curses-based GUID partition table (GPT) manipulator
 .SH "SYNOPSIS"
@@ -262,6 +262,10 @@ Change a single partition's type code. You enter the type code using a
 two\-byte hexadecimal number. You may also enter a GUID directly, if you
 have one and \fBcgdisk\fR doesn't know it. If you don't know the type code
 for your partition, you can type \fBL\fR to see a list of known type codes.
+The type code list may optionally be filtered by a search string; for
+instance, entering \fI\fBLinux\fR\fR shows only partition type codes with
+descriptions that include the string \fILinux\fR. This search is performed
+case\-sensitively.
 
 .TP 
 .B Verify
