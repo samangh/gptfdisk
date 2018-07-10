@@ -303,7 +303,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xed01, "BFBFAFE7-A34F-448A-9A5B-6213EB736C22", "Lenovo system partition");
 
    // EFI system and related partitions
-   AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI System"); // Parted identifies these as having the "boot flag" set
+   AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI system partition"); // Parted identifies these as having the "boot flag" set
    AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
    AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Used by GRUB
 
