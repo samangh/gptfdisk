@@ -150,7 +150,7 @@ sibling. Options available in \fBsgdisk\fR are:
 .TP 
 .B \-a, \-\-set\-alignment=value
 Set the sector alignment multiple. GPT fdisk aligns the start of partitions
-to sectors that are multiples of this value, which defaults to 1MiB (2048
+to sectors that are multiples of this value, which defaults to 1 MiB (2048
 on disks with 512-byte sectors) on freshly formatted disks. This alignment
 value is necessary to obtain optimum performance with Western Digital
 Advanced Format and similar drives with larger physical than logical sector
@@ -599,14 +599,14 @@ Contributors:
 
 
 .SH "SEE ALSO"
-\fBcfdisk (8)\fR,
-\fBcgdisk (8)\fR,
-\fBfdisk (8)\fR,
-\fBgdisk (8)\fR,
-\fBmkfs (8)\fR,
-\fBparted (8)\fR,
-\fBsfdisk (8)\fR
-\fBfixparts (8)\fR
+.BR cfdisk (8),
+.BR cgdisk (8),
+.BR fdisk (8),
+.BR gdisk (8),
+.BR mkfs (8),
+.BR parted (8),
+.BR sfdisk (8),
+.BR fixparts (8).
 
 \fIhttp://en.wikipedia.org/wiki/GUID_Partition_Table\fR
 
