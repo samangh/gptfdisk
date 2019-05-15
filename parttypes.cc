@@ -525,8 +525,10 @@ void PartType::ShowAllTypes(int maxLines) const {
             if (thisType->next) {
                cout << "\n";
                if ((maxLines > 0) && (lineCount++ % maxLines) == 0) {
-                  cout << "Press the <Enter> key to see more codes: ";
+                  cout << "Press the <Enter> key to see more codes, q to quit: ";
                   getline(cin, line);
+                  if ((line[0] =='q') || (line[0] =='Q'))
+                     break;
                } // if reached screen line limit
             } // if there's another entry following this one
          } else {
