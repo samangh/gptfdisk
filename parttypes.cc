@@ -510,10 +510,10 @@ void PartType::ShowAllTypes(int maxLines) const {
    cout.unsetf(ios::uppercase);
    if (maxLines > 0) {
       cout << "Type search string, or <Enter> to show all codes: ";
-      matchString = ReadString();
+      matchString = ToLower(ReadString());
    } // if
    while (thisType != NULL) {
-      found = thisType->name.find(matchString);
+      found = ToLower(thisType->name).find(matchString);
       if ((thisType->display == 1) && (found != string::npos)) { // show it
          cout.fill('0');
          cout.width(4);

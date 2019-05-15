@@ -82,5 +82,6 @@ int IsHex(string input); // Returns 1 if input can be hexadecimal number....
 int IsLittleEndian(void); // Returns 1 if CPU is little-endian, 0 if it's big-endian
 void ReverseBytes(void* theValue, int numBytes); // Reverses byte-order of theValue
 void WinWarning(void);
+string ToLower(const string& input);
 
 #endif
