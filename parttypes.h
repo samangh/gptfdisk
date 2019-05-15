@@ -36,6 +36,9 @@ protected:
    static AType* lastType; // Pointer to last entry in the list
    void AddAllTypes(void);
 public:
+   // PartType with GUID "00000000-0000-0000-0000-000000000000"
+   static const PartType unusedPartType;
+
    PartType(void);
    PartType(const PartType & orig);
    PartType(const GUIDData & orig);

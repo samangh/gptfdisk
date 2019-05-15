@@ -19,6 +19,7 @@ using namespace std;
 int PartType::numInstances = 0;
 AType* PartType::allTypes = NULL;
 AType* PartType::lastType = NULL;
+const PartType PartType::unusedPartType = (GUIDData) "00000000-0000-0000-0000-000000000000";
 
 // Constructor. Its main task is to initialize the data list, but only
 // if this is the first instance, since it's a static linked list.
