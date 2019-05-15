@@ -442,7 +442,7 @@ void GPTPart::ChangeType(void) {
    changeName = (GetDescription() == GetTypeName());
 #endif
 
-   cout << "Current type is '" << GetTypeName() << "'\n";
+   cout << "Current type is " << hex << GetHexType() << dec << " (" << GetTypeName() << ")\n";
    do {
       cout << "Hex code or GUID (L to show codes, Enter = " << hex << DEFAULT_GPT_TYPE << dec << "): ";
       line = ReadString();
