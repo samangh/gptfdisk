@@ -86,7 +86,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
       {"first-aligned-in-largest", 'F', POPT_ARG_NONE, NULL, 'F', "show start of the largest free block, aligned", ""},
       {"mbrtogpt", 'g', POPT_ARG_NONE, NULL, 'g', "convert MBR to GPT", ""},
       {"randomize-guids", 'G', POPT_ARG_NONE, NULL, 'G', "randomize disk and partition GUIDs", ""},
-      {"hybrid", 'h', POPT_ARG_STRING, &hybrids, 'h', "create hybrid MBR", "partnum[:partnum...]"},
+      {"hybrid", 'h', POPT_ARG_STRING, &hybrids, 'h', "create hybrid MBR", "partnum[:partnum...][:EE]"},
       {"info", 'i', POPT_ARG_INT, &infoPartNum, 'i', "show detailed information on partition", "partnum"},
       {"move-main-table", 'j', POPT_ARG_INT, &mainTableLBA, 'j', "adjust the location of the main partition table", "sector"},
       {"load-backup", 'l', POPT_ARG_STRING, &backupFile, 'l', "load GPT backup from file", "file"},
@@ -490,33 +490,47 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
 // Create a hybrid or regular MBR from GPT data structures
 int GPTDataCL::BuildMBR(char* argument, int isHybrid) {
    int numParts, allOK = 1, i, origPartNum;
+   int eeLast, mbrNum = 0;
    MBRPart newPart;
    BasicMBRData newMBR;
 
    if (argument != NULL) {
       numParts = CountColons(argument) + 1;
+      if (isHybrid) {
+         eeLast = GetString(argument, numParts) == "EE";
+         if (eeLast) {
+            numParts--;
+         }
+      }
+
       if (numParts <= (4 - isHybrid)) {
          newMBR.SetDisk(GetDisk());
          for (i = 0; i < numParts; i++) {
             origPartNum = GetInt(argument, i + 1) - 1;
             if (IsUsedPartNum(origPartNum) && (partitions[origPartNum].IsSizedForMBR() == MBR_SIZED_GOOD)) {
+               mbrNum = i + (isHybrid && ! eeLast);
                newPart.SetInclusion(PRIMARY);
                newPart.SetLocation(operator[](origPartNum).GetFirstLBA(),
                                    operator[](origPartNum).GetLengthLBA());
                newPart.SetStatus(0);
                newPart.SetType((uint8_t)(operator[](origPartNum).GetHexType() / 0x0100));
-               newMBR.AddPart(i + isHybrid, newPart);
+               newMBR.AddPart(mbrNum, newPart);
             } else {
                cerr << "Original partition " << origPartNum + 1 << " does not exist or is too big! Aborting operation!\n";
                allOK = 0;
             } // if/else
          } // for
          if (isHybrid) {
+            if (eeLast) {
+               mbrNum = i;
+            } else {
+               mbrNum = 0;
+            }
             newPart.SetInclusion(PRIMARY);
             newPart.SetLocation(1, newMBR.FindLastInFree(1));
             newPart.SetStatus(0);
             newPart.SetType(0xEE);
-            newMBR.AddPart(0, newPart);
+            newMBR.AddPart(mbrNum, newPart);
          } // if
          if (allOK)
             SetProtectiveMBR(newMBR);
