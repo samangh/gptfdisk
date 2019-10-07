@@ -19,6 +19,7 @@
  *
  */
 
+#include <clocale>
 #include <iostream>
 #include <string>
 #include <sstream>
