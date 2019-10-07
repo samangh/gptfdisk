@@ -55,6 +55,7 @@ string ReadString(void) {
 string ReadString(void) {
    string inString;
 
+   cout << flush;
    getline(cin, inString);
    if (!cin.good())
       exit(5);
