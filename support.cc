@@ -101,7 +101,7 @@ char GetYN(void) {
    do {
       if ( again ) { cout << "Your option? " ; }
       again = 1 ;
-      cout << "(Y/N): ";
+      cout << "(Y/N): " << flush;
       line = ReadString();
       response = toupper(line[0]);
    } while ((response != 'Y') && (response != 'N'));
