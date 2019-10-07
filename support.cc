@@ -73,7 +73,7 @@ uint64_t GetNumber(uint64_t low, uint64_t high, uint64_t def, const string & pro
 
    if (low != high) { // bother only if low and high differ...
       do {
-         cout << prompt;
+         cout << prompt << flush;
          cin.getline(line, 255);
          if (!cin.good())
             exit(5);
