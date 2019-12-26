@@ -129,8 +129,8 @@ void PartType::AddAllTypes(void) {
    AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris on MBR)
    AddType(0x8300, "0FC63DAF-8483-4772-8E79-3D69D8477DE4", "Linux filesystem"); // Linux native
    AddType(0x8301, "8DA63339-0007-60C0-C436-083AC8230908", "Linux reserved");
-   // See http://www.freedesktop.org/software/systemd/man/systemd-gpt-auto-generator.html
-   // and http://www.freedesktop.org/wiki/Specifications/DiscoverablePartitionsSpec/
+   // See https://www.freedesktop.org/software/systemd/man/systemd-gpt-auto-generator.html
+   // and https://systemd.io/DISCOVERABLE_PARTITIONS
    AddType(0x8302, "933AC7E1-2EB4-4F13-B844-0E14E2AEF915", "Linux /home"); // Linux /home (auto-mounted by systemd)
    AddType(0x8303, "44479540-F297-41B2-9AF7-D131D5F0458A", "Linux x86 root (/)"); // Linux / on x86 (auto-mounted by systemd)
    AddType(0x8304, "4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709", "Linux x86-64 root (/)"); // Linux / on x86-64 (auto-mounted by systemd)
@@ -139,6 +139,14 @@ void PartType::AddAllTypes(void) {
    AddType(0x8307, "69DAD710-2CE4-4E3C-B16C-21A1D49ABED3", "Linux ARM32 root (/)"); // Linux / on 32-bit ARM (auto-mounted by systemd)
    AddType(0x8308, "7FFEC5C9-2D00-49B7-8941-3EA10A5586B7", "Linux dm-crypt");
    AddType(0x8309, "CA7D7CCB-63ED-4C53-861C-1742536059CC", "Linux LUKS");
+   AddType(0x830A, "993D8D3D-F80E-4225-855A-9DAF8ED7EA97", "Linux IA-64 root (/)"); // Linux / on Itanium (auto-mounted by systemd)
+   AddType(0x830B, "D13C5D3B-B5D1-422A-B29F-9454FDC89D76", "Linux x86 root verity");
+   AddType(0x830C, "2C7357ED-EBD2-46D9-AEC1-23D437EC2BF5", "Linux x86-64 root verity");
+   AddType(0x830D, "7386CDF2-203C-47A9-A498-F2ECCE45A2D6", "Linux ARM32 root verity");
+   AddType(0x830E, "DF3300CE-D69F-4C92-978C-9BFB0F38D820", "Linux ARM64 root verity");
+   AddType(0x830F, "86ED10D5-B607-45BB-8957-D350F23D0571", "Linux IA-64 root verity");
+   AddType(0x8310, "4D21B016-B534-45C2-A9FB-5C16E091FD2D", "Linux /var"); // Linux /var (auto-mounted by systemd)
+   AddType(0x8311, "7EC6F557-3BC5-4ACA-B293-16EF5DF639D1", "Linux /var/tmp"); // Linux /var/tmp (auto-mounted by systemd)
 
    // Used by Intel Rapid Start technology
    AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");
