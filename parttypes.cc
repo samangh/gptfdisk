@@ -20,6 +20,10 @@ int PartType::numInstances = 0;
 AType* PartType::allTypes = NULL;
 AType* PartType::lastType = NULL;
 
+#define SCREEN_WIDTH 80
+#define NUM_COLUMNS 2
+#define DESC_LENGTH (SCREEN_WIDTH - (6 * NUM_COLUMNS)) / NUM_COLUMNS
+
 // Constructor. Its main task is to initialize the data list, but only
 // if this is the first instance, since it's a static linked list.
 // Partition type codes are MBR type codes multiplied by 0x0100, with
@@ -517,10 +521,10 @@ void PartType::ShowAllTypes(int maxLines) const {
          cout.fill('0');
          cout.width(4);
          cout << hex << thisType->MBRType << " ";
-         cout << thisType->name.substr(0, 20);
-         for (i = 0; i < (20 - (thisType->name.substr(0, 20).length())); i++)
+         cout << thisType->name.substr(0, DESC_LENGTH);
+         for (i = 0; i < (DESC_LENGTH - (thisType->name.substr(0, DESC_LENGTH).length())); i++)
             cout << " ";
-         if ((colCount % 3) == 0) {
+         if ((colCount % NUM_COLUMNS) == 0) {
             if (thisType->next) {
                cout << "\n";
                if ((maxLines > 0) && (lineCount++ % maxLines) == 0) {

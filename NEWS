@@ -1,7 +1,11 @@
-1.0.5 (?/?/2019):
+1.0.5 (?/?/2020):
 -----------------
 
-- Fixed minor typo in sgdisk man page
+- Fixed typos and minor formatting issues in man pages
+
+- Changed number of columns in type code output ("sgdisk -L" and equivalents
+  in gdisk and cgdisk) from 3 to 2, since some descriptions are long enough
+  that they're ambiguous with three columns.
 
 1.0.4 (7/5/2018):
 -----------------
