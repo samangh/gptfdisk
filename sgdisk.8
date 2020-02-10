@@ -264,13 +264,13 @@ in order to render all GUIDs once again unique.
 .TP 
 .B \-h, \-\-hybrid
 Create a hybrid MBR. This option takes from one to three partition numbers,
-separated by colons, as arguments. The created hybrid MBR places an EFI GPT
-(type 0xEE) partition first in the table, followed by the partition(s) you
-specify. Their type codes are based on the GPT fdisk type codes divided by
-0x0100, which is usually correct for Windows partitions. If the
-active/bootable flag should be set, you must do so in another program, such
-as \fBfdisk\fR. The \fBgdisk\fR program offers additional hybrid MBR
-creation options.
+separated by colons, as arguments. You may optionally specify a final partition
+"EE" to indicate that the EFI GPT (type 0xEE) should be placed last in the table,
+otherwise it will be placed first, followed by the partition(s) you specify.
+Their type codes are based on the GPT fdisk type codes divided by 0x0100, which
+is usually correct for Windows partitions. If the active/bootable flag should
+be set, you must do so in another program, such as \fBfdisk\fR. The \fBgdisk\fR
+program offers additional hybrid MBR creation options.
 
 .TP 
 .B \-i, \-\-info=partnum
