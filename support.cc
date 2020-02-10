@@ -55,6 +55,7 @@ string ReadString(void) {
 string ReadString(void) {
    string inString;
 
+   cout << flush;
    getline(cin, inString);
    if (!cin.good())
       exit(5);
@@ -73,7 +74,7 @@ uint64_t GetNumber(uint64_t low, uint64_t high, uint64_t def, const string & pro
 
    if (low != high) { // bother only if low and high differ...
       do {
-         cout << prompt;
+         cout << prompt << flush;
          cin.getline(line, 255);
          if (!cin.good())
             exit(5);
@@ -101,7 +102,7 @@ char GetYN(void) {
    do {
       if ( again ) { cout << "Your option? " ; }
       again = 1 ;
-      cout << "(Y/N): ";
+      cout << "(Y/N): " << flush;
       line = ReadString();
       response = toupper(line[0]);
    } while ((response != 'Y') && (response != 'N'));
