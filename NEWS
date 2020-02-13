@@ -7,6 +7,13 @@
   in gdisk and cgdisk) from 3 to 2, since some descriptions are long enough
   that they're ambiguous with three columns.
 
+- Makefile change: Add $(LDLIBS) support to enable clean static builds (for
+  libintl).
+
+- You can now put the 0xEE partition last in a hybrid MBR using sgdisk.
+  (Previously, this was possible with gdisk but not with sgdisk.) See the
+  sgdisk man page for details.
+
 1.0.4 (7/5/2018):
 -----------------
 
