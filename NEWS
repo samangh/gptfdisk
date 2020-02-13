@@ -14,6 +14,9 @@
   (Previously, this was possible with gdisk but not with sgdisk.) See the
   sgdisk man page for details.
 
+- Added numerous type codes for Container Linux, Veracrypt, and
+  Freedesktop.org's Discoverable Partitions Specification
+
 1.0.4 (7/5/2018):
 -----------------
 

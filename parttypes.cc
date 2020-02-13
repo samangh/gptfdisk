@@ -151,6 +151,12 @@ void PartType::AddAllTypes(void) {
    // Used by Intel Rapid Start technology
    AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");
 
+   // Type codes for Container Linux (formerly CoreOS; https://coreos.com)
+   AddType(0x8500, "5DFBF5F4-2848-4BAC-AA5E-0D9A20B745A6", "Container Linux /usr");
+   AddType(0x8501, "3884DD41-8582-4404-B9A8-E9B84F2DF50E", "Container Linux resizable rootfs");
+   AddType(0x8502, "C95DC21A-DF0E-4340-8D7B-26CBFA9A03E0", "Container Linux /OEM customizations");
+   AddType(0x8503, "BE9067B9-EA49-4F15-B4F6-F36F8C9E1818", "Container Linux root on RAID");
+
    // Another Linux type code....
    AddType(0x8e00, "E6D6D379-F507-44C2-A23C-238F2A3DF928", "Linux LVM");
 
@@ -303,6 +309,9 @@ void PartType::AddAllTypes(void) {
    // Open Network Install Environment (ONIE) partitions....
    AddType(0xe100, "7412F7D5-A156-4B13-81DC-867174929325", "ONIE boot");
    AddType(0xe101, "D4E6E2CD-4469-46F3-B5CB-1BFF57AFC149", "ONIE config");
+
+   // Veracrypt (https://www.veracrypt.fr/en/Home.html) encrypted partition
+   AddType(0xe900, "8C8F8EFF-AC95-4770-814A-21994F2DBC8F", "Veracrypt data");
 
    // See http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec
    AddType(0xea00, "BC13C2FF-59E6-4262-A352-B275FD6F7172", "Freedesktop $BOOT");
