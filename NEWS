@@ -17,6 +17,13 @@
 - Added numerous type codes for Container Linux, Veracrypt, and
   Freedesktop.org's Discoverable Partitions Specification
 
+- Apple no longer supports building i386 or "fat" binaries in XCode (or if
+  they do, they're making it hard), so I've removed that support. GPT fdisk
+  macOS binaries are now x86-64 only. Similarly, building now seems to
+  require macOS 10.9 or later, so that's now the minimum macOS version. I've
+  also re-built my Mac build environment and tweaked Makefile.mac
+  appropriately.
+
 1.0.4 (7/5/2018):
 -----------------
 

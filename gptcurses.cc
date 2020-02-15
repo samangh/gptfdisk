@@ -23,7 +23,11 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#ifdef __APPLE__
 #include <ncurses.h>
+#else
+#include <ncursesw/ncurses.h>
+#endif
 #include "gptcurses.h"
 #include "support.h"
 

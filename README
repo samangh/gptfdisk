@@ -204,9 +204,13 @@ be used instead. In addition, note these requirements:
   (https://trac.macports.org/browser/trunk/dports/devel/popt/Portfile), Fink
   (http://www.finkproject.org), or brew (http://macappstore.org/popt/); 
   however, you'll first need to install the relevant environment
-  (instructions exist on the relevant projects' pages). Alternatively, you
-  can compile gdisk and/or cgdisk alone, without sgdisk; gdisk doesn't
-  require popt.
+  (instructions exist on the relevant projects' pages). When I re-built my
+  Mac build environment in February of 2020, I found that brew was, by far,
+  the easiest of these to install. Some of the others seem to have been
+  abandoned, but I didn't investigate thoroughly. I'm leaving the references
+  in case they might be useful in the future. Instead of installing one of
+  These ports, you can compile gdisk and/or cgdisk alone, without sgdisk;
+  gdisk and cgdisk don't require popt.
 
 When all the necessary development tools and libraries are installed, you
 can uncompress the package and type "make" at the command prompt in the
