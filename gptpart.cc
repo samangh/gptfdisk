@@ -434,7 +434,7 @@ void GPTPart::ReversePartBytes(void) {
 void GPTPart::ChangeType(void) {
    string line;
    int changeName;
-   PartType tempType = (GUIDData) "00000000-0000-0000-0000-000000000000";
+   PartType tempType = PartType::unusedPartType;
 
 #ifdef USE_UTF16
    changeName = (GetDescription() == GetUTypeName());
@@ -442,19 +442,19 @@ void GPTPart::ChangeType(void) {
    changeName = (GetDescription() == GetTypeName());
 #endif
 
-   cout << "Current type is '" << GetTypeName() << "'\n";
+   cout << "Current type is " << hex << GetHexType() << dec << " (" << GetTypeName() << ")\n";
    do {
-      cout << "Hex code or GUID (L to show codes, Enter = " << hex << DEFAULT_GPT_TYPE << dec << "): ";
+      cout << "Hex code or GUID (L to show codes, Enter = " << hex << GetHexType() << dec << "): ";
       line = ReadString();
       if ((line[0] == 'L') || (line[0] == 'l')) {
          partitionType.ShowAllTypes();
       } else {
          if (line.length() == 0)
-            tempType = DEFAULT_GPT_TYPE;
+            tempType = GetHexType();
          else
             tempType = line;
       } // if/else
-   } while (tempType == (GUIDData) "00000000-0000-0000-0000-000000000000");
+   } while (tempType == PartType::unusedPartType);
    partitionType = tempType;
    cout << "Changed type of partition to '" << partitionType.TypeName() << "'\n";
    if (changeName) {

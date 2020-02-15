@@ -19,6 +19,7 @@ using namespace std;
 int PartType::numInstances = 0;
 AType* PartType::allTypes = NULL;
 AType* PartType::lastType = NULL;
+const PartType PartType::unusedPartType = (GUIDData) "00000000-0000-0000-0000-000000000000";
 
 #define SCREEN_WIDTH 80
 #define NUM_COLUMNS 2
@@ -530,10 +531,10 @@ void PartType::ShowAllTypes(int maxLines) const {
    cout.unsetf(ios::uppercase);
    if (maxLines > 0) {
       cout << "Type search string, or <Enter> to show all codes: ";
-      matchString = ReadString();
+      matchString = ToLower(ReadString());
    } // if
    while (thisType != NULL) {
-      found = thisType->name.find(matchString);
+      found = ToLower(thisType->name).find(matchString);
       if ((thisType->display == 1) && (found != string::npos)) { // show it
          cout.fill('0');
          cout.width(4);
@@ -545,8 +546,10 @@ void PartType::ShowAllTypes(int maxLines) const {
             if (thisType->next) {
                cout << "\n";
                if ((maxLines > 0) && (lineCount++ % maxLines) == 0) {
-                  cout << "Press the <Enter> key to see more codes: ";
+                  cout << "Press the <Enter> key to see more codes, q to quit: ";
                   getline(cin, line);
+                  if ((line[0] =='q') || (line[0] =='Q'))
+                     break;
                } // if reached screen line limit
             } // if there's another entry following this one
          } else {

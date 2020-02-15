@@ -375,7 +375,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                      partNum = newPartNum;
                   if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
                      typeHelper = GetString(typeCode, 2);
-                     if ((typeHelper != (GUIDData) "00000000-0000-0000-0000-000000000000") &&
+                     if ((typeHelper != PartType::unusedPartType) &&
                          (ChangePartType(partNum, typeHelper))) {
                         saveData = 1;
                         } else {

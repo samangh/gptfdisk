@@ -8,7 +8,9 @@
 
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+#define __STDC_FORMAT_MACROS
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
@@ -16,6 +18,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <string>
+#include <cctype>
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include "support.h"
@@ -78,7 +82,7 @@ uint64_t GetNumber(uint64_t low, uint64_t high, uint64_t def, const string & pro
          cin.getline(line, 255);
          if (!cin.good())
             exit(5);
-         num = sscanf(line, "%lld", &response);
+         num = sscanf(line, "%" PRIu64, &response);
          if (num == 1) { // user provided a response
             if ((response < low) || (response > high))
                cout << "Value out of range\n";
@@ -358,3 +362,11 @@ void WinWarning(void) {
       exit(0);
    #endif
 } // WinWarning()
+
+// Returns the input string in lower case
+string ToLower(const string& input) {
+   string lower = input; // allocate correct size through copy
+
+   transform(input.begin(), input.end(), lower.begin(), ::tolower);
+   return lower;
+} // ToLower()
