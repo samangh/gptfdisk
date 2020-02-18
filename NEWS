@@ -1,5 +1,5 @@
-1.0.5 (?/?/2020):
------------------
+1.0.5 (2/17/2020):
+------------------
 
 - Fixed typos and minor formatting issues in man pages
 
@@ -16,6 +16,22 @@
 
 - Added numerous type codes for Container Linux, Veracrypt, and
   Freedesktop.org's Discoverable Partitions Specification
+
+- Partition type name searches are now case-insensitive.
+
+- It's now possible to quit out of partition type name searches by typing
+  "q".
+
+- When changing a partition type code, the default is now the current
+  type code, not a platform-specific type code.
+
+- The UEFI GPT fdisk project
+  (https://sourceforge.net/projects/uefigptfdisk/) hasn't been updated since
+  2016, and is now broken; binaries don't compile with modern GCC
+  toolchains, and even when dropping back to Ubuntu 14.04, which worked for
+  GPT fdisk 1.0.4, the resulting binary hangs on launch. Therefore, I'm
+  dropping support for the EFI build of gdisk, at least unless and until
+  UEFI GPT fdisk is fixed.
 
 - Apple no longer supports building i386 or "fat" binaries in XCode (or if
   they do, they're making it hard), so I've removed that support. GPT fdisk
