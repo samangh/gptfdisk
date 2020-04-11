@@ -314,8 +314,8 @@ void PartType::AddAllTypes(void) {
    // Veracrypt (https://www.veracrypt.fr/en/Home.html) encrypted partition
    AddType(0xe900, "8C8F8EFF-AC95-4770-814A-21994F2DBC8F", "Veracrypt data");
 
-   // See http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec
-   AddType(0xea00, "BC13C2FF-59E6-4262-A352-B275FD6F7172", "Freedesktop $BOOT");
+   // See https://systemd.io/BOOT_LOADER_SPECIFICATION/
+   AddType(0xea00, "BC13C2FF-59E6-4262-A352-B275FD6F7172", "XBOOTLDR partition");
 
    // Type code for Haiku; uses BeOS MBR code as hex code base
    AddType(0xeb00, "42465331-3BA3-10F1-802A-4861696B7521", "Haiku BFS");
