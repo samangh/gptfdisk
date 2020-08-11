@@ -307,7 +307,7 @@ int DiskIO::DiskSync(void) {
 // Note that seeking beyond the end of the file is NOT detected as a failure!
 int DiskIO::Seek(uint64_t sector) {
    int retval = 1;
-   off_t seekTo, sought;
+   off64_t seekTo, sought;
 
    // If disk isn't open, try to open it....
    if (!isOpen) {
@@ -424,7 +424,7 @@ int DiskIO::Write(void* buffer, int numBytes) {
 // return correct values for disk image files.
 uint64_t DiskIO::DiskSize(int *err) {
    uint64_t sectors = 0; // size in sectors
-   off_t bytes = 0; // size in bytes
+   off64_t bytes = 0; // size in bytes
    struct stat64 st;
    int platformFound = 0;
 #ifdef __sun__
