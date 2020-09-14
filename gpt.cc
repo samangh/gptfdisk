@@ -1041,6 +1041,14 @@ int GPTData::LoadHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector
    } // if
    *crcOk = CheckHeaderCRC(&tempHeader);
 
+   if (tempHeader.sizeOfPartitionEntries != sizeof(GPTPart)) {
+       cerr << "Warning: Partition table header claims that the size of partition table\n";
+       cerr << "entries is " << tempHeader.sizeOfPartitionEntries << " bytes, but this program ";
+       cerr << " supports only " << sizeof(GPTPart) << "-byte entries.\n";
+       cerr << "Adjusting accordingly, but partition table may be garbage.\n";
+       tempHeader.sizeOfPartitionEntries = sizeof(GPTPart);
+   }
+
    if (allOK && (numParts != tempHeader.numParts) && *crcOk) {
       allOK = SetGPTSize(tempHeader.numParts, 0);
    }
@@ -1058,7 +1066,10 @@ int GPTData::LoadPartitionTable(const struct GPTHeader & header, DiskIO & disk, 
    uint32_t sizeOfParts, newCRC;
    int retval;
 
-   if (disk.OpenForRead()) {
+   if (header.sizeOfPartitionEntries != sizeof(GPTPart)) {
+      cerr << "Error! GPT header contains invalid partition entry size!\n";
+      retval = 0;
+   } else if (disk.OpenForRead()) {
       if (sector == 0) {
          retval = disk.Seek(header.partitionEntriesLBA);
       } else {
