@@ -148,6 +148,16 @@ void PartType::AddAllTypes(void) {
    AddType(0x830F, "86ED10D5-B607-45BB-8957-D350F23D0571", "Linux IA-64 root verity");
    AddType(0x8310, "4D21B016-B534-45C2-A9FB-5C16E091FD2D", "Linux /var"); // Linux /var (auto-mounted by systemd)
    AddType(0x8311, "7EC6F557-3BC5-4ACA-B293-16EF5DF639D1", "Linux /var/tmp"); // Linux /var/tmp (auto-mounted by systemd)
+   AddType(0x8313, "75250D76-8CC6-458E-BD66-BD47CC81A812", "Linux x86 /usr "); // Linux /usr on x86 (auto-mounted by systemd)
+   AddType(0x8314, "8484680C-9521-48C6-9C11-B0720656F69E", "Linux x86-64 /usr"); // Linux /usr on x86-64 (auto-mounted by systemd)
+   AddType(0x8315, "7D0359A3-02B3-4F0A-865C-654403E70625", "Linux ARM32 /usr"); // Linux /usr on 32-bit ARM (auto-mounted by systemd)
+   AddType(0x8316, "B0E01050-EE5F-4390-949A-9101B17104E9", "Linux ARM64 /usr"); // Linux /usr on 64-bit ARM (auto-mounted by systemd)
+   AddType(0x8317, "4301D2A6-4E3B-4B2A-BB94-9E0B2C4225EA", "Linux IA-64 /usr"); // Linux /usr on Itanium (auto-mounted by systemd)
+   AddType(0x8318, "8F461B0D-14EE-4E81-9AA9-049B6FB97ABD", "Linux x86 /usr verity");
+   AddType(0x8319, "77FF5F63-E7B6-4633-ACF4-1565B864C0E6", "Linux x86-64 /usr verity");
+   AddType(0x831A, "C215D751-7BCD-4649-BE90-6627490A4C05", "Linux ARM32 /usr verity");
+   AddType(0x831B, "6E11A4E7-FBCA-4DED-B9E9-E1A512BB664E", "Linux ARM64 /usr verity");
+   AddType(0x831C, "6A491E03-3BE7-4545-8E38-83320E0EA880", "Linux IA-64 /usr verity");
    // https://systemd.io/HOME_DIRECTORY/
    AddType(0x8312, "773F91EF-66D4-49B5-BD83-D683BF40AD16", "Linux user's home"); // used by systemd-homed
 
