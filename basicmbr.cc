@@ -290,7 +290,8 @@ int BasicMBRData::ReadLogicalParts(uint64_t extendedStart, int partNum) {
          if (EbrLocations[i] == offset) { // already read this one; infinite logical partition loop!
             cerr << "Logical partition infinite loop detected! This is being corrected.\n";
             allOK = -1;
-            partNum -= 1;
+            if (partNum > 0) //don't go negative
+               partNum -= 1;
          } // if
       } // for
       EbrLocations[partNum] = offset;
