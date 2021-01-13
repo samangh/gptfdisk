@@ -2,10 +2,12 @@
 ------------------
 
 - Fixed bug that could cause segfault if GPT header claimed partition
-  entries are oversized.
+  entries are oversized. See:
+  https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-0256
 
 - Fixed bug that could cause a crash if a badly-formatted MBR disk was
-  read.
+  read. See:
+  https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-0308
 
 - Renamed the partition type "Freedesktop $BOOT" to "XBOOTLDR partition".
 
@@ -13,7 +15,10 @@
   0x831C).
 
 - Fixed type code definition in diskio-unix.cc that prevented 32-bit builds
-  from correctly handling disks over 4 GiB in size.
+  from correctly handling disks over 4 TiB in size.
+
+- Minor tweaks to get the software to compile on FreeBSD; that seems to have
+  fallen into disrepair.
 
 1.0.5 (2/17/2020):
 ------------------
