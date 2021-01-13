@@ -3,13 +3,13 @@
 /* This program is copyright (c) 2009 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
+#ifndef __BSD_STRUCTS
+#define __BSD_STRUCTS
+
 #include <stdint.h>
 #include <sys/types.h>
 #include "gptpart.h"
 #include "diskio.h"
-
-#ifndef __BSD_STRUCTS
-#define __BSD_STRUCTS
 
 #define BSD_SIGNATURE UINT32_C(0x82564557)  /* BSD disklabel signature ("magic") */
 

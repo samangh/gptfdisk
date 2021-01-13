@@ -1,6 +1,9 @@
 /* This program is copyright (c) 2009-2018 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
+#ifndef __PARTITION_TYPES
+#define __PARTITION_TYPES
+
 #include <stdint.h>
 #include <stdlib.h>
 #ifdef USE_UTF16
@@ -11,9 +14,6 @@
 #include <string>
 #include "support.h"
 #include "guid.h"
-
-#ifndef __PARTITION_TYPES
-#define __PARTITION_TYPES
 
 using namespace std;
 

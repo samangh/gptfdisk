@@ -19,13 +19,13 @@
  *
  */
 
+#ifndef __GPT_CURSES
+#define __GPT_CURSES
+
 #include <iostream>
 #include <string>
 #include "gptpart.h"
 #include "gpt.h"
-
-#ifndef __GPT_CURSES
-#define __GPT_CURSES
 
 using namespace std;
 

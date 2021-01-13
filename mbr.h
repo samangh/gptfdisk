@@ -3,15 +3,15 @@
 /* This program is copyright (c) 2009-2013 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
+#ifndef __MBRSTRUCTS
+#define __MBRSTRUCTS
+
 #include <stdint.h>
 #include <sys/types.h>
 #include "gptpart.h"
 //#include "partnotes.h"
 #include "diskio.h"
 #include "basicmbr.h"
-
-#ifndef __MBRSTRUCTS
-#define __MBRSTRUCTS
 
 using namespace std;
 

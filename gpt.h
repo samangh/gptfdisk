@@ -4,6 +4,9 @@
 /* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
+#ifndef __GPTSTRUCTS
+#define __GPTSTRUCTS
+
 #include <stdint.h>
 #include <sys/types.h>
 #include "gptpart.h"
@@ -11,9 +14,6 @@
 #include "mbr.h"
 #include "bsd.h"
 #include "gptpart.h"
-
-#ifndef __GPTSTRUCTS
-#define __GPTSTRUCTS
 
 // Default values for sector alignment
 #define DEFAULT_ALIGNMENT 2048

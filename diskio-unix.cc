@@ -37,6 +37,10 @@
 
 using namespace std;
 
+#ifdef __APPLE__
+#define off64_t off_t
+#endif
+
 // Returns the official "real" name for a shortened version of same.
 // Trivial here; more important in Windows
 void DiskIO::MakeRealName(void) {

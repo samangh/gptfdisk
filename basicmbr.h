@@ -3,13 +3,13 @@
 /* This program is copyright (c) 2009-2013 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
+#ifndef __BASICMBRSTRUCTS
+#define __BASICMBRSTRUCTS
+
 #include <stdint.h>
 #include <sys/types.h>
 #include "diskio.h"
 #include "mbrpart.h"
-
-#ifndef __BASICMBRSTRUCTS
-#define __BASICMBRSTRUCTS
 
 #define MBR_SIGNATURE UINT16_C(0xAA55)
 

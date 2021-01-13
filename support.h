@@ -1,12 +1,12 @@
 /* This program is copyright (c) 2009-2018 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
+#ifndef __GPTSUPPORT
+#define __GPTSUPPORT
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>
-
-#ifndef __GPTSUPPORT
-#define __GPTSUPPORT
 
 #define GPTFDISK_VERSION "1.0.6"
 
