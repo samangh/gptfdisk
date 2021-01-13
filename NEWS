@@ -1,8 +1,11 @@
-1.0.6 (1/12/2021):
+1.0.6 (1/13/2021):
 ------------------
 
 - Fixed bug that could cause segfault if GPT header claimed partition
   entries are oversized.
+
+- Fixed bug that could cause a crash if a badly-formatted MBR disk was
+  read.
 
 - Renamed the partition type "Freedesktop $BOOT" to "XBOOTLDR partition".
 
