@@ -4,7 +4,13 @@
 - Fixed bug that could cause segfault if GPT header claimed partition
   entries are oversized.
 
-- Rename the partition type "Freedesktop $BOOT" to "XBOOTLDR partition".
+- Renamed the partition type "Freedesktop $BOOT" to "XBOOTLDR partition".
+
+- Added several more Freedesktop partition table type codes (0x8312 through
+  0x831C).
+
+- Fixed type code definition in diskio-unix.cc that prevented 32-bit builds
+  from correctly handling disks over 4 GiB in size.
 
 1.0.5 (2/17/2020):
 ------------------
