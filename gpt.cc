@@ -1042,11 +1042,19 @@ int GPTData::LoadHeader(struct GPTHeader *header, DiskIO & disk, uint64_t sector
    *crcOk = CheckHeaderCRC(&tempHeader);
 
    if (tempHeader.sizeOfPartitionEntries != sizeof(GPTPart)) {
-       cerr << "Warning: Partition table header claims that the size of partition table\n";
-       cerr << "entries is " << tempHeader.sizeOfPartitionEntries << " bytes, but this program ";
-       cerr << " supports only " << sizeof(GPTPart) << "-byte entries.\n";
-       cerr << "Adjusting accordingly, but partition table may be garbage.\n";
-       tempHeader.sizeOfPartitionEntries = sizeof(GPTPart);
+      // Print the below warning only if the CRC is OK -- but correct the
+      // problem either way. The warning is printed only on a valid CRC
+      // because otherwise this warning will display inappropriately when
+      // reading MBR disks. If the CRC is invalid, then a warning about
+      // that will be shown later, so the user will still know that
+      // something is wrong.
+      if (*crcOk) {
+         cerr << "Warning: Partition table header claims that the size of partition table\n";
+         cerr << "entries is " << tempHeader.sizeOfPartitionEntries << " bytes, but this program ";
+         cerr << " supports only " << sizeof(GPTPart) << "-byte entries.\n";
+         cerr << "Adjusting accordingly, but partition table may be garbage.\n";
+      }
+      tempHeader.sizeOfPartitionEntries = sizeof(GPTPart);
    }
 
    if (allOK && (numParts != tempHeader.numParts) && *crcOk) {
