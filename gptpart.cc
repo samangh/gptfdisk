@@ -92,7 +92,6 @@ string GPTPart::GetDescription(void) {
    size_t pos = 0 ;
    while ( ( pos < NAME_SIZE ) && ( name[ pos ] != 0 ) ) {
       uint16_t cp = name[ pos ++ ] ;
-      if ( ! IsLittleEndian() ) ReverseBytes( & cp , 2 ) ;
       // first to utf32
       uint32_t uni ;
       if ( cp < 0xd800 || cp > 0xdfff ) {
