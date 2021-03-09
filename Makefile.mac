@@ -1,7 +1,7 @@
 CC=gcc
 CXX=c++
 # FATBINFLAGS=-arch x86_64 -arch i386 -mmacosx-version-min=10.9
-FATBINFLAGS=-arch x86_64 -mmacosx-version-min=10.9
+FATBINFLAGS=-arch x86_64 -arch arm64 -mmacosx-version-min=10.9
 THINBINFLAGS=-arch x86_64 -mmacosx-version-min=10.9
 CFLAGS=$(FATBINFLAGS) -O2 -D_FILE_OFFSET_BITS=64 -g
 #CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -D USE_UTF16 -I/opt/local/include -I/usr/local/include -I/opt/local/include -g
@@ -21,7 +21,8 @@ gdisk:	$(LIB_OBJS) gpttext.o gdisk.o
 #	$(CXX) $(LIB_OBJS) -L/usr/lib -licucore gpttext.o gdisk.o -o gdisk
 
 cgdisk: $(LIB_OBJS) cgdisk.o gptcurses.o
-	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o /usr/lib/libncurses.dylib $(LDFLAGS) $(FATBINFLAGS) -o cgdisk
+	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o /usr/local/Cellar/ncurses/6.2/lib/libncurses.dylib $(LDFLAGS) -o cgdisk
+#	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o /usr/lib/libncurses.dylib $(LDFLAGS) -o cgdisk
 #	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -licucore -lncurses -o cgdisk
 
 sgdisk: $(LIB_OBJS) gptcl.o sgdisk.o
