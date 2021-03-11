@@ -83,6 +83,8 @@ void PartType::AddAllTypes(void) {
    AddType(0x0400, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-16 < 32M
    AddType(0x0600, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-16
    AddType(0x0700, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 1); // NTFS (or HPFS)
+   AddType(0x0701, "558D43C5-A1AC-43C0-AAC8-D1472B2923D1", "Microsoft Storage Replica", 1);
+   AddType(0x0702, "90B6FF38-B98F-4358-A21F-48F35B4A8AD3", "ArcaOS Type 1", 1);
    AddType(0x0b00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-32
    AddType(0x0c00, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "Microsoft basic data", 0); // FAT-32 LBA
    AddType(0x0c01, "E3C9E316-0B5C-4DB8-817D-F92DF00215AE", "Microsoft reserved");
@@ -163,6 +165,8 @@ void PartType::AddAllTypes(void) {
 
    // Used by Intel Rapid Start technology
    AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");
+   // This is another Intel-associated technology, so I'm keeping it close to the previous one....
+   AddType(0x8401, "7C5222BD-8F5D-4087-9C00-BF9843C7B58C", "SPDK block device");
 
    // Type codes for Container Linux (formerly CoreOS; https://coreos.com)
    AddType(0x8500, "5DFBF5F4-2848-4BAC-AA5E-0D9A20B745A6", "Container Linux /usr");

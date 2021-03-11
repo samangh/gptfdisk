@@ -1,4 +1,4 @@
-1.0.7 (?/??/2021):
+1.0.7 (3/10/2021):
 ------------------
 
 - Fixed bug that caused spurious warnings about the partition table
@@ -14,6 +14,11 @@
 
 - Fixed double byte swap operation on partition label data on big-endian
   CPUs. This resulted in partition names becoming gibberish on such CPUs.
+
+- Added three new type codes:
+  - 0x0701 - Microsoft Storage Replica
+  - 0x0702 - ArcaOS Type 1
+  - 0x8401 - Storage Performance Development Kit (SPDK) block device
 
 1.0.6 (1/13/2021):
 ------------------
