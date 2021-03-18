@@ -582,7 +582,7 @@ int GPTData::CheckHeaderCRC(struct GPTHeader* header, int warn) {
 // byte order and then undoes that reversal.)
 void GPTData::RecomputeCRCs(void) {
    uint32_t crc, hSize;
-   int littleEndian = 1;
+   int littleEndian;
 
    // If the header size is bigger than the GPT header data structure, reset it;
    // otherwise, set both header sizes to whatever the main one is....
@@ -2144,7 +2144,6 @@ int GPTData::Align(uint64_t* sector) {
       // Check to see that every sector between the earlier one and the
       // requested one is clear, and that it's not too early....
       if (earlier >= mainHeader.firstUsableLBA) {
-         sectorOK = 1;
          testSector = earlier;
          do {
             sectorOK = IsFree(testSector++);
@@ -2157,7 +2156,6 @@ int GPTData::Align(uint64_t* sector) {
 
       // If couldn't move the sector earlier, try to move it later instead....
       if ((sectorOK != 1) && (later <= mainHeader.lastUsableLBA)) {
-         sectorOK = 1;
          testSector = later;
          do {
             sectorOK = IsFree(testSector--);
@@ -2454,7 +2452,7 @@ void GPTData::SetAlignment(uint32_t n) {
 // is used on big disks (as safety for Advanced Format drives).
 // Returns the computed alignment value.
 uint32_t GPTData::ComputeAlignment(void) {
-   uint32_t i = 0, found, exponent = 31;
+   uint32_t i = 0, found, exponent;
    uint32_t align = DEFAULT_ALIGNMENT;
 
    if (blockSize > 0)

@@ -437,7 +437,6 @@ void GPTDataCurses::MakeNewPart(void) {
    move(LINES - 4, 0);
    clrtobot();
    while ((newFirstLBA < currentSpace->firstLBA) || (newFirstLBA > currentSpace->lastLBA)) {
-      newFirstLBA = currentSpace->firstLBA;
       move(LINES - 4, 0);
       clrtoeol();
       newFirstLBA = currentSpace->firstLBA;

@@ -251,7 +251,7 @@ void GPTDataTextUI::CreatePartition(void) {
       } while (IsFree(sector) == 0);
       lastBlock = sector;
 
-      firstFreePart = GPTData::CreatePartition(partNum, firstBlock, lastBlock);
+      GPTData::CreatePartition(partNum, firstBlock, lastBlock);
       partitions[partNum].ChangeType();
       partitions[partNum].SetDefaultDescription();
    } else {
