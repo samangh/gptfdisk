@@ -1,3 +1,11 @@
+1.0.8 (?/??/2021):
+------------------
+
+- Fixed double byte swap operation on writes of partition label data on
+  big-endian systems; this is in addition to the double byte swap fix on
+  reading partition label data fixed in 1.0.7. (Thanks to Erik Larsson for
+  both fixes.)
+
 1.0.7 (3/10/2021):
 ------------------
 
