@@ -422,7 +422,7 @@ void GPTPart::ReversePartBytes(void) {
    ReverseBytes(&attributes, 8);
    for (i = 0; i < NAME_SIZE; i ++ )
       ReverseBytes(name + i, 2);
-} // GPTPart::ReverseBytes()
+} // GPTPart::ReversePartBytes()
 
 /****************************************
  * Functions requiring user interaction *
