@@ -1,10 +1,19 @@
 1.0.8 (?/??/2021):
 ------------------
 
-- Fixed double byte swap operation on writes of partition label data on
+- Fixed double byte swap operation on writes of partition name data on
   big-endian systems; this is in addition to the double byte swap fix on
   reading partition label data fixed in 1.0.7. (Thanks to Erik Larsson for
   both fixes.)
+
+- Added feature to gdisk and sgdisk to enable swapping the byte order of
+  partition names, so as to correct disks already affected by the preceding
+  bug. This option is 'b' on the experts' menu in gdisk and
+  -b/--byte-swap-name in sgdisk. This seems advanced/obscure enough that I
+  don't want to clutter cgdisk's menu with this option, so I haven't added
+  it there.
+
+- Trivial code cleanup.
 
 1.0.7 (3/10/2021):
 ------------------

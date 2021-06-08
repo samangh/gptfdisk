@@ -341,6 +341,22 @@ int GPTDataTextUI::SetName(uint32_t partNum) {
    return retval;
 } // GPTDataTextUI::SetName()
 
+// Enable the user to byte-swap the name of the partition. Used to correct
+// partition names damaged by incorrect byte order, as could be created by
+// GPT fdisk 1.0.7 and earlier on big-endian systems, and perhaps other tools.
+void GPTDataTextUI::ReverseName(uint32_t partNum) {
+   int swapBytes;
+
+   cout << "Current name is: " << partitions[partNum].GetDescription() << "\n";
+   partitions[partNum].ReverseNameBytes();
+   cout << "Byte-swapped name is: " << partitions[partNum].GetDescription() << "\n";
+   cout << "Do you want to byte-swap the name? ";
+   swapBytes = (GetYN() == 'Y');
+   // Already swapped for display, so undo if necessary....
+   if (!swapBytes)
+      partitions[partNum].ReverseNameBytes();
+} // GPTDataTextUI::ReverseName()
+
 // Ask user for two partition numbers and swap them in the table. Note that
 // this just reorders table entries; it doesn't adjust partition layout on
 // the disk.
@@ -799,6 +815,9 @@ void GPTDataTextUI::ExpertsMenu(string filename) {
             else
                cout << "No partitions\n";
             break;
+         case 'b': case 'B':
+            ReverseName(GetPartNum());
+            break;
          case 'c': case 'C':
             ChangeUniqueGuid();
             break;
@@ -896,6 +915,7 @@ void GPTDataTextUI::ExpertsMenu(string filename) {
 
 void GPTDataTextUI::ShowExpertCommands(void) {
    cout << "a\tset attributes\n";
+   cout << "b\tbyte-swap a partition's name\n";
    cout << "c\tchange partition GUID\n";
    cout << "d\tdisplay the sector alignment value\n";
    cout << "e\trelocate backup data structures to the end of the disk\n";

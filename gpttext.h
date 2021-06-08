@@ -49,6 +49,7 @@ class GPTDataTextUI : public GPTData {
       void ChangeUniqueGuid(void);
       void SetAttributes(uint32_t partNum);
       int SetName(uint32_t partNum);
+      void ReverseName(uint32_t partNum);
       int SwapPartitions(void);
       int DestroyGPTwPrompt(void); // Returns 1 if user proceeds
       void ShowDetails(void);

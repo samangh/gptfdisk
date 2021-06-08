@@ -412,14 +412,18 @@ int GPTPart::DoTheyOverlap(const GPTPart & other) {
 // Reverse the bytes of integral data types and of the UTF-16LE name;
 // used on big-endian systems.
 void GPTPart::ReversePartBytes(void) {
-   int i;
-
    ReverseBytes(&firstLBA, 8);
    ReverseBytes(&lastLBA, 8);
    ReverseBytes(&attributes, 8);
+   ReverseNameBytes();
+} // GPTPart::ReversePartBytes()
+
+void GPTPart::ReverseNameBytes(void) {
+   int i;
+
    for (i = 0; i < NAME_SIZE; i ++ )
       ReverseBytes(name + i, 2);
-} // GPTPart::ReversePartBytes()
+} // GPTPart::ReverseNameBytes()
 
 /****************************************
  * Functions requiring user interaction *

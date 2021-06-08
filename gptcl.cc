@@ -64,6 +64,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
    GPTData secondDevice;
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
    int partNum = 0, newPartNum = -1, saveNonGPT = 1, retval = 0, pretend = 0;
+   int byteSwapPartNum = 0;
    uint64_t low, high, startSector, endSector, sSize, mainTableLBA;
    uint64_t temp; // temporary variable; free to use in any case
    char *device;
@@ -76,6 +77,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
           "list|[partnum:show|or|nand|xor|=|set|clear|toggle|get[:bitnum|hexbitmask]]"},
       {"set-alignment", 'a', POPT_ARG_INT, &alignment, 'a', "set sector alignment", "value"},
       {"backup", 'b', POPT_ARG_STRING, &backupFile, 'b', "backup GPT to file", "file"},
+      {"byte-swap-name", 'B',  POPT_ARG_INT, &byteSwapPartNum, 'B', "byte-swap partition's name", "partnum"},
       {"change-name", 'c', POPT_ARG_STRING, &partName, 'c', "change partition's name", "partnum:name"},
       {"recompute-chs", 'C', POPT_ARG_NONE, NULL, 'C', "recompute CHS values in protective/hybrid MBR", ""},
       {"delete", 'd', POPT_ARG_INT, &deletePartNum, 'd', "delete a partition", "partnum"},
@@ -190,6 +192,15 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                } // case 'A':
                case 'a':
                   SetAlignment(alignment);
+                  break;
+               case 'B':
+                  if (IsUsedPartNum(byteSwapPartNum - 1)) {
+                     partitions[byteSwapPartNum - 1].ReverseNameBytes();
+                     cout << "Changed partition " << byteSwapPartNum << "'s name to "
+                          << partitions[byteSwapPartNum - 1].GetDescription() << "\n";
+                     JustLooking(0);
+                     saveData = 1;
+                  }
                   break;
                case 'b':
                   SaveGPTBackup(backupFile);

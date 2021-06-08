@@ -183,6 +183,14 @@ the backup may not accurately reflect the damaged state; instead, they
 will reflect GPT fdisk's first\-pass interpretation of the GPT.
 
 .TP 
+.B \-B, \-\-byte\-swap\-name=partnum
+Swap the byte order for the name of the specified partition. Some
+partitioning tools, including GPT fdisk 1.0.7 and earlier, can write the
+partition name in the wrong byte order on big-endian computers, such as the
+IBM s390 mainframes and PowerPC-based Macs. This feature corrects this
+problem.
+
+.TP 
 .B \-c, \-\-change\-name=partnum:name
 Change the GPT name of a partition. This name is encoded as a UTF\-16
 string, but proper entry and display of anything beyond basic ASCII values

@@ -94,6 +94,7 @@ class GPTPart {
       void BlankPartition(void); // empty partition of data
       int DoTheyOverlap(const GPTPart & other); // returns 1 if there's overlap
       void ReversePartBytes(void); // reverse byte order of all integer fields
+      void ReverseNameBytes(void); // reverse byte order of partition's name field
 
       // Functions requiring user interaction
       void ChangeType(void); // Change the type code

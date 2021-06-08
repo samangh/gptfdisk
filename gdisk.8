@@ -420,6 +420,14 @@ aren't translated into anything useful. In practice, most OSes seem to
 ignore these attributes.
 
 .TP 
+.B b
+Swap the byte order for the name of the specified partition. Some
+partitioning tools, including GPT fdisk 1.0.7 and earlier, can write the
+partition name in the wrong byte order on big-endian computers, such as the
+IBM s390 mainframes and PowerPC-based Macs. This feature corrects this
+problem.
+
+.TP 
 .B c
 Change partition GUID. You can enter a custom unique GUID for a partition
 using this option. (Note this refers to the GUID that uniquely identifies a
