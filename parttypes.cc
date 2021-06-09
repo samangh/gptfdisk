@@ -300,6 +300,9 @@ void PartType::AddAllTypes(void) {
    // QNX Power-Safe (QNX6)
    AddType(0xb300, "CEF5A9AD-73BC-4601-89F3-CDEEEEE321A1", "QNX6 Power-Safe");
 
+   // Barebox boot loader; see https://barebox.org/doc/latest/user/state.html?highlight=guid#sd-emmc-and-ata
+   AddType(0xbb00, "4778ED65-BF42-45FA-9C5B-287A1DC4AAB1", "Barebox boot loader");
+
    // Acronis Secure Zone
    AddType(0xbc00, "0311FC50-01CA-4725-AD77-9ADBB20ACE98", "Acronis Secure Zone");
 

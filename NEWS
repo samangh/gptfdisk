@@ -13,6 +13,9 @@
   don't want to clutter cgdisk's menu with this option, so I haven't added
   it there.
 
+- Added type code for the Barebox boot loader (0xbb00;
+  4778ED65-BF42-45FA-9C5B-287A1DC4AAB1).
+
 - Trivial code cleanup.
 
 1.0.7 (3/10/2021):
