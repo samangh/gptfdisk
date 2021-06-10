@@ -1,5 +1,5 @@
-1.0.8 (?/??/2021):
-------------------
+1.0.8 (6/9/2021):
+-----------------
 
 - Fixed double byte swap operation on writes of partition name data on
   big-endian systems; this is in addition to the double byte swap fix on
