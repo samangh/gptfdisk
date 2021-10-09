@@ -207,7 +207,6 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   free(backupFile);
                   break;
                case 'c':
-                  cout << "Setting name!\n";
                   JustLooking(0);
                   partNum = (int) GetInt(partName, 1) - 1;
                   if (partNum < 0)
