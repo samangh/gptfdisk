@@ -212,7 +212,6 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   partNum = (int) GetInt(partName, 1) - 1;
                   if (partNum < 0)
                      partNum = newPartNum;
-                  cout << "partNum is " << partNum << "\n";
                   if ((partNum >= 0) && (partNum < (int) GetNumParts())) {
                      name = GetString(partName, 2);
                      if (SetName(partNum, (UnicodeString) name.c_str())) {
