@@ -186,8 +186,13 @@ new disks, GPT fdisk attempts to align partitions on 1 MiB boundaries
 performance for all of these disk types. On pre\-partitioned disks, GPT
 fdisk attempts to identify the alignment value used on that disk, but will
 set 8-sector alignment on disks larger than 300 GB even if lesser alignment
-values are detected. In either case, it can be changed by using this
-option.
+values are detected. In either case, it can be changed by using this option.
+The alignment value also affects the default end sector value when creating
+a new partition; it will be aligned to one less than a multiple of the
+alignment value, when possible. This should keep partitions a multiple of
+the alignment value in size. Some disk encryption tools require partitions
+to be sized to some value, typically 4096 bytes, so the default alignment of
+1 MiB works well for them.
 
 .TP 
 .B Backup

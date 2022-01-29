@@ -1,4 +1,4 @@
-/* This program is copyright (c) 2009-2018 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2022 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #ifndef __GPTSUPPORT
@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string>
 
-#define GPTFDISK_VERSION "1.0.8"
+#define GPTFDISK_VERSION "1.0.8.2"
 
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 // Darwin (Mac OS) & FreeBSD: disk IOCTLs are different, and there is no lseek64
@@ -74,8 +74,7 @@ using namespace std;
 string ReadString(void);
 uint64_t GetNumber(uint64_t low, uint64_t high, uint64_t def, const string & prompt);
 char GetYN(void);
-uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, uint64_t sSize, const std::string& prompt);
-uint64_t IeeeToInt(string IeeeValue, uint64_t sSize, uint64_t low, uint64_t high, uint64_t def = 0);
+uint64_t IeeeToInt(string IeeeValue, uint64_t sSize, uint64_t low, uint64_t high, uint32_t sectorAlignment, uint64_t def = 0);
 string BytesToIeee(uint64_t size, uint32_t sectorSize);
 unsigned char StrToHex(const string & input, unsigned int position);
 int IsHex(string input); // Returns 1 if input can be hexadecimal number....

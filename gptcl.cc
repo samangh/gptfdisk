@@ -1,7 +1,7 @@
 /*
     Implementation of GPTData class derivative with popt-based command
     line processing
-    Copyright (C) 2010-2014 Roderick W. Smith
+    Copyright (C) 2010-2022 Roderick W. Smith
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ GPTDataCL::GPTDataCL(void) {
    attributeOperation = backupFile = partName = hybrids = newPartInfo = NULL;
    mbrParts = twoParts = outDevice = typeCode = partGUID = diskGUID = NULL;
    alignment = DEFAULT_ALIGNMENT;
+   alignEnd = false;
    deletePartNum = infoPartNum = largestPartNum = bsdPartNum = 0;
    tableSize = GPT_SIZE;
 } // GPTDataCL constructor
@@ -90,6 +91,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
       {"randomize-guids", 'G', POPT_ARG_NONE, NULL, 'G', "randomize disk and partition GUIDs", ""},
       {"hybrid", 'h', POPT_ARG_STRING, &hybrids, 'h', "create hybrid MBR", "partnum[:partnum...][:EE]"},
       {"info", 'i', POPT_ARG_INT, &infoPartNum, 'i', "show detailed information on partition", "partnum"},
+      {"align-end", 'I', POPT_ARG_NONE, NULL, 'I', "align partition end points", ""},
       {"move-main-table", 'j', POPT_ARG_INT, &mainTableLBA, 'j', "adjust the location of the main partition table", "sector"},
       {"load-backup", 'l', POPT_ARG_STRING, &backupFile, 'l', "load GPT backup from file", "file"},
       {"list-types", 'L', POPT_ARG_NONE, NULL, 'L', "list known partition types", ""},
@@ -272,6 +274,9 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                case 'i':
                   ShowPartDetails(infoPartNum - 1);
                   break;
+               case 'I':
+                  alignEnd = true;
+                  break;
                case 'j':
                    if (MoveMainTable(mainTableLBA)) {
                        JustLooking(0);
@@ -307,9 +312,9 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                      newPartNum = FindFirstFreePart();
                   low = FindFirstInLargest();
                   Align(&low);
-                  high = FindLastInFree(low);
-                  startSector = IeeeToInt(GetString(newPartInfo, 2), sSize, low, high, low);
-                  endSector = IeeeToInt(GetString(newPartInfo, 3), sSize, startSector, high, high);
+                  high = FindLastInFree(low, alignEnd);
+                  startSector = IeeeToInt(GetString(newPartInfo, 2), sSize, low, high, sectorAlignment, low);
+                  endSector = IeeeToInt(GetString(newPartInfo, 3), sSize, startSector, high, sectorAlignment, high);
                   if (CreatePartition(newPartNum, startSector, endSector)) {
                      saveData = 1;
                   } else {
@@ -323,7 +328,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   JustLooking(0);
                   startSector = FindFirstInLargest();
                   Align(&startSector);
-                  endSector = FindLastInFree(startSector);
+                  endSector = FindLastInFree(startSector, alignEnd);
                   if (largestPartNum <= 0)
                      largestPartNum = FindFirstFreePart() + 1;
                   if (CreatePartition(largestPartNum - 1, startSector, endSector)) {

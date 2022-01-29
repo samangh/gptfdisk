@@ -1,7 +1,7 @@
 /*
  *    Implementation of GPTData class derivative with curses-based text-mode
  *    interaction
- *    Copyright (C) 2011-2018 Roderick W. Smith
+ *    Copyright (C) 2011-2022 Roderick W. Smith
  *
  *    This program is free software; you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -430,12 +430,18 @@ void GPTDataCurses::Verify(void) {
 
 // Create a new partition in the space pointed to by currentSpace.
 void GPTDataCurses::MakeNewPart(void) {
-   uint64_t size, newFirstLBA = 0, newLastLBA = 0;
+   uint64_t size, newFirstLBA = 0, newLastLBA = 0, lastAligned;
    int partNum;
    char inLine[80];
 
    move(LINES - 4, 0);
    clrtobot();
+   lastAligned = currentSpace->lastLBA + 1;
+   Align(&lastAligned);
+   lastAligned--;
+   // Discard end-alignment attempt if it's giving us an invalid end point....
+   if (!IsFree(lastAligned))
+       lastAligned = currentSpace->lastLBA;
    while ((newFirstLBA < currentSpace->firstLBA) || (newFirstLBA > currentSpace->lastLBA)) {
       move(LINES - 4, 0);
       clrtoeol();
@@ -445,10 +451,13 @@ void GPTDataCurses::MakeNewPart(void) {
       echo();
       getnstr(inLine, 79);
       noecho();
-      newFirstLBA = IeeeToInt(inLine, blockSize, currentSpace->firstLBA, currentSpace->lastLBA, newFirstLBA);
+      newFirstLBA = IeeeToInt(inLine, blockSize, currentSpace->firstLBA, currentSpace->lastLBA, sectorAlignment, newFirstLBA);
       Align(&newFirstLBA);
    } // while
-   size = currentSpace->lastLBA - newFirstLBA + 1;
+   if (newFirstLBA > lastAligned)
+      size = currentSpace->lastLBA - newFirstLBA + 1;
+   else
+      size = lastAligned - newFirstLBA + 1;
    while ((newLastLBA > currentSpace->lastLBA) || (newLastLBA < newFirstLBA)) {
       move(LINES - 3, 0);
       clrtoeol();
@@ -456,7 +465,7 @@ void GPTDataCurses::MakeNewPart(void) {
       echo();
       getnstr(inLine, 79);
       noecho();
-      newLastLBA = newFirstLBA + IeeeToInt(inLine, blockSize, 1, size, size) - 1;
+      newLastLBA = newFirstLBA + IeeeToInt(inLine, blockSize, 1, size, sectorAlignment, size) - 1;
    } // while
    partNum = FindFirstFreePart();
    if (CreatePartition(partNum, newFirstLBA, newLastLBA)) { // created OK; set type code & name....

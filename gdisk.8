@@ -210,7 +210,8 @@ default start sector, or \fI\fB\-200M\fR\fR to specify a point 200MiB
 before the last available sector. Pressing the Enter key with no input
 specifies the default value, which is the start of the largest available
 block for the start sector and the end of the same block for the end
-sector.
+sector. Default start and end points may be adjusted to optimize partition
+alignment.
 
 .TP 
 .B o
@@ -491,13 +492,18 @@ Change the sector alignment value. Disks with more logical sectors per
 physical sectors (such as modern Advanced Format drives), some RAID
 configurations, and many SSD devices, can suffer performance problems if
 partitions are not aligned properly for their internal data structures. On
-new disks, GPT fdisk attempts to align partitions on 1 MiB boundaries
-(2048\-sectors on disks with 512-byte sectors) by default, which optimizes
+new disks, GPT fdisk attempts to align partitions on 1 MiB boundaries (2048
+sectors on disks with 512-byte sectors) by default, which optimizes
 performance for all of these disk types. On pre\-partitioned disks, GPT
 fdisk attempts to identify the alignment value used on that disk, but will
 set 8-sector alignment on disks larger than 300 GB even if lesser alignment
-values are detected. In either case, it can be changed by using this
-option.
+values are detected. In either case, it can be changed by using this option.
+The alignment value also affects the default end sector value when creating
+a new partition; it will be aligned to one less than a multiple of the
+alignment value, if possible. This should keep partitions a multiple of the
+alignment value in size. Some disk encryption tools require partitions to be
+sized to some value, typically 4096 bytes, so the default alignment of 1 MiB
+works well for them.
 
 .TP 
 .B m

@@ -1,7 +1,7 @@
 /* gpt.h -- GPT and data structure definitions, types, and
    functions */
 
-/* This program is copyright (c) 2009-2011 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2022 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #ifndef __GPTSTRUCTS
@@ -185,7 +185,7 @@ public:
    uint64_t FindFirstUsedLBA(void);
    uint64_t FindFirstInLargest(void);
    uint64_t FindLastAvailable();
-   uint64_t FindLastInFree(uint64_t start);
+   uint64_t FindLastInFree(uint64_t start, bool align = false);
    uint64_t FindFreeBlocks(uint32_t *numSegments, uint64_t *largestSegment);
    int IsFree(uint64_t sector, uint32_t *partNum = NULL);
    int IsFreePartNum(uint32_t partNum);

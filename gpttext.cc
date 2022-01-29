@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2018  <Roderick W. Smith>
+    Copyright (C) 2010-2022  <Roderick W. Smith>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -199,7 +199,7 @@ void GPTDataTextUI::MoveMainTable(void) {
 
 // Interactively create a partition
 void GPTDataTextUI::CreatePartition(void) {
-   uint64_t firstBlock, firstInLargest, lastBlock, sector, origSector;
+   uint64_t firstBlock, firstInLargest, lastBlock, sector, origSector, lastAligned;
    uint32_t firstFreePart = 0;
    ostringstream prompt1, prompt2, prompt3;
    int partNum;
@@ -229,7 +229,7 @@ void GPTDataTextUI::CreatePartition(void) {
       prompt2 << "First sector (" << firstBlock << "-" << lastBlock << ", default = "
               << firstInLargest << ") or {+-}size{KMGTP}: ";
       do {
-         sector = GetSectorNum(firstBlock, lastBlock, firstInLargest, blockSize, prompt2.str());
+         sector = GetSectorNum(firstBlock, lastBlock, firstInLargest, prompt2.str());
       } while (IsFree(sector) == 0);
       origSector = sector;
       if (Align(&sector)) {
@@ -239,15 +239,15 @@ void GPTDataTextUI::CreatePartition(void) {
          if (!beQuiet)
             cout << "Use 'l' on the experts' menu to adjust alignment\n";
       } // if
-      //      Align(&sector); // Align sector to correct multiple
       firstBlock = sector;
 
       // Get last block for new partitions...
-      lastBlock = FindLastInFree(firstBlock);
+      lastBlock = FindLastInFree(firstBlock, false);
+      lastAligned = FindLastInFree(firstBlock, true);
       prompt3 << "Last sector (" << firstBlock << "-" << lastBlock << ", default = "
-            << lastBlock << ") or {+-}size{KMGTP}: ";
+              << lastAligned << ") or {+-}size{KMGTP}: ";
       do {
-         sector = GetSectorNum(firstBlock, lastBlock, lastBlock, blockSize, prompt3.str());
+         sector = GetSectorNum(firstBlock, lastBlock, lastAligned, prompt3.str());
       } while (IsFree(sector) == 0);
       lastBlock = sector;
 
@@ -547,6 +547,28 @@ int GPTDataTextUI::XFormToMBR(void) {
    protectiveMBR.MakeItLegal();
    return protectiveMBR.DoMenu();
 } // GPTDataTextUI::XFormToMBR()
+
+// Obtains a sector number, between low and high, from the
+// user, accepting values prefixed by "+" to add sectors to low,
+// or the same with "K", "M", "G", "T", or "P" as suffixes to add
+// kibibytes, mebibytes, gibibytes, tebibytes, or pebibytes,
+// respectively. If a "-" prefix is used, use the high value minus
+// the user-specified number of sectors (or KiB, MiB, etc.). Use the
+// def value as the default if the user just hits Enter.
+uint64_t GPTDataTextUI::GetSectorNum(uint64_t low, uint64_t high, uint64_t def,
+                                     const string & prompt) {
+   uint64_t response;
+   char line[255];
+
+   do {
+      cout << prompt;
+      cin.getline(line, 255);
+      if (!cin.good())
+         exit(5);
+      response = IeeeToInt(line, blockSize, low, high, sectorAlignment, def);
+   } while ((response < low) || (response > high));
+   return response;
+} // GPTDataTextUI::GetSectorNum()
 
 /******************************************************
  *                                                    *

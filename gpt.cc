@@ -3,7 +3,7 @@
 
 /* By Rod Smith, initial coding January to February, 2009 */
 
-/* This program is copyright (c) 2009-2018 by Roderick W. Smith. It is distributed
+/* This program is copyright (c) 2009-2022 by Roderick W. Smith. It is distributed
   under the terms of the GNU GPL version 2, as detailed in the COPYING file. */
 
 #define __STDC_LIMIT_MACROS
@@ -409,6 +409,11 @@ int GPTData::Verify(void) {
               << testAlignment << "-sector boundary. This may\nresult "
               << "in degraded performance on some modern (2009 and later) hard disks.\n";
          alignProbs++;
+      } // if
+      if ((partitions[i].IsUsed()) && ((partitions[i].GetLastLBA() + 1) % testAlignment) != 0) {
+         cout << "\nCaution: Partition " << i + 1 << " doesn't end on a "
+              << testAlignment << "-sector boundary. This may\nresult "
+              << "in problems with some disk encryption tools.\n";
       } // if
    } // for
    if (alignProbs > 0)
@@ -2334,18 +2339,28 @@ uint64_t GPTData::FindLastAvailable(void) {
 } // GPTData::FindLastAvailable()
 
 // Find the last available block in the free space pointed to by start.
-uint64_t GPTData::FindLastInFree(uint64_t start) {
-   uint64_t nearestStart;
+// If align == true, returns the last sector that's aligned on the
+// system alignment value (unless that's less than the start value);
+// if align == false, returns the last available block regardless of
+// alignment. (The align variable is set to false by default.)
+uint64_t GPTData::FindLastInFree(uint64_t start, bool align) {
+   uint64_t nearestEnd, endPlus;
    uint32_t i;
 
-   nearestStart = mainHeader.lastUsableLBA;
+   nearestEnd = mainHeader.lastUsableLBA;
    for (i = 0; i < numParts; i++) {
-      if ((nearestStart > partitions[i].GetFirstLBA()) &&
+      if ((nearestEnd > partitions[i].GetFirstLBA()) &&
           (partitions[i].GetFirstLBA() > start)) {
-         nearestStart = partitions[i].GetFirstLBA() - 1;
+         nearestEnd = partitions[i].GetFirstLBA() - 1;
       } // if
    } // for
-   return (nearestStart);
+   if (align) {
+       endPlus = nearestEnd + 1;
+       if (Align(&endPlus) && IsFree(endPlus - 1) && (endPlus > start)) {
+           nearestEnd = endPlus - 1;
+       } // if
+   } // if
+   return (nearestEnd);
 } // GPTData::FindLastInFree()
 
 // Finds the total number of free blocks, the number of segments in which
@@ -2422,7 +2437,10 @@ int GPTData::IsUsedPartNum(uint32_t partNum) {
  ***********************************************************/
 
 // Set partition alignment value; partitions will begin on multiples of
-// the specified value
+// the specified value, and the default end values will be set so that
+// partition sizes are multiples of this value in cgdisk and gdisk, too.
+// (In sgdisk, end-alignment is done only if the '-I' command-line option
+// is used.)
 void GPTData::SetAlignment(uint32_t n) {
    if (n > 0) {
       sectorAlignment = n;

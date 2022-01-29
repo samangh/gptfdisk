@@ -1,6 +1,6 @@
 /*
     Implementation of GPTData class derivative with basic text-mode interaction
-    Copyright (C) 2010-2018 Roderick W. Smith
+    Copyright (C) 2010-2022 Roderick W. Smith
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -55,6 +55,7 @@ class GPTDataTextUI : public GPTData {
       void ShowDetails(void);
       void MakeHybrid(void);
       int XFormToMBR(void); // convert GPT to MBR, wiping GPT afterwards. Returns 1 if successful
+      uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & prompt);
 
       // An informational function....
       void WarnAboutIffyMBRPart(int partNum);

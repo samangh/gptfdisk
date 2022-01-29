@@ -1,8 +1,16 @@
-1.0.9 (?/?/2021):
+1.0.9 (?/?/2022):
 -----------------
 
 - Removed stray debugging code that caused "partNum is {x}" to be printed
   when changing a partition's name with sgdisk (-c/--change-name).
+
+- Added support for aligning partitions' end points, as well as their start
+  points. This support affects the default partition size when using 'n' in
+  gdisk; it affects the default partition size in cgdisk; and it's activated
+  by the new '-I' option in sgdisk. See the programs' respective man pages
+  for details. This feature is intended to help with LUKS2 encryption, which
+  reacts badly to partitions that are not sized as exact multiples of the
+  encryption block size.
 
 1.0.8 (6/9/2021):
 -----------------

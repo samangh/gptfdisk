@@ -154,7 +154,10 @@ to sectors that are multiples of this value, which defaults to 1 MiB (2048
 on disks with 512-byte sectors) on freshly formatted disks. This alignment
 value is necessary to obtain optimum performance with Western Digital
 Advanced Format and similar drives with larger physical than logical sector
-sizes, with some types of RAID arrays, and with SSD devices.
+sizes, with some types of RAID arrays, and with SSD devices. When the
+\fI\-I\fR option is used, this same alignment value is used to determine
+partition end points; but partitions end at one less than a multiple of this
+value, to keep the partition length a multiple of this value.
 
 .TP
 .B \-A, \-\-attributes=list|[partnum:show|or|nand|xor|=|set|clear|toggle|get[:bitnum|hexbitmask]]
@@ -280,13 +283,25 @@ is usually correct for Windows partitions. If the active/bootable flag should
 be set, you must do so in another program, such as \fBfdisk\fR. The \fBgdisk\fR
 program offers additional hybrid MBR creation options.
 
-.TP 
+.TP
 .B \-i, \-\-info=partnum
 Show detailed partition information. The summary information produced by
 the \fI\-p\fR command necessarily omits many details, such as the partition's
 unique GUID and the translation of \fBsgdisk\fR's
 internal partition type code to a plain type name. The \fI\-i\fR option
 displays this information for a single partition.
+
+.TP
+.B \-I, \-\-align\-end
+When possible, align the end points of partitions to one less than a
+multiple of the alignment value. When both start and end points are aligned,
+partitions should be multiples of the alignment value in size, which is
+necessary for some partition encryption tools to function correctly. This
+option applies to all partitions created \fBafter\fR this option on the
+command line. Note that this alignment is not always possible; for instance,
+if the free space at the end of a disk is less than the alignment value,
+with the current final partition being aligned, and if \fBsgdisk\fR is asked
+to create a partition in that space, then it will \fBnot\fR be end\-aligned.
 
 .TP
 .B \-j, \-\-adjust\-main\-table=sector
