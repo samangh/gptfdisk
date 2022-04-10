@@ -27,12 +27,10 @@
 #include "gptpart.h"
 #include "gpt.h"
 
-using namespace std;
-
 struct MenuItem {
    int key; // Keyboard shortcut
-   string name; // Item name; 8 characters
-   string desc; // Description
+   std::string name; // Item name; 8 characters
+   std::string desc; // Description
 };
 
 static struct MenuItem menuMain[] = {
@@ -81,7 +79,7 @@ protected:
    Space *lastSpace;
    Space *currentSpace;
    int currentSpaceNum;
-   string whichOptions;
+   std::string whichOptions;
    char currentKey;
    int numSpaces;
    int displayType;
@@ -130,7 +128,7 @@ public:
 void ClearLine(int lineNum);
 void ClearBottom(void);
 void PromptToContinue(void);
-void Report(string theText);
+void Report(std::string theText);
 void ShowTypes(void);
 
 #endif

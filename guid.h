@@ -30,8 +30,6 @@ typedef unsigned char my_uuid_t[16];
 typedef uuid_t my_uuid_t;
 #endif
 
-using namespace std;
-
 // Note: This class's data size is critical. If data elements must be added,
 // it will be necessary to modify various GPT classes to compensate.
 class GUIDData {
@@ -39,17 +37,17 @@ class GUIDData {
       static bool firstInstance;
    protected:
       my_uuid_t uuidData;
-      string DeleteSpaces(string s);
+      std::string DeleteSpaces(std::string s);
    public:
       GUIDData(void);
       GUIDData(const GUIDData & orig);
-      GUIDData(const string & orig);
+      GUIDData(const std::string & orig);
       GUIDData(const char * orig);
       ~GUIDData(void);
 
       // Data assignment operators....
       GUIDData & operator=(const GUIDData & orig);
-      GUIDData & operator=(const string & orig);
+      GUIDData & operator=(const std::string & orig);
       GUIDData & operator=(const char * orig);
       void Zero(void);
       void Randomize(void);
@@ -59,9 +57,9 @@ class GUIDData {
       int operator!=(const GUIDData & orig) const;
 
       // Data retrieval....
-      string AsString(void) const;
+      std::string AsString(void) const;
 }; // class GUIDData
 
-ostream & operator<<(ostream & os, const GUIDData & data);
+std::ostream & operator<<(std::ostream & os, const GUIDData & data);
 
 #endif

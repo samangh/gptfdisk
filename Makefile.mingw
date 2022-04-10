@@ -1,9 +1,9 @@
-CC=/usr/bin/i686-w64-mingw32-gcc
-CXX=/usr/bin/i686-w64-mingw32-g++
-STRIP=/usr/bin/i686-w64-mingw32-strip
-CFLAGS=-O2 -Wall -static -static-libgcc -static-libstdc++  -D_FILE_OFFSET_BITS=64 -g
-CXXFLAGS=-O2 -Wall -static -static-libgcc -static-libstdc++ -D_FILE_OFFSET_BITS=64 -g
-#CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -I /usr/local/include -I/opt/local/include -g
+CXX=i686-w64-mingw32-g++
+STRIP=i686-w64-mingw32-strip
+CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -static -static-libgcc -static-libstdc++
+#CXXFLAGS=-O2 -Wall -D_FILE_OFFSET_BITS=64 -I /usr/local/include -I/opt/local/include
+LDFLAGS+=-static -static-libgcc -static-libstdc++
+LDLIBS+=-lrpcrt4
 LIB_NAMES=guid gptpart bsd parttypes attributes crc32 mbrpart basicmbr mbr gpt support diskio diskio-windows
 MBR_LIBS=support diskio diskio-windows basicmbr mbrpart
 LIB_SRCS=$(NAMES:=.cc)
@@ -12,25 +12,28 @@ MBR_LIB_OBJS=$(MBR_LIBS:=.o)
 LIB_HEADERS=$(LIB_NAMES:=.h)
 DEPEND= makedepend $(CFLAGS)
 
-all:	gdisk fixparts
+all:	gdisk sgdisk fixparts
 
 gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
-	$(CXX) $(CXXFLAGS) $(LIB_OBJS) gdisk.o gpttext.o -lrpcrt4 -static-libgcc -o gdisk32.exe
+	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) $(LDLIBS) -o gdisk32.exe
 
-sgdisk: $(LIB_OBJS) sgdisk.o
-	$(CXX) $(CXXFLAGS) $(LIB_OBJS) sgdisk.o -lpopt -static-libgcc -o sgdisk32.exe
+cgdisk: $(LIB_OBJS) cgdisk.o gptcurses.o
+	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) $(LDLIBS) -lncursesw -o cgdisk32.exe
+
+sgdisk: $(LIB_OBJS) sgdisk.o gptcl.o
+	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) $(LDLIBS) -lpopt -lintl -liconv -o sgdisk32.exe
 
 fixparts: $(MBR_LIB_OBJS) fixparts.o
-	$(CXX) $(CXXFLAGS) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -static-libgcc -o fixparts32.exe
+	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -o fixparts32.exe
 
 lint:	#no pre-reqs
 	lint $(SRCS)
 
 clean:	#no pre-reqs
-	rm -f core *.o *~ gdisk.exe sgdisk.exe
+	rm -f core *.o *~ gdisk32.exe cgdisk32.exe sgdisk32.exe fixparts32.exe
 
 strip:	#no pre-reqs
-	$(STRIP) gdisk32.exe fixparts32.exe
+	$(STRIP) gdisk32.exe cgdisk32.exe sgdisk32.exe fixparts32.exe
 
 # what are the source dependencies
 depend: $(SRCS)

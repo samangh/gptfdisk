@@ -28,12 +28,8 @@ Windows Use Notes
 
 The Windows version of GPT fdisk was added with version 0.6.2 of the
 package. The Windows binary package includes the gdisk.exe interactive
-text-mode program file but no equivalent to the sgdisk program that's
-available with Linux, FreeBSD, and OS X builds. In theory, an sgdisk.exe
-for Windows could be built if the popt library were installed. I've not
-attempted to do this myself, though. If you care to try, check
-http://gnuwin32.sourceforge.net/packages/popt.htm for information on popt
-for Windows.
+text-mode program file as well as the sgdisk program that's available
+with Linux, FreeBSD, and OS X builds.
 
 Beginning with version 0.8.10, I'm distributing both 32-bit and 64-bit
 binaries, which include the strings "32" or "64" in their names. The 32-bit
@@ -47,10 +43,11 @@ certain partition table problems that can be created by buggy partitioning
 software. Windows seems to be unfazed by most such problems, but I've not
 done an extensive survey of Windows partitioning tools on this score.
 
-To install the programs, copy the gdisk32.exe and fixparts32.exe (or
-gdisk64.exe and fixparts64.exe) program files to any directory on your
-path, such as C:\Windows. Alternatively, you can change to the program's
-directory or type its complete path whenever you use it.
+To install the programs, copy the gdisk32.exe, cgdisk32.exe, sgdisk32.exe
+and fixparts32.exe (or gdisk64.exe, cgdisk64.exe, sgdisk64.exe and
+fixparts64.exe) program files to any directory on your path, such as
+C:\Windows. Alternatively, you can change to the program's directory or type
+its complete path whenever you use it.
 
 To use the programs, first launch a Command Prompt as the Administrator. To
 do this, locate the Command Prompt program icon, right-click it, and select
@@ -74,17 +71,18 @@ This command is equivalent to the earlier one -- it edits the partition
 table on the first physical disk. Change the number at the end of the
 device name to change the disk edited.
 
-If you pass the "-l" option to gdisk.exe in addition to the disk
-identifier, the program displays the current partition table information
-and then exits. This use entails no risk to MBR disks, since the program
-never writes data back to the disk when used in this way.
+If you pass the "-l" option to gdisk64.exe in addition to the disk
+identifier, the program displays the current partition table information and
+then exits. (Alternatively, you can pass "-p" to sgdisk64.exe.) This use
+entails no risk to MBR disks, since the program never writes data back to
+the disk when used in this way.
 
-As noted above, editing the first disk with GPT fdisk is usually a Bad
-Idea. An exception would be if your system uses an Extensible Firmware
-Interface (EFI) and already boots from a GPT disk. It's safer to edit
-non-boot disks, which usually have numbers of 1 and above, but only if you
-run a version of Windows with GPT support. For more information on Windows'
-support of GPT, see Microsoft's Web page on the topic:
+As noted above, editing the first disk with GPT fdisk is a Bad Idea on older
+BIOS-based computers. Newer computers typically use an Extensible Firmware
+Interface (EFI) and boot from GPT disks. It's safer to edit non-boot disks,
+which usually have numbers of 1 and above, but only if you run a version of
+Windows with GPT support. For more information on Windows' support of GPT,
+see Microsoft's Web page on the topic:
 
 http://www.microsoft.com/whdc/device/storage/GPT_FAQ.mspx
 
@@ -103,34 +101,91 @@ Source Code and Compilation Issues
 I have successfully compiled GPT fdisk using three different Windows
 compilers:
 
-- MinGW (http://www.mingw.org), and in particular its Linux-hosted
-  cross-compiler -- Under Ubuntu Linux, the Makefile.mingw and
-  Makefile.mingw64 files enable compilation of the software via MinGW.
-  (Type "make -f Makefile.mingw" to compile 32-bit binaries, and "make -f
-  Makefile.mingw64" to compile 64-bit binaries.) If you try to compile
-  using another compiler or even using MinGW under Windows or another Linux
-  variety, you may need to adjust the Makefile.mingw options.
+- MinGW (https://www.mingw-w64.org/), using either a Linux-hosted
+  cross-compiler or under Windows using the original MinGW or MSYS2
+  (https://www.msys2.org). This is my only GPT fdisk development environment
+  for Windows in 2022.
 
 - Microsoft Visual C++ 2008 Express
   (http://www.microsoft.com/express/Windows/) -- This compiler requires a
   third-party stdint.h file (I used the one from
-  http://msinttypes.googlecode.com/svn/trunk/stdint.h), but it otherwise
-  works fine. A project is easily created by adding all the *.h files and
-  all the *.cc files except diskio-unix.cc, sgdisk.cc, and whichever
-  program file you intend to NOT build (gdisk.cc or fixparts.cc).
+  http://web.archive.org/web/20130317001712/http://msinttypes.googlecode.com/svn/trunk/stdint.h),
+  but it otherwise worked fine the last time I tried it. A project is easily
+  created by adding all the *.h files and all the *.cc files except
+  diskio-unix.cc, sgdisk.cc, and whichever program file you intend to NOT
+  build (gdisk.cc or fixparts.cc).
 
 - Microsoft Visual C++ 2010 Express -- This compiler works much like the
   2008 version, although I didn't need to add a third-party stdint.h file.
 
-The MinGW compiler produces much larger executables than do the MS
-compilers. The resulting binaries seem to work equally well, but my testing
-has been minimal.
-
-I've also attempted to compile the code with OpenWatcom 1.8, but this
-attempt failed, mostly because the compiler can't yet handle iostream
-output on standard C++ strings. OpenWatcom also seems to have incorrectly
-set the value of UINT32_MAX as if uint32_t values were 64-bit integers.
-This alone won't cause the compile to fail, but it would create bugs.
+Although I used Microsoft Visual C++ in the past, I haven't tried using
+these compilers recently and so I can't promise they would work today (in
+2022).
 
 If you modify GPT fdisk to get it to compile under another compiler, I
 welcome submission of patches.
+
+The following instructions focus on use of MinGW to compile GPT fdisk for
+Windows.
+
+My primary development environment is Ubuntu Linux, using the MinGW
+cross-compiler. This system can compile the gdisk and fixparts binaries with
+no need for additional libraries; after installing MinGW (via the
+g++-mingw-w64 package in Ubuntu, or the equivalent in another distribution),
+you can type "make -f Makefile.mingw" to compile 32-bit binaries, and "make
+-f Makefile.mingw64" to compile 64-bit binaries.
+
+If you use Windows, your best bet is likely to be to install the MSYS2
+package (https://www.msys2.org). This package provides MinGW and a package
+management system based on pacman (used by Arch Linux) for installing
+additional libraries. To install the libraries needed to compile sgdisk and
+cgdisk, type "pacman -S mingw-w64-x86_64-popt mingw-w64-x86_64-gettext
+mingw-w64-x86_64-ncurses" if you want to compile 64-bit binaries; change
+'x86_64' to 'i686' for 32-bit packages. This command will install the popt
+library needed by sgdisk and the ncurses library needed by cgdisk, along
+with gettext, which is needed by popt. With these libraries installed, you
+should be able to compile all four Linux programs -- gdisk, cgdisk, sgdisk,
+and fixparts.
+
+If you want to compile sgdisk for Windows under Linux, you can do so;
+however, you must copy the relevant header and library files from a Windows
+installation to Linux. Specifically, you must copy:
+
+    Windows File                   Linux Directory
+    ------------                   ---------------
+    /mingw64/include/popt.h        /usr/x86_64-w64-mingw32/include/
+    /mingw64/lib/libpopt.a         /usr/x86_64-w64-mingw32/lib/
+    /mingw64/lib/libintl.a         /usr/x86_64-w64-mingw32/lib/
+    /mingw64/lib/libiconv.a        /usr/x86_64-w64-mingw32/lib/
+
+For 32-bit binaries, change /mingw64 to /mingw32 on the Windows source and
+x86_64-w64-mingw32 to i686-w64-mingw32 on the Linux destination.
+
+In theory, you should be able to do something similar to compile cgdisk. The
+relevant files are:
+
+    Windows File                            Linux Directory
+    ------------                            ---------------
+    /mingw64/include/ncursesw/curses.h      /usr/x86_64-w64-mingw32/include/ncursesw/
+    /mingw64/include/ncursesw/ncurses.h     /usr/x86_64-w64-mingw32/include/ncursesw/
+    /mingw64/include/ncursesw/ncurses_dll.h /usr/x86_64-w64-mingw32/include/ncursesw/
+    /mingw64/include/ncursesw/unctrl.h      /usr/x86_64-w64-mingw32/include/ncursesw/
+    /mingw64/lib/libncurses.a               /usr/x86_64-w64-mingw32/lib/
+
+In practice, this has not worked for me; the compilation fails with a
+complaint about an undefined reference to 'nanosleep'. My guess is that the
+ncurses version installed in Windows is too new to work with the MinGW
+libraries in Ubuntu (20.04 or 22.04). It's conceivable it would work with
+another distribution, though.
+
+In any event, the Makefile.mingw and Makefile.mingw64 files contain targets
+for all four programs; however, because of the problem building cgdisk in
+Linux, that program is omitted from the "all" target. It can still be built
+explicitly, though, as in:
+
+make -f Makefile.mingw64 cgdisk
+
+The Makefiles are configured to create statically-linked binaries so as to
+simplify installation of the binaries. If you want smaller binaries, you can
+remove the various static options from the relevant Makefile. You can also
+strip the binaries ("make -f Makefile.mingw64 strip") to remove unused code.

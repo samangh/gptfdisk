@@ -25,8 +25,6 @@
 #include "gpt.h"
 #include <popt.h>
 
-using namespace std;
-
 class GPTDataCL : public GPTData {
    protected:
       // Following are variables associated with popt parameters....
@@ -41,14 +39,14 @@ class GPTDataCL : public GPTData {
       int BuildMBR(char* argument, int isHybrid);
    public:
       GPTDataCL(void);
-      GPTDataCL(string filename);
+      GPTDataCL(std::string filename);
       ~GPTDataCL(void);
-      void LoadBackupFile(string backupFile, int &saveData, int &neverSaveData);
+      void LoadBackupFile(std::string backupFile, int &saveData, int &neverSaveData);
       int DoOptions(int argc, char* argv[]);
 }; // class GPTDataCL
 
 int CountColons(char* argument);
-uint64_t GetInt(const string & argument, int itemNum);
-string GetString(string argument, int itemNum);
+uint64_t GetInt(const std::string & argument, int itemNum);
+std::string GetString(std::string argument, int itemNum);
 
 #endif

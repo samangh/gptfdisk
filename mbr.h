@@ -13,8 +13,6 @@
 #include "diskio.h"
 #include "basicmbr.h"
 
-using namespace std;
-
 /****************************************
  *                                      *
  * MBRData class and related structures *
@@ -26,7 +24,7 @@ class MBRData : public BasicMBRData {
 protected:
 public:
    MBRData(void) {}
-   MBRData(string deviceFilename) : BasicMBRData(deviceFilename) {}
+   MBRData(std::string deviceFilename) : BasicMBRData(deviceFilename) {}
    MBRData & operator=(const BasicMBRData & orig);
    ~MBRData(void);
 

@@ -6,16 +6,14 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#ifdef USE_UTF16
-#include <unicode/ustream.h>
-#else
-#define UnicodeString string
-#endif
 #include <string>
 #include "support.h"
 #include "guid.h"
-
-using namespace std;
+#ifdef USE_UTF16
+#include <unicode/ustream.h>
+#else
+#define UnicodeString std::string
+#endif
 
 // A partition type
 struct AType {
@@ -24,7 +22,7 @@ struct AType {
    // codes required by GPT
    uint16_t MBRType;
    GUIDData GUIDType;
-   string name;
+   std::string name;
    int display; // 1 to show to users as available type, 0 not to
    AType* next;
 }; // struct AType
@@ -48,7 +46,7 @@ public:
    int AddType(uint16_t mbrType, const char * guidData, const char * name, int toDisplay = 1);
 
    // New assignment operators....
-   PartType & operator=(const string & orig);
+   PartType & operator=(const std::string & orig);
    PartType & operator=(const char * orig);
 
    // Assignment operators based on base class....
@@ -58,7 +56,7 @@ public:
    PartType & operator=(uint16_t ID); // Use MBR type code times 0x0100 to assign GUID
 
    // Retrieve transformed GUID data based on type code matches
-   string TypeName(void) const;
+   std::string TypeName(void) const;
    UnicodeString UTypeName(void) const;
    uint16_t GetHexType() const;
 

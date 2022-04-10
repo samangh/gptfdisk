@@ -1,7 +1,7 @@
-CFLAGS+=-D_FILE_OFFSET_BITS=64
-#CXXFLAGS+=-Wall -D_FILE_OFFSET_BITS=64 -D USE_UTF16
-CXXFLAGS+=-Wall -D_FILE_OFFSET_BITS=64
+#CXXFLAGS+=-O2 -Wall -D_FILE_OFFSET_BITS=64 -D USE_UTF16
+CXXFLAGS+=-O2 -Wall -D_FILE_OFFSET_BITS=64
 LDFLAGS+=
+LDLIBS+=-luuid #-licuio -licuuc
 LIB_NAMES=crc32 support guid gptpart mbrpart basicmbr mbr gpt bsd parttypes attributes diskio diskio-unix
 MBR_LIBS=support diskio diskio-unix basicmbr mbrpart
 LIB_OBJS=$(LIB_NAMES:=.o)
@@ -12,19 +12,16 @@ DEPEND= makedepend $(CXXFLAGS)
 all:	cgdisk gdisk sgdisk fixparts
 
 gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
-	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -luuid $(LDLIBS) -o gdisk
-#	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -licuio -licuuc -luuid -o gdisk
+	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) $(LDLIBS) -o gdisk
 
 cgdisk: $(LIB_OBJS) cgdisk.o gptcurses.o
-	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -luuid -lncursesw $(LDLIBS) -o cgdisk
-#	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -licuio -licuuc -luuid -lncurses -o cgdisk
+	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) $(LDLIBS) -lncursesw -o cgdisk
 
 sgdisk: $(LIB_OBJS) sgdisk.o gptcl.o
-	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) -luuid -lpopt $(LDLIBS) -o sgdisk
-#	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) -licuio -licuuc -luuid -lpopt -o sgdisk
+	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) $(LDLIBS) -lpopt -o sgdisk
 
 fixparts: $(MBR_LIB_OBJS) fixparts.o
-	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) $(LDLIBS) -o fixparts
+	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -o fixparts
 
 test:
 	./gdisk_test.sh

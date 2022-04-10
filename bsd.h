@@ -30,9 +30,6 @@
 // memory errors will occur.
 #define MAX_BSD_PARTS 64
 
-
-using namespace std;
-
 /****************************************
  *                                      *
  * BSDData class and related structures *
@@ -75,7 +72,7 @@ class BSDData {
    public:
       BSDData(void);
       ~BSDData(void);
-      int ReadBSDData(const string & deviceFilename, uint64_t startSector, uint64_t endSector);
+      int ReadBSDData(const std::string & deviceFilename, uint64_t startSector, uint64_t endSector);
       int ReadBSDData(DiskIO *myDisk, uint64_t startSector, uint64_t endSector);
       void ReverseMetaBytes(void);
       void DisplayBSDData(void);

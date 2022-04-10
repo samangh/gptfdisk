@@ -10,11 +10,9 @@
 #define NUM_ATR 64 /* # of attributes -- 64, since it's a 64-bit field */
 #define ATR_NAME_SIZE 25 /* maximum size of attribute names */
 
-using namespace std;
-
 class Attributes {
 protected:
-   static string atNames[NUM_ATR];
+   static std::string atNames[NUM_ATR];
    static int numAttrs;
    void Setup(void);
    uint64_t attributes;
@@ -30,12 +28,12 @@ public:
    void ShowAttributes(const uint32_t partNum);
 
    void ChangeAttributes(void);
-   bool OperateOnAttributes(const uint32_t partNum, const string& attributeOperator, const string& attributeBits);
+   bool OperateOnAttributes(const uint32_t partNum, const std::string& attributeOperator, const std::string& attributeBits);
 
-   static const string& GetAttributeName(const uint32_t bitNum) {return atNames [bitNum];}
+   static const std::string& GetAttributeName(const uint32_t bitNum) {return atNames [bitNum];}
    static void ListAttributes(void);
 }; // class Attributes
 
-ostream & operator<<(ostream & os, const Attributes & data);
+std::ostream & operator<<(std::ostream & os, const Attributes & data);
 
 #endif

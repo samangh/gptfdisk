@@ -11,6 +11,8 @@
 #include <iostream>
 #include "gpttext.h"
 
+using namespace std;
+
 int main(int argc, char* argv[]) {
    GPTDataTextUI theGPT;
    string device = "";

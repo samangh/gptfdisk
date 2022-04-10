@@ -24,8 +24,6 @@
 // smallest Advanced Format drive I know of is 320GB in size
 #define SMALLEST_ADVANCED_FORMAT UINT64_C(585937500)
 
-using namespace std;
-
 /****************************************
  *                                      *
  * GPTData class and related structures *
@@ -67,7 +65,7 @@ protected:
    uint32_t numParts; // # of partitions the table can hold
    struct GPTHeader secondHeader;
    MBRData protectiveMBR;
-   string device; // device filename
+   std::string device; // device filename
    DiskIO myDisk;
    uint32_t blockSize; // device logical block size
    uint32_t physBlockSize; // device physical block size (or 0 if it can't be determined)
@@ -93,7 +91,7 @@ public:
    // Basic necessary functions....
    GPTData(void);
    GPTData(const GPTData &);
-   GPTData(string deviceFilename);
+   GPTData(std::string deviceFilename);
    virtual ~GPTData(void);
    GPTData & operator=(const GPTData & orig);
 
@@ -111,18 +109,18 @@ public:
    int FindInsanePartitions(void);
 
    // Load or save data from/to disk
-   int SetDisk(const string & deviceFilename);
+   int SetDisk(const std::string & deviceFilename);
    DiskIO* GetDisk(void) {return &myDisk;}
-   int LoadMBR(const string & f) {return protectiveMBR.ReadMBRData(f);}
+   int LoadMBR(const std::string & f) {return protectiveMBR.ReadMBRData(f);}
    int WriteProtectiveMBR(void) {return protectiveMBR.WriteMBRData(&myDisk);}
    void PartitionScan(void);
-   int LoadPartitions(const string & deviceFilename);
+   int LoadPartitions(const std::string & deviceFilename);
    int ForceLoadGPTData(void);
    int LoadMainTable(void);
    int LoadSecondTableAsMain(void);
    int SaveGPTData(int quiet = 0);
-   int SaveGPTBackup(const string & filename);
-   int LoadGPTBackup(const string & filename);
+   int SaveGPTBackup(const std::string & filename);
+   int LoadGPTBackup(const std::string & filename);
    int SaveMBR(void);
    int DestroyGPT(void);
    int DestroyMBR(void);
@@ -204,9 +202,9 @@ public:
    void ReversePartitionBytes(); // for endianness
 
    // Attributes functions
-   int ManageAttributes(int partNum, const string & command, const string & bits);
+   int ManageAttributes(int partNum, const std::string & command, const std::string & bits);
    void ShowAttributes(const uint32_t partNum);
-   void GetAttribute(const uint32_t partNum, const string& attributeBits);
+   void GetAttribute(const uint32_t partNum, const std::string& attributeBits);
 
 }; // class GPTData
 

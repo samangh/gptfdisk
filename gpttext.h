@@ -23,13 +23,11 @@
 
 #include "gpt.h"
 
-using namespace std;
-
 class GPTDataTextUI : public GPTData {
    protected:
    public:
       GPTDataTextUI(void);
-      GPTDataTextUI(string filename);
+      GPTDataTextUI(std::string filename);
       ~GPTDataTextUI(void);
 
       // This one needs to be explicitly defined, even though it does nothing new....
@@ -55,17 +53,17 @@ class GPTDataTextUI : public GPTData {
       void ShowDetails(void);
       void MakeHybrid(void);
       int XFormToMBR(void); // convert GPT to MBR, wiping GPT afterwards. Returns 1 if successful
-      uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const string & prompt);
+      uint64_t GetSectorNum(uint64_t low, uint64_t high, uint64_t def, const std::string & prompt);
 
       // An informational function....
       void WarnAboutIffyMBRPart(int partNum);
 
       // Main menu functions
-      void MainMenu(string filename);
+      void MainMenu(std::string filename);
       void ShowCommands(void);
-      void ExpertsMenu(string filename);
+      void ExpertsMenu(std::string filename);
       void ShowExpertCommands(void);
-      void RecoveryMenu(string filename);
+      void RecoveryMenu(std::string filename);
       void ShowRecoveryCommands(void);
 }; // class GPTDataTextUI
 

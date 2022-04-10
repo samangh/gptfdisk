@@ -23,8 +23,6 @@
 #include "guid.h"
 #include "attributes.h"
 
-using namespace std;
-
 // Values returned by GPTPart::IsSizedForMBR()
 #define MBR_SIZED_GOOD 0 /* Whole partition under 2^32 sectors */
 #define MBR_SIZED_IFFY 1 /* Partition starts under 2^32 & is less than 2^32, but ends over 2^32 */
@@ -59,7 +57,7 @@ class GPTPart {
       // Simple data retrieval:
       PartType & GetType(void) {return partitionType;}
       uint16_t GetHexType(void) const;
-      string GetTypeName(void);
+      std::string GetTypeName(void);
       UnicodeString GetUTypeName(void);
       const GUIDData GetUniqueGUID(void) const {return uniqueGUID;}
       uint64_t GetFirstLBA(void) const {return firstLBA;}
@@ -80,7 +78,7 @@ class GPTPart {
       void SetLastLBA(uint64_t l) {lastLBA = l;}
       void SetAttributes(uint64_t a) {attributes = a;}
       void SetAttributes(void) {attributes.ChangeAttributes();}
-      void SetName(const string & theName);
+      void SetName(const std::string & theName);
 #ifdef USE_UTF16
       void SetName(const UnicodeString & theName);
 #endif

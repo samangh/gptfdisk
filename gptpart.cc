@@ -15,17 +15,16 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-#ifdef USE_UTF16
-#include <unicode/ustdio.h>
-#else
-#define UnicodeString string
-#endif
-
 #include <string.h>
 #include <stdio.h>
 #include <iostream>
 #include "gptpart.h"
 #include "attributes.h"
+#ifdef USE_UTF16
+#include <unicode/ustdio.h>
+#else
+#define UnicodeString std::string
+#endif
 
 using namespace std;
 

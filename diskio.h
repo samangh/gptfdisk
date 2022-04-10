@@ -37,8 +37,6 @@
 #include "support.h"
 //#include "parttypes.h"
 
-using namespace std;
-
 /***************************************
  *                                     *
  * DiskIO class and related structures *
@@ -47,9 +45,9 @@ using namespace std;
 
 class DiskIO {
    protected:
-      string userFilename;
-      string realFilename;
-      string modelName;
+      std::string userFilename;
+      std::string realFilename;
+      std::string modelName;
       int isOpen;
       int openForWrite;
 #ifdef _WIN32
@@ -62,9 +60,9 @@ class DiskIO {
       ~DiskIO(void);
 
       void MakeRealName(void);
-      int OpenForRead(const string & filename);
+      int OpenForRead(const std::string & filename);
       int OpenForRead(void);
-      int OpenForWrite(const string & filename);
+      int OpenForWrite(const std::string & filename);
       int OpenForWrite(void);
       void Close();
       int Seek(uint64_t sector);
@@ -73,12 +71,12 @@ class DiskIO {
       int DiskSync(void); // resync disk caches to use new partitions
       int GetBlockSize(void);
       int GetPhysBlockSize(void);
-      string GetModel(void) {return modelName;}
+      std::string GetModel(void) {return modelName;}
       uint32_t GetNumHeads(void);
       uint32_t GetNumSecsPerTrack(void);
       int IsOpen(void) {return isOpen;}
       int IsOpenForWrite(void) {return openForWrite;}
-      string GetName(void) const {return realFilename;}
+      std::string GetName(void) const {return realFilename;}
 
       uint64_t DiskSize(int* err);
 }; // class DiskIO

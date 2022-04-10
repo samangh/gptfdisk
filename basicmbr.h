@@ -16,8 +16,6 @@
 // Maximum number of MBR partitions
 #define MAX_MBR_PARTS 128
 
-using namespace std;
-
 /****************************************
  *                                      *
  * MBRData class and related structures *
@@ -57,23 +55,23 @@ protected:
    uint32_t numSecspTrack; // number of sectors per track, in CHS scheme
    DiskIO* myDisk;
    int canDeleteMyDisk;
-   string device;
+   std::string device;
    MBRValidity state;
    MBRPart* GetPartition(int i); // Return primary or logical partition
 public:
    BasicMBRData(void);
-   BasicMBRData(string deviceFilename);
+   BasicMBRData(std::string deviceFilename);
    BasicMBRData(const BasicMBRData &);
    ~BasicMBRData(void);
    BasicMBRData & operator=(const BasicMBRData & orig);
 
    // File I/O functions...
-   int ReadMBRData(const string & deviceFilename);
+   int ReadMBRData(const std::string & deviceFilename);
    int ReadMBRData(DiskIO * theDisk, int checkBlockSize = 1);
    int ReadLogicalParts(uint64_t extendedStart, int partNum);
    int WriteMBRData(void);
    int WriteMBRData(DiskIO *theDisk);
-   int WriteMBRData(const string & deviceFilename);
+   int WriteMBRData(const std::string & deviceFilename);
    int WriteMBRData(struct TempMBR & mbr, DiskIO *theDisk, uint64_t sector);
    void DiskSync(void) {myDisk->DiskSync();}
    void SetDisk(DiskIO *theDisk);
@@ -147,7 +145,7 @@ public:
    uint64_t GetLength(int i);
 
    // User interaction functions....
-   int DoMenu(const string& prompt = "\nMBR command (? for help): ");
+   int DoMenu(const std::string& prompt = "\nMBR command (? for help): ");
    void ShowCommands(void);
 }; // class BasicMBRData
 

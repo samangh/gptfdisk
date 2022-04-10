@@ -90,7 +90,7 @@ void GPTDataCurses::EmptySpaces(void) {
 // unpartitioned space on the disk.
 // Returns the number of Spaces created.
 int GPTDataCurses::MakeSpacesFromParts(void) {
-   uint i;
+   uint32_t i;
    Space *tempSpace;
 
    EmptySpaces();
@@ -608,7 +608,7 @@ void GPTDataCurses::MoveSelection(int delta) {
 // Show user's options. Refers to currentSpace to determine which options to show.
 // Highlights the option with the key selectedKey; or a default if that's invalid.
 void GPTDataCurses::DisplayOptions(char selectedKey) {
-   uint i, j = 0, firstLine, numPerLine;
+   uint64_t i, j = 0, firstLine, numPerLine;
    string optionName, optionDesc = "";
 
    if (currentSpace != NULL) {

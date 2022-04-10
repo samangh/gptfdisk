@@ -32,8 +32,6 @@
 #define EBR 4     /* sector is used as an EBR or MBR */
 #define INVALID 8 /* sector number is too large for disk */
 
-using namespace std;
-
 // Data for a single MBR partition record
 // Note that firstSector and lastSector are in CHS addressing, which
 // splits the bits up in a weird way.
