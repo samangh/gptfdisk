@@ -886,8 +886,16 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
             break;
       } // switch
 
-      if (allOK)
+      if (allOK) {
          CheckGPTSize();
+         // Below is unlikely to happen on real disks, but could happen if
+         // the user is manipulating a truncated image file....
+         if (diskSize <= GetTableSizeInSectors() * 2 + 3) {
+             allOK = 0;
+             cout << "Disk is too small to hold GPT data (" << diskSize
+                  << " sectors)! Aborting!\n";
+         }
+      }
       myDisk.Close();
       ComputeAlignment();
    } else {
