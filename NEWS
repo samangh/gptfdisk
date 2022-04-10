@@ -12,6 +12,13 @@
   reacts badly to partitions that are not sized as exact multiples of the
   encryption block size.
 
+- Added check for too-small disks (most likely to be an issue when trying
+  to use a too-small disk image); program now aborts if this happens.
+
+- Added the ability to build sgdisk and cgdisk for Windows.
+
+- Fixed build problems with recent versions of ncurses.
+
 1.0.8 (6/9/2021):
 -----------------
 
