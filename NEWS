@@ -19,6 +19,8 @@
 
 - Fixed build problems with recent versions of ncurses.
 
+- Fixed bug that caused cgdisk to report incorrect partition attributes.
+
 1.0.8 (6/9/2021):
 -----------------
 
