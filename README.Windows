@@ -132,8 +132,12 @@ My primary development environment is Ubuntu Linux, using the MinGW
 cross-compiler. This system can compile the gdisk and fixparts binaries with
 no need for additional libraries; after installing MinGW (via the
 g++-mingw-w64 package in Ubuntu, or the equivalent in another distribution),
-you can type "make -f Makefile.mingw" to compile 32-bit binaries, and "make
--f Makefile.mingw64" to compile 64-bit binaries.
+you can type "TARGET=win32 make" to compile 32-bit binaries, and
+"TARGET=win64 make" to compile 64-bit binaries. This will attempt to build
+gdisk, sgdisk, and fixparts; but the sgdisk build will fail until you
+install the popt libraries, as described shortly. You can build the other
+binaries by specifying them, as in "TARGET=win64 make gdisk" to build the
+64-bit gdisk binary alone.
 
 If you use Windows, your best bet is likely to be to install the MSYS2
 package (https://www.msys2.org). This package provides MinGW and a package
@@ -145,7 +149,11 @@ mingw-w64-x86_64-ncurses" if you want to compile 64-bit binaries; change
 library needed by sgdisk and the ncurses library needed by cgdisk, along
 with gettext, which is needed by popt. With these libraries installed, you
 should be able to compile all four Linux programs -- gdisk, cgdisk, sgdisk,
-and fixparts.
+and fixparts. Typing "make" alone in the MSYS2 shell should build all four
+programs for the host architecture (x86-64 or i686); to compile for the
+other architecture, you must specify it with a "TARGET=" specification, as
+under Linux. (The Makefile does not currently support ARM64 targets for
+Windows.)
 
 If you want to compile sgdisk for Windows under Linux, you can do so;
 however, you must copy the relevant header and library files from a Windows
@@ -178,14 +186,7 @@ ncurses version installed in Windows is too new to work with the MinGW
 libraries in Ubuntu (20.04 or 22.04). It's conceivable it would work with
 another distribution, though.
 
-In any event, the Makefile.mingw and Makefile.mingw64 files contain targets
-for all four programs; however, because of the problem building cgdisk in
-Linux, that program is omitted from the "all" target. It can still be built
-explicitly, though, as in:
-
-make -f Makefile.mingw64 cgdisk
-
-The Makefiles are configured to create statically-linked binaries so as to
+The Makefile is configured to create statically-linked binaries so as to
 simplify installation of the binaries. If you want smaller binaries, you can
-remove the various static options from the relevant Makefile. You can also
-strip the binaries ("make -f Makefile.mingw64 strip") to remove unused code.
+remove the various static options from the Makefile. You can also strip the
+binaries ("make strip") to remove unused code.

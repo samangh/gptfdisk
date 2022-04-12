@@ -21,6 +21,11 @@
 
 - Fixed bug that caused cgdisk to report incorrect partition attributes.
 
+- Consolidated Makefiles for Linux, FreeBSD, Solaris, macOS, and Windows
+  (32- and 64-bit). The old OS-specific Makefiles remain in case the new
+  consolidated Makefile has problems, but the old ones are deprecated.
+  (The Solaris support in the new Makefile is untested.)
+
 1.0.8 (6/9/2021):
 -----------------
 
