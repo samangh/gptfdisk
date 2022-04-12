@@ -127,6 +127,9 @@ void PartType::AddAllTypes(void) {
    AddType(0x7f00, "FE3A2A5D-4F32-41A7-B725-ACCC3285A309", "ChromeOS kernel");
    AddType(0x7f01, "3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC", "ChromeOS root");
    AddType(0x7f02, "2E0A753D-9E48-43B0-8337-B15192CB1B5E", "ChromeOS reserved");
+   AddType(0x7f03, "CAB6E88E-ABF3-4102-A07A-D4BB9BE3C1D3", "ChromeOS firmware");
+   AddType(0x7f04, "09845860-705F-4BB5-B16C-8A8A099CAF52", "ChromeOS mini-OS");
+   AddType(0x7f05, "3F0F8318-F146-4E6B-8222-C28C8F02E0D5", "ChromeOS hibernate");
 
    // Linux-specific partition types....
    AddType(0x8200, "0657FD6D-A4AB-43C4-84E5-0933C84B4F4F", "Linux swap"); // Linux swap (or Solaris on MBR)
@@ -258,6 +261,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xa503, "516E7CB6-6ECF-11D6-8FF8-00022D09712B", "FreeBSD UFS");
    AddType(0xa504, "516E7CBA-6ECF-11D6-8FF8-00022D09712B", "FreeBSD ZFS");
    AddType(0xa505, "516E7CB8-6ECF-11D6-8FF8-00022D09712B", "FreeBSD Vinum/RAID");
+   AddType(0xa506, "74BA7DD9-A689-11E1-BD04-00E081286ACF", "FreeBSD nandfs");
 
    // Midnight BSD partition types....
    AddType(0xa580, "85D5E45A-237C-11E1-B4B3-E89A8F7FC3A7", "Midnight BSD data");
@@ -296,6 +300,12 @@ void PartType::AddAllTypes(void) {
    AddType(0xaf08, "FA709C7E-65B1-4593-BFD5-E71D61DE9B02", "Apple SoftRAID Volume");
    AddType(0xaf09, "BBBA6DF5-F46F-4A89-8F59-8765B2727503", "Apple SoftRAID Cache");
    AddType(0xaf0a, "7C3457EF-0000-11AA-AA11-00306543ECAC", "Apple APFS");
+   AddType(0xaf0b, "69646961-6700-11AA-AA11-00306543ECAC", "Apple APFS Pre-Boot");
+   AddType(0xaf0c, "52637672-7900-11AA-AA11-00306543ECAC", "Apple APFS Recovery");
+
+   // U-Boot boot loader; see https://lists.denx.de/pipermail/u-boot/2020-November/432928.html
+   // and https://source.denx.de/u-boot/u-boot/-/blob/v2021.07/include/part_efi.h#L59-61
+   AddType(0xb000, "3DE21764-95BD-54BD-A5C3-4ABE786F38A8", "U-Boot boot loader");
 
    // QNX Power-Safe (QNX6)
    AddType(0xb300, "CEF5A9AD-73BC-4601-89F3-CDEEEEE321A1", "QNX6 Power-Safe");
@@ -347,6 +357,35 @@ void PartType::AddAllTypes(void) {
    AddType(0xef00, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "EFI system partition"); // Parted identifies these as having the "boot flag" set
    AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
    AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Used by GRUB
+
+   // Fuscia OS code; see https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/public/zircon/hw/gpt.h
+   AddType(0xf100, "FE8A2634-5E2E-46BA-99E3-3A192091A350", "Fuchsia boot loader (slot A/B/R)");
+   AddType(0xf101, "D9FD4535-106C-4CEC-8D37-DFC020CA87CB", "Fuchsia durable mutable encrypted system data");
+   AddType(0xf102, "A409E16B-78AA-4ACC-995C-302352621A41", "Fuchsia durable mutable boot loader");
+   AddType(0xf103, "F95D940E-CABA-4578-9B93-BB6C90F29D3E", "Fuchsia factory ro system data");
+   AddType(0xf104, "10B8DBAA-D2BF-42A9-98C6-A7C5DB3701E7", "Fuchsia factory ro bootloader data");
+   AddType(0xf105, "49FD7CB8-DF15-4E73-B9D9-992070127F0F", "Fuchsia Volume Manager");
+   AddType(0xf106, "421A8BFC-85D9-4D85-ACDA-B64EEC0133E9", "Fuchsia verified boot metadata (slot A/B/R)");
+   AddType(0xf107, "9B37FFF6-2E58-466A-983A-F7926D0B04E0", "Fuchsia Zircon boot image (slot A/B/R)");
+   AddType(0xf108, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", "Fuchsia ESP");
+   AddType(0xf109, "606B000B-B7C7-4653-A7D5-B737332C899D", "Fuchsia System");
+   AddType(0xf10a, "08185F0C-892D-428A-A789-DBEEC8F55E6A", "Fuchsia Data");
+   AddType(0xf10b, "48435546-4953-2041-494E-5354414C4C52", "Fuchsia Install");
+   AddType(0xf10c, "2967380E-134C-4CBB-B6DA-17E7CE1CA45D", "Fuchsia Blob");
+   AddType(0xf10d, "41D0E340-57E3-954E-8C1E-17ECAC44CFF5", "Fuchsia FVM");
+   AddType(0xf10e, "DE30CC86-1F4A-4A31-93C4-66F147D33E05", "Fuchsia Zircon boot image (slot A)");
+   AddType(0xf10f, "23CC04DF-C278-4CE7-8471-897D1A4BCDF7", "Fuchsia Zircon boot image (slot B)");
+   AddType(0xf110, "A0E5CF57-2DEF-46BE-A80C-A2067C37CD49", "Fuchsia Zircon boot image (slot R)");
+   AddType(0xf111, "4E5E989E-4C86-11E8-A15B-480FCF35F8E6", "Fuchsia sys-config");
+   AddType(0xf112, "5A3A90BE-4C86-11E8-A15B-480FCF35F8E6", "Fuchsia factory-config");
+   AddType(0xf113, "5ECE94FE-4C86-11E8-A15B-480FCF35F8E6", "Fuchsia bootloader");
+   AddType(0xf114, "8B94D043-30BE-4871-9DFA-D69556E8C1F3", "Fuchsia guid-test");
+   AddType(0xf115, "A13B4D9A-EC5F-11E8-97D8-6C3BE52705BF", "Fuchsia verified boot metadata (A)");
+   AddType(0xf116, "A288ABF2-EC5F-11E8-97D8-6C3BE52705BF", "Fuchsia verified boot metadata (B)");
+   AddType(0xf117, "6A2460C3-CD11-4E8B-80A8-12CCE268ED0A", "Fuchsia verified boot metadata (R)");
+   AddType(0xf118, "1D75395D-F2C6-476B-A8B7-45CC1C97B476", "Fuchsia misc");
+   AddType(0xf119, "900B0FC5-90CD-4D4F-84F9-9F8ED579DB88", "Fuchsia emmc-boot1");
+   AddType(0xf11a, "B2B2E8D1-7C10-4EBC-A2D0-4614568260AD", "Fuchsia emmc-boot2");
 
    // Ceph type codes; see https://github.com/ceph/ceph/blob/9bcc42a3e6b08521694b5c0228b2c6ed7b3d312e/src/ceph-disk#L76-L81
    // and Wikipedia

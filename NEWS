@@ -17,6 +17,16 @@
 
 - Added the ability to build sgdisk and cgdisk for Windows.
 
+- Added new type codes:
+  * FreeBSD nandfs (0xa506)
+  * Apple APFS Pre-Boot (0xaf0b)
+  * Apple APFS Recovery (0xaf0c)
+  * ChromeOS firmware (0x7f03)
+  * ChromeOS mini-OS (0x7f04)
+  * ChromeOS hibernate (0x7f05)
+  * U-Boot boot loader (0xb000)
+  * 27 (!) codes for Fuchsia (0xf100 to 0xf11a)
+
 - Fixed build problems with recent versions of ncurses.
 
 - Fixed bug that caused cgdisk to report incorrect partition attributes.
