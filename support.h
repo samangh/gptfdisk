@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string>
 
-#define GPTFDISK_VERSION "1.0.9"
+#define GPTFDISK_VERSION "1.0.9.1"
 
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__) || defined (__APPLE__)
 // Darwin (Mac OS) & FreeBSD: disk IOCTLs are different, and there is no lseek64

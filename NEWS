@@ -1,3 +1,11 @@
+1.0.10 (?/??/2022):
+-------------------
+
+- Fixed problem that caused sgdisk to crash with errors about being unable
+  to read the disk's partition table when compiled with the latest popt
+  (commit 740, which is pre-release as I type; presumably version 1.19 and
+  later once released).
+
 1.0.9 (4/14/2022):
 ------------------
 
