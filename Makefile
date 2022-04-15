@@ -1,5 +1,6 @@
 # Makefile for GPT fdisk
 
+# Copyright (c) 2022 by Rod Smith
 # This program is licensed under the terms of the GNU GPL, version 2,
 # or (at your option) any later version.
 # You should have received a copy of the GNU General Public License
@@ -63,8 +64,8 @@ endif
 $(info Build target is $(TARGET))
 
 # Default/Linux settings....
-#CXXFLAGS+=-O2 -Wall -D_FILE_OFFSET_BITS=64 -D USE_UTF16
 STRIP?=strip
+#CXXFLAGS+=-O2 -Wall -D_FILE_OFFSET_BITS=64 -D USE_UTF16
 CXXFLAGS+=-O2 -Wall -D_FILE_OFFSET_BITS=64
 LDFLAGS+=
 LDLIBS+=-luuid #-licuio -licuuc

@@ -358,7 +358,7 @@ void PartType::AddAllTypes(void) {
    AddType(0xef01, "024DEE41-33E7-11D3-9D69-0008C781F39F", "MBR partition scheme"); // Used to nest MBR in GPT
    AddType(0xef02, "21686148-6449-6E6F-744E-656564454649", "BIOS boot partition"); // Used by GRUB
 
-   // Fuscia OS code; see https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/public/zircon/hw/gpt.h
+   // Fuscia OS codes; see https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/public/zircon/hw/gpt.h
    AddType(0xf100, "FE8A2634-5E2E-46BA-99E3-3A192091A350", "Fuchsia boot loader (slot A/B/R)");
    AddType(0xf101, "D9FD4535-106C-4CEC-8D37-DFC020CA87CB", "Fuchsia durable mutable encrypted system data");
    AddType(0xf102, "A409E16B-78AA-4ACC-995C-302352621A41", "Fuchsia durable mutable boot loader");
