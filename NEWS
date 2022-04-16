@@ -6,6 +6,8 @@
   (commit 740, which is pre-release as I type; presumably version 1.19 and
   later once released).
 
+- Updated guid.cc to deal with minor change in libuuid.
+
 1.0.9 (4/14/2022):
 ------------------
 
