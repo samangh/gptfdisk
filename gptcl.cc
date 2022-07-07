@@ -155,10 +155,11 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
    } // while
 
    // Assume first non-option argument is the device filename....
-   device = strdup((char*) poptGetArg(poptCon));
-   poptResetContext(poptCon);
+   device = (char*) poptGetArg(poptCon);
 
    if (device != NULL) {
+      device = strdup(device);
+      poptResetContext(poptCon);
       JustLooking(); // reset as necessary
       BeQuiet(); // Tell called functions to be less verbose & interactive
       if (LoadPartitions((string) device)) {
@@ -498,6 +499,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
          cerr << "Error encountered; not saving changes.\n";
          retval = 4;
       } // if
+      free(device);
    } // if (device != NULL)
    poptFreeContext(poptCon);
    return retval;
