@@ -37,8 +37,12 @@
 
 using namespace std;
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__linux__)
 #define off64_t off_t
+#define stat64 stat
+#define fstat64 fstat
+#define lstat64 lstat
+#define lseek64 lseek
 #endif
 
 // Returns the official "real" name for a shortened version of same.
