@@ -331,8 +331,10 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   startSector = FindFirstInLargest();
                   Align(&startSector);
                   endSector = FindLastInFree(startSector, alignEnd);
-                  if (largestPartNum <= 0)
+                  if (largestPartNum <= 0) {
                      largestPartNum = FindFirstFreePart() + 1;
+                     newPartNum = largestPartNum - 1;
+                  }
                   if (CreatePartition(largestPartNum - 1, startSector, endSector)) {
                      saveData = 1;
                   } else {
