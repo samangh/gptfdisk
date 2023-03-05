@@ -370,8 +370,11 @@ to use the first available partition number. Subsequent uses of the
 .B \-N, \-\-largest\-new=num
 Create a new partition that fills the largest available block of space on
 the disk. You can use the \fI\-a\fR (\fI\-\-set\-alignment\fR) option to
-adjust the alignment, if desired. A num value of 0 causes the program to
-use the first available partition number.
+adjust the alignment, if desired. A num value of 0 causes the program to use
+the first available partition number. Subsequent uses of the \fI\-A\fR
+(\fI\-\-attributes\fR), \fI\-c\fR (\fI\-\-change\-name\fR), \fI\-t\fR
+(\fI\-\-typecode\fR), and \fI\-u\fR (\fI\-\-partition\-guid\fR) options may
+also use \fI0\fR to refer to the same partition.
 
 .TP 
 .B \-o, \-\-clear
