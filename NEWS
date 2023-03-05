@@ -1,4 +1,4 @@
-1.0.10 (?/??/2022):
+1.0.10 (?/??/2023):
 -------------------
 
 - Fixed problem that caused sgdisk to crash with errors about being unable
@@ -7,6 +7,8 @@
   later once released).
 
 - Updated guid.cc to deal with minor change in libuuid.
+
+- Fixed potential NULL derefernce bug in sgdisk.
 
 1.0.9 (4/14/2022):
 ------------------
