@@ -18,6 +18,13 @@
 - Make explicit casts in gptcurses.cc to eliminate compiler warnings about
   mis-matched types in printw() statements.
 
+- In previous versions, rEFInd accepted only integer values for partition
+  start points, end points, and sizes, and it interpreted decimal values
+  incorrectly. That is, if you typed "+9.5G" as the partition end point,
+  you'd end up with something just 9 sectors in size. This version now
+  truncates decimal numbers to their integral values, so you'd get a 9 GiB
+  partition instead.
+
 1.0.9 (4/14/2022):
 ------------------
 
