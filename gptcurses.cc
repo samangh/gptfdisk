@@ -333,13 +333,13 @@ void GPTDataCurses::ShowInfo(int partNum) {
    printw("Partition GUID code: %s (%s)\n", partitions[partNum].GetType().AsString().c_str(),
           partitions[partNum].GetTypeName().c_str());
    printw("Partition unique GUID: %s\n", partitions[partNum].GetUniqueGUID().AsString().c_str());
-   printw("First sector: %lld (at %s)\n", partitions[partNum].GetFirstLBA(),
+   printw("First sector: %llu (at %s)\n", (long long unsigned int) partitions[partNum].GetFirstLBA(),
           BytesToIeee(partitions[partNum].GetFirstLBA(), blockSize).c_str());
-   printw("Last sector: %lld (at %s)\n", partitions[partNum].GetLastLBA(),
+   printw("Last sector: %llu (at %s)\n", (long long unsigned int) partitions[partNum].GetLastLBA(),
           BytesToIeee(partitions[partNum].GetLastLBA(), blockSize).c_str());
    size = partitions[partNum].GetLastLBA() - partitions[partNum].GetFirstLBA() + 1;
-   printw("Partition size: %lld sectors (%s)\n", size, BytesToIeee(size, blockSize).c_str());
-   printw("Attribute flags: %016llx\n", partitions[partNum].GetAttributes().GetAttributes());
+   printw("Partition size: %llu sectors (%s)\n", (long long unsigned int) size, BytesToIeee(size, blockSize).c_str());
+   printw("Attribute flags: %016llx\n", (long long unsigned int) partitions[partNum].GetAttributes().GetAttributes());
    #ifdef USE_UTF16
    partitions[partNum].GetDescription().extract(0, NAME_SIZE , temp, NAME_SIZE );
    printw("Partition name: '%s'\n", temp);
@@ -447,7 +447,8 @@ void GPTDataCurses::MakeNewPart(void) {
       clrtoeol();
       newFirstLBA = currentSpace->firstLBA;
       Align(&newFirstLBA);
-      printw("First sector (%lld-%lld, default = %lld): ", newFirstLBA, currentSpace->lastLBA, newFirstLBA);
+      printw("First sector (%llu-%llu, default = %llu): ", (long long unsigned int) newFirstLBA,
+             (long long unsigned int) currentSpace->lastLBA, (long long unsigned int) newFirstLBA);
       echo();
       getnstr(inLine, 79);
       noecho();
@@ -461,7 +462,7 @@ void GPTDataCurses::MakeNewPart(void) {
    while ((newLastLBA > currentSpace->lastLBA) || (newLastLBA < newFirstLBA)) {
       move(LINES - 3, 0);
       clrtoeol();
-      printw("Size in sectors or {KMGTP} (default = %lld): ", size);
+      printw("Size in sectors or {KMGTP} (default = %llu): ", (long long unsigned int) size);
       echo();
       getnstr(inLine, 79);
       noecho();

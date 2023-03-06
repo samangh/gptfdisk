@@ -15,6 +15,9 @@
   partitions when the --largest-new=0 option to sgdisk is used. Thanks to
   David Joaquín Shourabi Porcel for this improvement.
 
+- Make explicit casts in gptcurses.cc to eliminate compiler warnings about
+  mis-matched types in printw() statements.
+
 1.0.9 (4/14/2022):
 ------------------
 
