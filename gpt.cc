@@ -80,6 +80,7 @@ GPTData::GPTData(void) {
    beQuiet = 0;
    whichWasUsed = use_new;
    mainHeader.numParts = 0;
+   mainHeader.firstUsableLBA = 0;
    mainHeader.lastUsableLBA = 0;
    numParts = 0;
    SetGPTSize(NUM_GPT_ENTRIES);

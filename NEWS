@@ -18,6 +18,8 @@
 - Make explicit casts in gptcurses.cc to eliminate compiler warnings about
   mis-matched types in printw() statements.
 
+- Minor code cleanup based on valgrind analysis.
+
 - In previous versions, rEFInd accepted only integer values for partition
   start points, end points, and sizes, and it interpreted decimal values
   incorrectly. That is, if you typed "+9.5G" as the partition end point,
