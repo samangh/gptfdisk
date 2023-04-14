@@ -68,7 +68,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
    int opt, numOptions = 0, saveData = 0, neverSaveData = 0;
    int partNum = 0, newPartNum = -1, saveNonGPT = 1, retval = 0, pretend = 0;
    int byteSwapPartNum = 0;
-   uint64_t low, high, startSector, endSector, sSize, mainTableLBA;
+   uint64_t low, high, startSector, endSector, sSize, mainTableLBA, secondTableLBA;
    uint64_t temp; // temporary variable; free to use in any case
    char *device;
    string cmd, typeGUID, name;
@@ -85,7 +85,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
       {"recompute-chs", 'C', POPT_ARG_NONE, NULL, 'C', "recompute CHS values in protective/hybrid MBR", ""},
       {"delete", 'd', POPT_ARG_INT, &deletePartNum, 'd', "delete a partition", "partnum"},
       {"display-alignment", 'D', POPT_ARG_NONE, NULL, 'D', "show number of sectors per allocation block", ""},
-      {"move-second-header", 'e', POPT_ARG_NONE, NULL, 'e', "move second header to end of disk", ""},
+      {"move-second-header", 'e', POPT_ARG_NONE, NULL, 'e', "move second/backup header to end of disk", ""},
       {"end-of-largest", 'E', POPT_ARG_NONE, NULL, 'E', "show end of largest free block", ""},
       {"first-in-largest", 'f', POPT_ARG_NONE, NULL, 'f', "show start of the largest free block", ""},
       {"first-aligned-in-largest", 'F', POPT_ARG_NONE, NULL, 'F', "show start of the largest free block, aligned", ""},
@@ -94,7 +94,8 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
       {"hybrid", 'h', POPT_ARG_STRING, &hybrids, 'h', "create hybrid MBR", "partnum[:partnum...][:EE]"},
       {"info", 'i', POPT_ARG_INT, &infoPartNum, 'i', "show detailed information on partition", "partnum"},
       {"align-end", 'I', POPT_ARG_NONE, NULL, 'I', "align partition end points", ""},
-      {"move-main-table", 'j', POPT_ARG_INT, &mainTableLBA, 'j', "adjust the location of the main partition table", "sector"},
+      {"move-main-table", 'j', POPT_ARG_INT, &mainTableLBA, 'j', "change the start sector of the main partition table", "sector"},
+      {"move-backup-table", 'k', POPT_ARG_INT, &secondTableLBA, 'k', "change the start sector of the second/backup partition table", "sector"},
       {"load-backup", 'l', POPT_ARG_STRING, &backupFile, 'l', "load GPT backup from file", "file"},
       {"list-types", 'L', POPT_ARG_NONE, NULL, 'L', "list known partition types", ""},
       {"gpttombr", 'm', POPT_ARG_STRING, &mbrParts, 'm', "convert GPT to MBR", "partnum[:partnum...]"},
@@ -117,6 +118,7 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
       {"zap", 'z', POPT_ARG_NONE, NULL, 'z', "zap (destroy) GPT (but not MBR) data structures", ""},
       {"zap-all", 'Z', POPT_ARG_NONE, NULL, 'Z', "zap (destroy) GPT and MBR data structures", ""},
       POPT_AUTOHELP { NULL, 0, 0, NULL, 0 }
+      // TODO: Incorrect(ly documented) (long) arguments are silently swallowed and seem to take the next argument with them!
    };
 
    // Create popt context...
@@ -281,13 +283,21 @@ int GPTDataCL::DoOptions(int argc, char* argv[]) {
                   alignEnd = true;
                   break;
                case 'j':
-                   if (MoveMainTable(mainTableLBA)) {
-                       JustLooking(0);
-                       saveData = 1;
-                   } else {
-                       neverSaveData = 1;
-                   } // if/else
-                   break;
+                  if (MoveMainTable(mainTableLBA)) {
+                     JustLooking(0);
+                     saveData = 1;
+                  } else {
+                     neverSaveData = 1;
+                  } // if/else
+                  break;
+               case 'k':
+                  if (MoveSecondTable(secondTableLBA)) {
+                     JustLooking(0);
+                     saveData = 1;
+                  } else {
+                     neverSaveData = 1;
+                  } // if/else
+                  break;
                case 'l':
                   LoadBackupFile(backupFile, saveData, neverSaveData);
                   free(backupFile);

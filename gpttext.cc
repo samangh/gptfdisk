@@ -197,6 +197,24 @@ void GPTDataTextUI::MoveMainTable(void) {
     } // if
 } // GPTDataTextUI::MoveMainTable()
 
+// Move the backup partition table.
+void GPTDataTextUI::MoveSecondTable(void) {
+    uint64_t newStart, pteSize = GetTableSizeInSectors();
+    uint64_t minValue = FindLastUsedLBA();
+    uint64_t maxValue = diskSize - 1 - pteSize;
+    ostringstream prompt;
+
+    cout << "Currently, backup partition table begins at sector " << secondHeader.partitionEntriesLBA
+         << " and ends at sector " << secondHeader.partitionEntriesLBA + pteSize - 1 << "\n";
+    prompt << "Enter new starting location (" << minValue << " to " << maxValue << "; default is " << minValue << "; 1 to abort): ";
+    newStart = GetNumber(1, maxValue, minValue, prompt.str());
+    if (newStart != 1) {
+        GPTData::MoveSecondTable(newStart);
+    } else {
+        cout << "Aborting change!\n";
+    } // if
+} // GPTDataTextUI::MoveSecondTable()
+
 // Interactively create a partition
 void GPTDataTextUI::CreatePartition(void) {
    uint64_t firstBlock, firstInLargest, lastBlock, sector, origSector, lastAligned;
@@ -698,7 +716,7 @@ void GPTDataTextUI::ShowCommands(void) {
 void GPTDataTextUI::RecoveryMenu(string filename) {
    uint32_t numParts;
    int goOn = 1, temp1;
-   
+
    do {
       cout << "\nRecovery/transformation command (? for help): ";
       switch (ReadString()[0]) {
@@ -824,7 +842,7 @@ void GPTDataTextUI::ExpertsMenu(string filename) {
    string guidStr, device;
    GUIDData aGUID;
    ostringstream prompt;
-   
+
    do {
       cout << "\nExpert command (? for help): ";
       switch (ReadString()[0]) {
@@ -872,6 +890,9 @@ void GPTDataTextUI::ExpertsMenu(string filename) {
             break;
          case 'j': case 'J':
              MoveMainTable();
+             break;
+         case 'k': case 'K':
+             MoveSecondTable();
              break;
          case 'l': case 'L':
             prompt.seekp(0);
@@ -946,6 +967,7 @@ void GPTDataTextUI::ShowExpertCommands(void) {
    cout << "h\trecompute CHS values in protective/hybrid MBR\n";
    cout << "i\tshow detailed information on a partition\n";
    cout << "j\tmove the main partition table\n";
+   cout << "k\tmove the backup partition table\n";
    cout << "l\tset the sector alignment value\n";
    cout << "m\treturn to main menu\n";
    cout << "n\tcreate a new protective MBR\n";
@@ -1007,4 +1029,3 @@ UnicodeString ReadUString(void) {
    return ReadString().c_str();
 } // ReadUString()
 #endif
-   

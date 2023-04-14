@@ -1501,7 +1501,7 @@ int GPTData::DestroyGPT(void) {
             cerr << "Warning! GPT main partition table not overwritten! Error is " << errno << "\n";
             allOK = 0;
          } // if write failed
-      } // if 
+      } // if
       if (!myDisk.Seek(secondHeader.partitionEntriesLBA))
          allOK = 0;
       if (allOK) {
@@ -1912,6 +1912,23 @@ int GPTData::MoveMainTable(uint64_t pteSector) {
     return retval;
 } // GPTData::MoveMainTable()
 
+// Change the start sector for the secondary partition table.
+// Returns 1 on success, 0 on failure
+int GPTData::MoveSecondTable(uint64_t pteSector) {
+   uint64_t pteSize = GetTableSizeInSectors();
+   int retval = 1;
+
+   if ((pteSector > FindLastUsedLBA()) && ((pteSector + pteSize) < diskSize)) {
+      secondHeader.partitionEntriesLBA = pteSector; // (RebuildSecondHeader actually replaces this with lastUsableLBA+1)
+      mainHeader.lastUsableLBA = secondHeader.partitionEntriesLBA - UINT64_C(1);
+      RebuildSecondHeader();
+   } else {
+      cerr << "Unable to set the secondary partition table's location to " << pteSector << "!\n";
+      retval = 0;
+   } // if/else
+   return retval;
+} // GPTData::MoveSecondTable()
+
 // Blank the partition array
 void GPTData::BlankPartitions(void) {
    uint32_t i;
@@ -2067,6 +2084,7 @@ void GPTData::MoveSecondHeaderToEnd() {
    } // if
    mainHeader.lastUsableLBA = secondHeader.lastUsableLBA = diskSize - mainHeader.firstUsableLBA;
    secondHeader.partitionEntriesLBA = secondHeader.lastUsableLBA + UINT64_C(1);
+   // TODO: Whenever this gets called, it moves the backup table to be the same distance from the backup header as the primary one it from its header. This seems highly problematic, since MoveMainTable does not call this, but then further actions may or may not do so. Moving the primary table may thus imply moving the backup table, or it may leave it where it was. There is also no guarantee that the space where the backup table is moved to is actually available.
 } // GPTData::FixSecondHeaderLocation()
 
 // Sets the partition's name to the specified UnicodeString without
@@ -2286,7 +2304,7 @@ uint64_t GPTData::FindFirstAvailable(uint64_t start) {
 } // GPTData::FindFirstAvailable()
 
 // Returns the LBA of the start of the first partition on the disk (by
-// sector number), or 0 if there are no partitions defined.
+// sector number), or UINT64_MAX if there are no partitions defined.
 uint64_t GPTData::FindFirstUsedLBA(void) {
     uint32_t i;
     uint64_t firstFound = UINT64_MAX;
@@ -2298,6 +2316,20 @@ uint64_t GPTData::FindFirstUsedLBA(void) {
     } // for
     return firstFound;
 } // GPTData::FindFirstUsedLBA()
+
+// Returns the LBA of the end of the last partition on the disk (by
+// sector number), or 0 if there are no partitions defined.
+uint64_t GPTData::FindLastUsedLBA(void) {
+   uint32_t i;
+   uint64_t lastFound = 0;
+
+   for (i = 0; i < numParts; i++) {
+      if ((partitions[i].IsUsed()) && (partitions[i].GetFirstLBA() > lastFound)) {
+         lastFound = partitions[i].GetFirstLBA();
+      } // if
+   } // for
+   return lastFound;
+} // GPTData::FindLastUsedLBA()
 
 // Finds the first available sector in the largest block of unallocated
 // space on the disk. Returns 0 if there are no available blocks left
