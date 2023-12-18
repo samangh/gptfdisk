@@ -834,25 +834,27 @@ int GPTData::LoadPartitions(const string & deviceFilename) {
    int err, allOK = 1;
    MBRValidity mbrState;
 
-   if (myDisk.OpenForRead(deviceFilename)) {
-      err = myDisk.OpenForWrite(deviceFilename);
-      if ((err == 0) && (!justLooking)) {
-         cout << "\aNOTE: Write test failed with error number " << errno
-              << ". It will be impossible to save\nchanges to this disk's partition table!\n";
+   if (!justLooking) {
+      if (myDisk.OpenForRead(deviceFilename)) {
+         err = myDisk.OpenForWrite(deviceFilename);
+         if (err == 0) {
+            cout << "\aNOTE: Write test failed with error number " << errno
+                 << ". It will be impossible to save\nchanges to this disk's partition table!\n";
 #if defined (__FreeBSD__) || defined (__FreeBSD_kernel__)
-         cout << "You may be able to enable writes by exiting this program, typing\n"
-              << "'sysctl kern.geom.debugflags=16' at a shell prompt, and re-running this\n"
-              << "program.\n";
+            cout << "You may be able to enable writes by exiting this program, typing\n"
+                 << "'sysctl kern.geom.debugflags=16' at a shell prompt, and re-running this\n"
+                 << "program.\n";
 #endif
 #if defined (__APPLE__)
-         cout << "You may need to deactivate System Integrity Protection to use this program. See\n"
-              << "https://www.quora.com/How-do-I-turn-off-the-rootless-in-OS-X-El-Capitan-10-11\n"
-              << "for more information.\n";
+            cout << "You may need to deactivate System Integrity Protection to use this program. See\n"
+                 << "https://www.quora.com/How-do-I-turn-off-the-rootless-in-OS-X-El-Capitan-10-11\n"
+                 << "for more information.\n";
 #endif
-              cout << "\n";
-      } // if
-      myDisk.Close(); // Close and re-open read-only in case of bugs
-   } else allOK = 0; // if
+                 cout << "\n";
+         } // if
+         myDisk.Close(); // Close and re-open read-only in case of bugs
+      } else allOK = 0; // if
+   }
 
    if (allOK && myDisk.OpenForRead(deviceFilename)) {
       // store disk information....
