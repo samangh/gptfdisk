@@ -63,7 +63,6 @@ int DiskIO::OpenForRead(void) {
       fd = CreateFile(realFilename.c_str(),GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
                       NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
       if (fd == INVALID_HANDLE_VALUE) {
-         CloseHandle(fd);
          cerr << "Problem opening " << realFilename << " for reading!\n";
          realFilename = "";
          userFilename = "";
@@ -94,13 +93,11 @@ int DiskIO::OpenForWrite(void) {
    // Preceding call can fail when creating backup files; if so, try
    // again with different option...
    if (fd == INVALID_HANDLE_VALUE) {
-      CloseHandle(fd);
       fd = CreateFile(realFilename.c_str(), GENERIC_READ | GENERIC_WRITE,
                       FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS,
                       FILE_ATTRIBUTE_NORMAL, NULL);
    } // if
    if (fd == INVALID_HANDLE_VALUE) {
-      CloseHandle(fd);
       isOpen = 0;
       openForWrite = 0;
       errno = GetLastError();
@@ -114,8 +111,10 @@ int DiskIO::OpenForWrite(void) {
 // Close the disk device. Note that this does NOT erase the stored filenames,
 // so the file can be re-opened without specifying the filename.
 void DiskIO::Close(void) {
-   if (isOpen)
+   if (isOpen) {
       CloseHandle(fd);
+      fd = INVALID_HANDLE_VALUE;
+   }
    isOpen = 0;
    openForWrite = 0;
 } // DiskIO::Close()
