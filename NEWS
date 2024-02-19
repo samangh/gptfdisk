@@ -1,4 +1,4 @@
-1.0.10 (?/??/2023):
+1.0.10 (2/19/2024):
 -------------------
 
 - Fixed problem that caused sgdisk to crash with errors about being unable
@@ -26,6 +26,9 @@
   you'd end up with something just 9 sectors in size. This version now
   truncates decimal numbers to their integral values, so you'd get a 9 GiB
   partition instead.
+
+- Changes to optimize disk handling, particularly on Windows, courtesy of
+  Frediano Ziglio.
 
 1.0.9 (4/14/2022):
 ------------------
