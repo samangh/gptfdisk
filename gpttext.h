@@ -41,6 +41,7 @@ class GPTDataTextUI : public GPTData {
       uint32_t GetPartNum(void);
       void ResizePartitionTable(void);
       void MoveMainTable(void);
+      void MoveSecondTable(void);
       void CreatePartition(void);
       void DeletePartition(void);
       void ChangePartType(void);
