@@ -30,8 +30,14 @@
 - Changes to optimize disk handling, particularly on Windows, courtesy of
   Frediano Ziglio.
 
-- Numerous new partition type codes from Discoverable Partitions Specification
+- Added numerous new partition type codes from Discoverable Partitions
+  Specification
   (https://uapi-group.org/specifications/specs/discoverable_partitions_specification/).
+
+- Added new sgdisk -k/--move-backup-table and gdisk k (on the experts' menu)
+  option to relocate the backup partition table. This is the counterpart of
+  the sgdisk -j/--move-main-table and gdisk j (on the experts' menu) option
+  to move the main partition table. This code comes from Niklas Gollenstede.
 
 1.0.9 (4/14/2022):
 ------------------

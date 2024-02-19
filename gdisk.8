@@ -486,6 +486,13 @@ system\-on\-chip (SoC) is hard\-coded to read boot code from sector 2. I
 recommend against adjusting this value unless doing so is absolutely
 necessary.
 
+.TP
+.B k
+Adjust the location of the backup partition table. This partition table is
+normally located just before the backup metadata at the end of the disk, but
+it may need to be moved in some very rare cases. I recommend against
+adjusting this value unless doing so is absolutely necessary.
+
 .TP 
 .B l
 Change the sector alignment value. Disks with more logical sectors per

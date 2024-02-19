@@ -186,6 +186,8 @@ void GPTDataTextUI::MoveMainTable(void) {
     uint64_t maxValue = FindFirstUsedLBA() - pteSize;
     ostringstream prompt;
 
+    if (maxValue == UINT64_MAX - pteSize)
+       maxValue = FindLastAvailable() - pteSize;
     cout << "Currently, main partition table begins at sector " << mainHeader.partitionEntriesLBA
          << " and ends at sector " << mainHeader.partitionEntriesLBA + pteSize - 1 << "\n";
     prompt << "Enter new starting location (2 to " << maxValue << "; default is 2; 1 to abort): ";
@@ -200,15 +202,17 @@ void GPTDataTextUI::MoveMainTable(void) {
 // Move the backup partition table.
 void GPTDataTextUI::MoveSecondTable(void) {
     uint64_t newStart, pteSize = GetTableSizeInSectors();
-    uint64_t minValue = FindLastUsedLBA();
+    uint64_t minValue = FindLastUsedLBA() + 1;
     uint64_t maxValue = diskSize - 1 - pteSize;
     ostringstream prompt;
 
     cout << "Currently, backup partition table begins at sector " << secondHeader.partitionEntriesLBA
-         << " and ends at sector " << secondHeader.partitionEntriesLBA + pteSize - 1 << "\n";
-    prompt << "Enter new starting location (" << minValue << " to " << maxValue << "; default is " << minValue << "; 1 to abort): ";
-    newStart = GetNumber(1, maxValue, minValue, prompt.str());
-    if (newStart != 1) {
+         << " and ends at\n"
+         << "sector " << secondHeader.partitionEntriesLBA + pteSize - 1 << "\n";
+    prompt << "Enter new starting location (" << minValue << " to " << maxValue <<
+              "; default is " << maxValue << "; 1 to abort): ";
+    newStart = GetNumber(minValue, maxValue, maxValue, prompt.str());
+    if (newStart != secondHeader.partitionEntriesLBA) {
         GPTData::MoveSecondTable(newStart);
     } else {
         cout << "Aborting change!\n";

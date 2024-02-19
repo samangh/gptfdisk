@@ -345,6 +345,13 @@ int GPTData::Verify(void) {
             << "but is generally ill-advised. Using 'j' on the experts' menu can adjust this\n"
             << "gap.\n";
    } // if
+   if (secondHeader.partitionEntriesLBA != diskSize - GetTableSizeInSectors() - 1) {
+       cout << "\nWarning: There is a gap between the secondary partition table (ending at sector\n"
+            << secondHeader.partitionEntriesLBA + GetTableSizeInSectors() - 1
+            << ") and the secondary metadata (sector " << mainHeader.backupLBA << ").\n"
+            << "This is helpful in some exotic configurations, but is generally ill-advised.\n"
+            << "Using 'k' on the experts' menu can adjust this gap.\n";
+   } // if
    if (mainHeader.partitionEntriesLBA + GetTableSizeInSectors() != mainHeader.firstUsableLBA) {
        cout << "\nWarning: There is a gap between the main partition table (ending sector "
             << mainHeader.partitionEntriesLBA + GetTableSizeInSectors() - 1 << ")\n"
@@ -2327,7 +2334,7 @@ uint64_t GPTData::FindLastUsedLBA(void) {
 
    for (i = 0; i < numParts; i++) {
       if ((partitions[i].IsUsed()) && (partitions[i].GetFirstLBA() > lastFound)) {
-         lastFound = partitions[i].GetFirstLBA();
+         lastFound = partitions[i].GetLastLBA();
       } // if
    } // for
    return lastFound;
