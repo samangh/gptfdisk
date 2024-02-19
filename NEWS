@@ -20,7 +20,7 @@
 
 - Minor code cleanup based on valgrind analysis.
 
-- In previous versions, rEFInd accepted only integer values for partition
+- In previous versions, GPT fdisk accepted only integer values for partition
   start points, end points, and sizes, and it interpreted decimal values
   incorrectly. That is, if you typed "+9.5G" as the partition end point,
   you'd end up with something just 9 sectors in size. This version now
@@ -29,6 +29,9 @@
 
 - Changes to optimize disk handling, particularly on Windows, courtesy of
   Frediano Ziglio.
+
+- Numerous new partition type codes from Discoverable Partitions Specification
+  (https://uapi-group.org/specifications/specs/discoverable_partitions_specification/).
 
 1.0.9 (4/14/2022):
 ------------------
