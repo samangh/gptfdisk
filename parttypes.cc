@@ -271,12 +271,6 @@ void PartType::AddAllTypes(void) {
    AddType(0x8384, "4EDE75E2-6CCC-4CC8-B9C7-70334B087510", "Linux TILE-Gx /usr verity signature");
    AddType(0x8385, "E7BB33FB-06CF-4E81-8273-E543B413E2E2", "Linux x86-64 /usr verity signature");
    AddType(0x8386, "974A71C0-DE41-43C3-BE5D-5C5CCD1AD2C0", "Linux x86 /usr verity signature");
-   AddType(0x8382, "", "Linux Alpha /usr verity signature");
-   AddType(0x8382, "", "Linux Alpha /usr verity signature");
-   AddType(0x8382, "", "Linux Alpha /usr verity signature");
-   AddType(0x8382, "", "Linux Alpha /usr verity signature");
-   AddType(0x8382, "", "Linux Alpha /usr verity signature");
-   AddType(0x8382, "", "Linux Alpha /usr verity signature");
 
    // Used by Intel Rapid Start technology
    AddType(0x8400, "D3BFE2DE-3DAF-11DF-BA40-E3A556D89593", "Intel Rapid Start");
