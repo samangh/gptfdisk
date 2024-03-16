@@ -131,7 +131,7 @@ string GPTPart::GetDescription(void) {
       } // if
       else {
          utf8 += (char) ( 0xf0 | ( uni >> 18 ) ) ;
-         utf8 += (char) ( 0xe0 | ( ( uni >> 12 ) & 0x3f ) ) ;
+         utf8 += (char) ( 0x80 | ( ( uni >> 12 ) & 0x3f ) ) ;
          utf8 += (char) ( 0x80 | ( ( uni >> 6 ) & 0x3f ) ) ;
          utf8 += (char) ( 0x80 | ( uni & 0x3f ) ) ;
       } // if
