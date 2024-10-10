@@ -440,7 +440,10 @@ int GPTData::Verify(void) {
            << largestSegment << " (" << BytesToIeee(largestSegment, blockSize)
            << ") in size.\n";
    } else {
-      cout << "\nIdentified " << problems << " problems!\n";
+      if (problems == 1)
+         cout << "\nIdentified " << problems << " problem!\n";
+      else
+         cout << "\nIdentified " << problems << " problems!\n";
    } // if/else
 
    return (problems);
